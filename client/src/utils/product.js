@@ -34,6 +34,11 @@ export const CATEGORY_ICONS = {
   electronics: '📱',
   clothing: '👕',
   accessories: '⌚',
+  home: '🏠',
+  beauty: '💄',
+  sports: '⚽',
+  groceries: '🛒',
+  toys: '🧸',
   default: '🛍️',
 };
 

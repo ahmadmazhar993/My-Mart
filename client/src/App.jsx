@@ -15,12 +15,15 @@ import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 
 import Register from './pages/Register';
+
 import ForgotPassword from './pages/ForgotPassword';
+
 import ResetPassword from './pages/ResetPassword';
 
 import Profile from './pages/Profile';
 
 import Orders from './pages/Orders';
+
 import OrderDetail from './pages/OrderDetail';
 
 import Checkout from './pages/Checkout';
