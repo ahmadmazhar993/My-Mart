@@ -11,7 +11,7 @@ const Cart = () => {
   const { cart, removeItem, updateQuantity, clearCart, clearBuyNowItems } = useCartStore();
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 1000 || subtotal === 0 ? 0 : 150;
+  const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 250;
   const total = subtotal + shipping;
 
   const handleCheckout = () => {
@@ -97,7 +97,7 @@ const Cart = () => {
                 <span className="font-medium">{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
               </div>
               {shipping > 0 && (
-                <p className="text-xs text-primary">Add {formatPrice(1000 - subtotal)} more for free shipping</p>
+                <p className="text-xs text-primary">Add {formatPrice(2000 - subtotal)} more for free shipping</p>
               )}
             </div>
             <div className="flex justify-between font-bold text-base sm:text-lg mb-6">
