@@ -1,0 +1,30 @@
+{
+  "name": "ahm-mart-website",
+  "version": "1.0.0",
+  "description": "Ahm Mart e-commerce website built with React and Vite",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-easy-crop": "^6.0.2",
+    "react-router-dom": "^6.20.0",
+    "tailwindcss": "^3.3.6",
+    "zustand": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "postcss": "^8.4.32",
+    "vite": "^5.0.8"
+  }
+}
