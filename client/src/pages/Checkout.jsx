@@ -64,6 +64,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [transactionId, setTransactionId] = useState('');
   const [senderAccount, setSenderAccount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
@@ -98,13 +99,43 @@ const Checkout = () => {
   const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 250;
   const total = subtotal + shipping;
 
-  const handleCopyAccount = async (value) => {
+  const handleCopyAccount = async (value, e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
     try {
-      await navigator.clipboard.writeText(value);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = value;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
       setCopiedAccount(value);
-      window.setTimeout(() => setCopiedAccount(''), 1500);
+      window.setTimeout(() => setCopiedAccount(''), 2000);
     } catch (err) {
-      setError('Unable to copy account details right now.');
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = value;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopiedAccount(value);
+        window.setTimeout(() => setCopiedAccount(''), 2000);
+      } catch (fallbackErr) {
+        setError('Unable to copy account details right now.');
+      }
     }
   };
 
@@ -117,16 +148,94 @@ const Checkout = () => {
     return <Navigate to={isBuyNow ? '/products' : '/cart'} replace />;
   }
 
+  const validateField = (name, value) => {
+    const nextErrors = { ...errors };
+
+    if (name === 'fullName') {
+      if (!value.trim()) {
+        nextErrors.fullName = 'Full name is required.';
+      } else {
+        delete nextErrors.fullName;
+      }
+    }
+
+    if (name === 'phone') {
+      if (!value.trim()) {
+        nextErrors.phone = 'Phone number is required.';
+      } else if (!/^((\+92|92|0)?3\d{9})$/.test(value.trim())) {
+        nextErrors.phone = 'Please enter a valid phone number.';
+      } else {
+        delete nextErrors.phone;
+      }
+    }
+
+    if (name === 'address') {
+      if (!value.trim()) {
+        nextErrors.address = 'Address is required.';
+      } else {
+        delete nextErrors.address;
+      }
+    }
+
+    if (name === 'city') {
+      if (!value.trim()) {
+        nextErrors.city = 'Please select a city.';
+      } else {
+        delete nextErrors.city;
+      }
+    }
+
+    return nextErrors;
+  };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    setErrors((prev) => validateField(name, value));
+  };
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const fullName = form.fullName.trim();
+    const phone = form.phone.trim();
+    const address = form.address.trim();
+    const city = form.city.trim();
+
+    if (!fullName) {
+      nextErrors.fullName = 'Full name is required.';
+    }
+
+    if (!phone) {
+      nextErrors.phone = 'Phone number is required.';
+    } else if (!/^((\+92|92|0)?3\d{9})$/.test(phone)) {
+      nextErrors.phone = 'Please enter a valid phone number.';
+    }
+
+    if (!address) {
+      nextErrors.address = 'Address is required.';
+    }
+
+    if (!city) {
+      nextErrors.city = 'Please select a city.';
+    }
+
+    return nextErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const nextErrors = validateForm();
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setError('Please complete the highlighted fields before placing your order.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
-    const shippingAddress = `${form.fullName}, ${form.phone}, ${form.address}, ${form.city}`;
+    const shippingAddress = `${form.fullName.trim()}, ${form.phone.trim()}, ${form.address.trim()}, ${form.city.trim()}`;
 
     try {
       const payload = {
@@ -201,10 +310,10 @@ const Checkout = () => {
                   name="fullName"
                   value={form.fullName}
                   onChange={handleChange}
-                  required
-                  className="input-field"
+                  className={`input-field ${errors.fullName ? 'border-red-300' : ''}`}
                   placeholder="John Doe"
                 />
+                {errors.fullName && <p className="mt-1 text-xs text-red-600">{errors.fullName}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1.5">Phone Number</label>
@@ -213,10 +322,10 @@ const Checkout = () => {
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  required
-                  className="input-field"
+                  className={`input-field ${errors.phone ? 'border-red-300' : ''}`}
                   placeholder="03XX XXXXXXX"
                 />
+                {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
             </div>
             <div>
@@ -225,11 +334,11 @@ const Checkout = () => {
                 name="address"
                 value={form.address}
                 onChange={handleChange}
-                required
                 rows={3}
-                className="input-field resize-none"
+                className={`input-field resize-none ${errors.address ? 'border-red-300' : ''}`}
                 placeholder="House no, street, area"
               />
+              {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold mb-1.5">City</label>
@@ -237,14 +346,14 @@ const Checkout = () => {
                 name="city"
                 value={form.city}
                 onChange={handleChange}
-                required
-                className="input-field"
+                className={`input-field ${errors.city ? 'border-red-300' : ''}`}
               >
                 <option value="">Select a city</option>
                 {CITY_OPTIONS.map((city) => (
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
+              {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
             </div>
 
             <div className="pt-2">
@@ -295,7 +404,7 @@ const Checkout = () => {
                                     </div>
                                     <button
                                       type="button"
-                                      onClick={() => handleCopyAccount(account.account)}
+                                      onClick={(e) => handleCopyAccount(account.account, e)}
                                       className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
                                     >
                                       {copiedAccount === account.account ? 'Copied' : 'Copy'}
@@ -316,29 +425,53 @@ const Checkout = () => {
                               <input
                                 type="file"
                                 accept="image/*,.pdf"
-                                onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                                className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-2 file:text-white"
+                                onChange={(e) => {
+                                  setReceiptFile(e.target.files?.[0] || null);
+                                  setErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.receiptFile;
+                                    return next;
+                                  });
+                                }}
+                                className={`block w-full text-sm text-gray-600 file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-2 file:text-white ${errors.receiptFile ? 'border border-red-300 rounded-sm' : ''}`}
                               />
+                              {errors.receiptFile && <p className="mt-1 text-xs text-red-600">{errors.receiptFile}</p>}
                             </div>
                             <div>
                               <label className="block text-sm font-semibold mb-1.5">Transaction ID / Reference Number</label>
                               <input
                                 type="text"
                                 value={transactionId}
-                                onChange={(e) => setTransactionId(e.target.value)}
-                                className="input-field"
+                                onChange={(e) => {
+                                  setTransactionId(e.target.value);
+                                  setErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.transactionId;
+                                    return next;
+                                  });
+                                }}
+                                className={`input-field ${errors.transactionId ? 'border-red-300' : ''}`}
                                 placeholder="ABC123456"
                               />
-                            </div>  
+                              {errors.transactionId && <p className="mt-1 text-xs text-red-600">{errors.transactionId}</p>}
+                            </div>
                             <div>
                               <label className="block text-sm font-semibold mb-1.5">Sender Account Number</label>
                               <input
                                 type="text"
                                 value={senderAccount}
-                                onChange={(e) => setSenderAccount(e.target.value)}
-                                className="input-field"
+                                onChange={(e) => {
+                                  setSenderAccount(e.target.value);
+                                  setErrors((prev) => {
+                                    const next = { ...prev };
+                                    delete next.senderAccount;
+                                    return next;
+                                  });
+                                }}
+                                className={`input-field ${errors.senderAccount ? 'border-red-300' : ''}`}
                                 placeholder="0313xxxxxxx"
                               />
+                              {errors.senderAccount && <p className="mt-1 text-xs text-red-600">{errors.senderAccount}</p>}
                             </div>
                           </div>
                         </div>

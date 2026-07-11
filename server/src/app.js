@@ -36,6 +36,14 @@ app.get('/', (req, res) => {
   });
 });
 
+app.get('/favicon.svg', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/public/favicon.svg'));
+});
+
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/svg+xml').sendFile(path.join(__dirname, '../../client/public/favicon.svg'));
+});
+
 app.use('/api/v1', apiV1Routes);
 
 app.use(notFound);

@@ -8,6 +8,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { login, isAuthenticated, user } = useAuthStore();
   const { addToast } = useToast();
@@ -25,13 +26,74 @@ const Login = () => {
     return <Navigate to={destination} replace />;
   }
 
+  const validateField = (field, value) => {
+    const nextErrors = { ...errors };
+    const trimmedValue = value.trim();
+
+    if (field === 'email') {
+      if (!trimmedValue) {
+        nextErrors.email = 'Email is required.';
+      } else if (!/^\S+@\S+\.\S+$/.test(trimmedValue)) {
+        nextErrors.email = 'Please enter a valid email address.';
+      } else {
+        delete nextErrors.email;
+      }
+    }
+
+    if (field === 'password') {
+      if (!trimmedValue) {
+        nextErrors.password = 'Password is required.';
+      } else {
+        delete nextErrors.password;
+      }
+    }
+
+    return nextErrors;
+  };
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail) {
+      nextErrors.email = 'Email is required.';
+    } else if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      nextErrors.email = 'Please enter a valid email address.';
+    }
+
+    if (!trimmedPassword) {
+      nextErrors.password = 'Password is required.';
+    }
+
+    return nextErrors;
+  };
+
+  const handleChange = (field, value) => {
+    if (field === 'email') {
+      setEmail(value);
+    } else {
+      setPassword(value);
+    }
+
+    setErrors((prev) => validateField(field, value));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const nextErrors = validateForm();
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setError('Please fix the highlighted fields.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const response = await authService.login(email, password);
+      const response = await authService.login(email.trim(), password.trim());
       const payload = response.data?.data || response.data;
       const authUser = payload.user || payload;
       const token = payload.token || response.data?.token;
@@ -71,11 +133,11 @@ const Login = () => {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input-field"
+                onChange={(e) => handleChange('email', e.target.value)}
+                className={`input-field ${errors.email ? 'border-red-300' : ''}`}
                 placeholder="Enter your email"
               />
+              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
             </div>
 
             <div>
@@ -83,11 +145,11 @@ const Login = () => {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="input-field"
+                onChange={(e) => handleChange('password', e.target.value)}
+                className={`input-field ${errors.password ? 'border-red-300' : ''}`}
                 placeholder="Enter your password"
               />
+              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
             </div>
             <div className="text-right">
               <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
