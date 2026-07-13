@@ -17,10 +17,23 @@ const getTokenCookieOptions = () => ({
 });
 
 const clearTokenCookie = (res) => res.clearCookie('token', getTokenCookieOptions());
+const isSseRequest = (req) => req.headers.accept?.includes('text/event-stream') || req.path.includes('/events');
+
+const sendAuthFailure = (req, res, message = 'Authentication failed') => {
+  if (isSseRequest(req)) {
+    return res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message });
+  }
+
+  return res.status(StatusCodes.FORBIDDEN).json({ error: true, message });
+};
 
 const isAuthenticated = (req, res, next) => {
   try {
     let { token } = req.cookies;
+
+    if (!token && req.query?.token) {
+      token = req.query.token;
+    }
 
     if (!token) {
       const authorizationHeader = req.headers.authorization;
@@ -34,12 +47,15 @@ const isAuthenticated = (req, res, next) => {
       return jwt.verify(token, TOKEN_SECRET_KEY, (err, decoded) => {
         if (err) {
           logger.log('info', `[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Error::Token verification failed. You are not authorized to perform this operation!`, err);
+          clearTokenCookie(res);
           if (err.name === 'TokenExpiredError') {
-            return clearTokenCookie(res)
-              .redirect('/?error=Token expired');
+            return isSseRequest(req)
+              ? res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Token expired' })
+              : res.redirect('/?error=Token expired');
           }
-          return clearTokenCookie(res)
-            .redirect('/?error=Invalid token');
+          return isSseRequest(req)
+            ? res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Invalid token' })
+            : res.redirect('/?error=Invalid token');
         }
         return db('user').first()
           .where('email', decoded.email)
@@ -48,7 +64,7 @@ const isAuthenticated = (req, res, next) => {
           .then((user) => {
             if (!user) {
               logger.log('info', `[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Error::Token verification failed. No such user.Decoded::`, decoded);
-              return res.status(StatusCodes.FORBIDDEN).json({ error: true, message: 'No such user' });
+              return sendAuthFailure(req, res, 'No such user');
             }
             req.activeUser = user;
             if (decoded.isMustChange) {
@@ -65,9 +81,7 @@ const isAuthenticated = (req, res, next) => {
       });
     }
     logger.log('info', `[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Error::Authentication failed. No token provided.`);
-    return res.status(StatusCodes.FORBIDDEN).json({
-      error: true, message: 'No token provided'
-    });
+    return sendAuthFailure(req, res, 'No token provided');
   } catch (e) {
     logger.error(`[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Exception::`, e);
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

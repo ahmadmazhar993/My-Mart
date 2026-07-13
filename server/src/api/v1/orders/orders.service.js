@@ -7,6 +7,7 @@ const { mapOrder } = require('../../../libs/serializers');
 const logger = require('../../../config/winston');
 const { createUniqueOrderReferenceCode } = require('../../../libs/orderCode');
 const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require('../../../email/templates');
+const orderEvents = require('../../../libs/orderEvents');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_METHODS = ['cod', 'online'];
@@ -26,14 +27,51 @@ const paymentProofStorage = multer.diskStorage({
   },
 });
 
-const uploadPaymentProofMiddleware = multer({
-  storage: paymentProofStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-    cb(null, allowed.includes(file.mimetype));
-  },
-}).single('receipt');
+const isValidTransactionReference = (value) => {
+  if (!value) return true;
+  return /^[A-Za-z0-9._ -]{3,50}$/.test(value);
+};
+
+const isValidSenderAccount = (value) => {
+  if (!value) return true;
+  return /^[0-9 -]{4,20}$/.test(value);
+};
+
+const uploadPaymentProofMiddleware = (req, res, next) => {
+  const upload = multer({
+    storage: paymentProofStorage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+      cb(null, allowed.includes(file.mimetype));
+    },
+  }).single('receipt');
+
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(StatusCodes.PAYLOAD_TOO_LARGE).json({
+          success: false,
+          message: 'Receipt file must be 5MB or smaller.',
+        });
+      }
+
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: err.message || 'Failed to upload receipt',
+      });
+    }
+
+    if (err) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: err.message || 'Failed to upload receipt',
+      });
+    }
+
+    next();
+  });
+};
 
 async function listOrders(req, res) {
   try {
@@ -131,10 +169,24 @@ async function createOrder(req, res) {
     payment_details = {},
   } = req.body;
 
+  if (payment_details?.transaction_id && !isValidTransactionReference(payment_details.transaction_id)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: 'Transaction ID / Reference Number must be 3-50 characters and contain only letters, numbers, spaces, dots, underscores, or hyphens.',
+    });
+  }
+
+  if (payment_details?.sender_account_number && !isValidSenderAccount(payment_details.sender_account_number)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: 'Sender Account Number must be 4-20 characters and may only contain digits, spaces, or hyphens.',
+    });
+  }
+
   const userId = req.activeUser.userID;
   const normalizedPaymentMethod = PAYMENT_METHODS.includes(payment_method) ? payment_method : 'cod';
-  const initialPaymentStatus = normalizedPaymentMethod === 'online' ? 'unpaid' : 'paid';
-  const initialPaymentState = normalizedPaymentMethod === 'online' ? 'pending' : 'completed';
+  const initialPaymentStatus = 'unpaid';
+  const initialPaymentState = 'pending';
 
   if (!shipping_address || !items?.length) {
     return res.status(StatusCodes.BAD_REQUEST).json({
@@ -259,6 +311,20 @@ async function submitPaymentProof(req, res) {
     const { id } = req.params;
     const { transaction_id, sender_account_number } = req.body;
 
+    if (transaction_id && !isValidTransactionReference(transaction_id)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Transaction ID / Reference Number must be 3-50 characters and contain only letters, numbers, spaces, dots, underscores, or hyphens.',
+      });
+    }
+
+    if (sender_account_number && !isValidSenderAccount(sender_account_number)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Sender Account Number must be 4-20 characters and may only contain digits, spaces, or hyphens.',
+      });
+    }
+
     if (!req.file) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
@@ -380,6 +446,8 @@ async function updateOrderStatus(req, res) {
     const [updatedOrder] = await db('orders')
       .where({ orderID: id })
       .update(updatePayload, '*');
+
+    orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: id });
 
     const paymentUpdate = {};
     if (normalizedPaymentStatus === 'paid') {

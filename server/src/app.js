@@ -7,6 +7,8 @@ const path = require('path');
 const { notFound, genericErrorHandler } = require('./libs/errorHandler');
 const requestLogger = require('./libs/requestLogger');
 const apiV1Routes = require('./api/v1');
+const { isAuthenticated } = require('./api/v1/auth/auth.service');
+const orderEvents = require('./libs/orderEvents');
 
 const app = express();
 
@@ -42,6 +44,34 @@ app.get('/favicon.svg', (req, res) => {
 
 app.get('/favicon.ico', (req, res) => {
   res.type('image/svg+xml').sendFile(path.join(__dirname, '../../client/public/favicon.svg'));
+});
+
+app.get('/api/v1/orders/events', isAuthenticated, (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.flushHeaders?.();
+
+  const sendEvent = (payload) => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
+  sendEvent({ type: 'connected' });
+
+  const keepAlive = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 15000);
+
+  const onOrderUpdated = (payload) => sendEvent(payload || { type: 'orders-updated' });
+  orderEvents.on('orders-updated', onOrderUpdated);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    orderEvents.off('orders-updated', onOrderUpdated);
+  });
 });
 
 app.use('/api/v1', apiV1Routes);
