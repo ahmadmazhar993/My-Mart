@@ -19,9 +19,21 @@ const AdminOrders = () => {
 
   useEffect(() => { loadOrders(); }, []);
 
+  const broadcastOrderUpdate = () => {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel('orders-updates');
+      channel.postMessage({ type: 'orders-updated' });
+      channel.close();
+    }
+
+    localStorage.setItem('orders:updated', String(Date.now()));
+    window.dispatchEvent(new Event('orders:updated'));
+  };
+
   const handleStatusChange = async (id, status) => {
     try {
       await orderService.updateOrderStatus(id, status);
+      broadcastOrderUpdate();
       loadOrders();
     } catch {
       setError('Failed to update order status');
@@ -31,6 +43,7 @@ const AdminOrders = () => {
   const handlePaymentApproval = async (id) => {
     try {
       await orderService.updateOrderStatus(id, undefined, 'paid');
+      broadcastOrderUpdate();
       loadOrders();
     } catch {
       setError('Failed to update payment status');

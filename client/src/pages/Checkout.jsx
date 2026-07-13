@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { Breadcrumb } from '../components/ui';
+import { useToast } from '../components/ToastProvider';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService, userService } from '../services';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
+import { validatePaymentReceiptFile, validateSenderAccount, validateTransactionReference } from '../utils/paymentValidation';
 
 const CITY_OPTIONS = [
   'Karachi',
@@ -48,6 +50,7 @@ const Checkout = () => {
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
   const { cart, clearCart, buyNowItems, clearBuyNowItems } = useCartStore();
+  const { addToast } = useToast();
 
   const isBuyNow = new URLSearchParams(location.search).get('mode') === 'buynow';
   const checkoutItems = useMemo(
@@ -160,9 +163,10 @@ const Checkout = () => {
     }
 
     if (name === 'phone') {
-      if (!value.trim()) {
+      const normalizedValue = value.trim();
+      if (!normalizedValue) {
         nextErrors.phone = 'Phone number is required.';
-      } else if (!/^((\+92|92|0)?3\d{9})$/.test(value.trim())) {
+      } else if (!/^((\+92|92|0)?3\d{2,3}[- ]?\d{7,8})$/.test(normalizedValue)) {
         nextErrors.phone = 'Please enter a valid phone number.';
       } else {
         delete nextErrors.phone;
@@ -207,7 +211,7 @@ const Checkout = () => {
 
     if (!phone) {
       nextErrors.phone = 'Phone number is required.';
-    } else if (!/^((\+92|92|0)?3\d{9})$/.test(phone)) {
+    } else if (!/^((\+92|92|0)?3\d{2,3}[- ]?\d{7,8})$/.test(phone)) {
       nextErrors.phone = 'Please enter a valid phone number.';
     }
 
@@ -222,13 +226,38 @@ const Checkout = () => {
     return nextErrors;
   };
 
+  const validateOnlinePaymentDetails = () => {
+    const nextErrors = {};
+
+    const receiptError = validatePaymentReceiptFile(receiptFile);
+    if (receiptError) {
+      nextErrors.receiptFile = receiptError;
+    }
+
+    const transactionError = validateTransactionReference(transactionId);
+    if (transactionError) {
+      nextErrors.transactionId = transactionError;
+    }
+
+    const senderError = validateSenderAccount(senderAccount);
+    if (senderError) {
+      nextErrors.senderAccount = senderError;
+    }
+
+    return nextErrors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const nextErrors = validateForm();
+    const shippingErrors = validateForm();
+    const paymentErrors = paymentMethod === 'online' ? validateOnlinePaymentDetails() : {};
+    const nextErrors = { ...shippingErrors, ...paymentErrors };
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      setError('Please complete the highlighted fields before placing your order.');
+      const message = 'Please complete the highlighted fields before placing your order.';
+      setError(message);
+      addToast(message, 'error');
       return;
     }
 
@@ -426,15 +455,22 @@ const Checkout = () => {
                                 type="file"
                                 accept="image/*,.pdf"
                                 onChange={(e) => {
-                                  setReceiptFile(e.target.files?.[0] || null);
+                                  const file = e.target.files?.[0] || null;
+                                  setReceiptFile(file);
                                   setErrors((prev) => {
                                     const next = { ...prev };
-                                    delete next.receiptFile;
+                                    const receiptError = validatePaymentReceiptFile(file);
+                                    if (receiptError) {
+                                      next.receiptFile = receiptError;
+                                    } else {
+                                      delete next.receiptFile;
+                                    }
                                     return next;
                                   });
                                 }}
                                 className={`block w-full text-sm text-gray-600 file:mr-3 file:rounded-sm file:border-0 file:bg-primary file:px-3 file:py-2 file:text-white ${errors.receiptFile ? 'border border-red-300 rounded-sm' : ''}`}
                               />
+                              <p className="mt-1 text-xs text-gray-500">PNG, JPG, or PDF up to 5MB.</p>
                               {errors.receiptFile && <p className="mt-1 text-xs text-red-600">{errors.receiptFile}</p>}
                             </div>
                             <div>
@@ -443,10 +479,16 @@ const Checkout = () => {
                                 type="text"
                                 value={transactionId}
                                 onChange={(e) => {
-                                  setTransactionId(e.target.value);
+                                  const value = e.target.value;
+                                  setTransactionId(value);
                                   setErrors((prev) => {
                                     const next = { ...prev };
-                                    delete next.transactionId;
+                                    const transactionError = validateTransactionReference(value);
+                                    if (transactionError) {
+                                      next.transactionId = transactionError;
+                                    } else {
+                                      delete next.transactionId;
+                                    }
                                     return next;
                                   });
                                 }}
@@ -461,10 +503,16 @@ const Checkout = () => {
                                 type="text"
                                 value={senderAccount}
                                 onChange={(e) => {
-                                  setSenderAccount(e.target.value);
+                                  const value = e.target.value;
+                                  setSenderAccount(value);
                                   setErrors((prev) => {
                                     const next = { ...prev };
-                                    delete next.senderAccount;
+                                    const senderError = validateSenderAccount(value);
+                                    if (senderError) {
+                                      next.senderAccount = senderError;
+                                    } else {
+                                      delete next.senderAccount;
+                                    }
                                     return next;
                                   });
                                 }}

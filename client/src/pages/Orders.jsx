@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Breadcrumb, EmptyState, ProductSkeleton } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
 import { useAuthStore } from '../store';
+import { useToast } from '../components/ToastProvider';
+import { API_BASE, API_VERSION } from '../services/api';
 import { formatPrice } from '../utils/format';
+import { validatePaymentReceiptFile } from '../utils/paymentValidation';
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -38,6 +41,7 @@ const formatDate = (dateStr) => {
 
 const Orders = () => {
   const { isAuthenticated, user } = useAuthStore();
+  const { addToast } = useToast();
   const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,21 +50,64 @@ const Orders = () => {
   const [uploadMessage, setUploadMessage] = useState('');
   const placedPaymentMethod = location.state?.paymentMethod;
 
-  useEffect(() => {
+  const loadOrders = useCallback(async (showToast = false) => {
     if (!isAuthenticated) return;
 
     setLoading(true);
-    orderService.getAllOrders()
-      .then((res) => {
-        const all = res.data?.data || [];
-        setOrders(all);
-      })
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
+    try {
+      const res = await orderService.getAllOrders();
+      const nextOrders = res.data?.data || [];
+      setOrders((prevOrders) => {
+        if (showToast && prevOrders.length && JSON.stringify(prevOrders) !== JSON.stringify(nextOrders)) {
+          addToast('Your order status has been updated.', 'success');
+        }
+        return nextOrders;
+      });
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user?.id, addToast]);
+
+  useEffect(() => {
+    loadOrders();
   }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    const eventSourceUrl = (() => {
+      const url = new URL(`${API_VERSION}/orders/events`, API_BASE);
+      const token = localStorage.getItem('token');
+      if (token) {
+        url.searchParams.set('token', token);
+      }
+      return url.toString();
+    })();
+
+    const eventSource = new EventSource(eventSourceUrl);
+    eventSource.onmessage = (event) => {
+      const payload = JSON.parse(event.data);
+      if (payload.type === 'orders-updated') {
+        loadOrders(true);
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [isAuthenticated, loadOrders]);
 
   const handleReceiptUpload = async (orderId, file) => {
     if (!file) return;
+
+    const receiptError = validatePaymentReceiptFile(file);
+    if (receiptError) {
+      setUploadMessage(receiptError);
+      return;
+    }
+
     setUploadingId(orderId);
     setUploadMessage('');
     const formData = new FormData();
@@ -68,7 +115,8 @@ const Orders = () => {
     try {
       await orderService.submitPaymentProof(orderId, formData);
       setUploadMessage('Payment proof uploaded successfully.');
-      orderService.getAllOrders().then((res) => setOrders(res.data?.data || []));
+      window.dispatchEvent(new Event('orders:updated'));
+      await loadOrders();
     } catch {
       setUploadMessage('Failed to upload payment proof. Please try again.');
     } finally {
