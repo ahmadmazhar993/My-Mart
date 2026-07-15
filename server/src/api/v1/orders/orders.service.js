@@ -41,7 +41,7 @@ const uploadPaymentProofMiddleware = (req, res, next) => {
   const upload = multer({
     storage: paymentProofStorage,
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
+    fileFilter: (_req, file, cb) => {
       const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
       cb(null, allowed.includes(file.mimetype));
     },
@@ -69,7 +69,7 @@ const uploadPaymentProofMiddleware = (req, res, next) => {
       });
     }
 
-    next();
+    return next();
   });
 };
 
@@ -79,7 +79,7 @@ async function listOrders(req, res) {
       .leftJoin('user as u', 'orders.user_id', 'u.userID')
       .select(
         'orders.*',
-        db.raw(`u."firstName" || ' ' || u."lastName" as "userName"`)
+        db.raw('u."firstName" || \' \' || u."lastName" as "userName"')
       )
       .orderBy('orders.createdOn', 'desc')
       .limit(100);
@@ -169,17 +169,23 @@ async function createOrder(req, res) {
     payment_details = {},
   } = req.body;
 
-  if (payment_details?.transaction_id && !isValidTransactionReference(payment_details.transaction_id)) {
+  if (payment_details?.transaction_id
+    && !isValidTransactionReference(payment_details.transaction_id)) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: 'Transaction ID / Reference Number must be 3-50 characters and contain only letters, numbers, spaces, dots, underscores, or hyphens.',
+      message:
+        'Transaction ID must be 3-50 characters and contain only letters, '
+        + 'numbers, underscores, or hyphens.',
     });
   }
 
-  if (payment_details?.sender_account_number && !isValidSenderAccount(payment_details.sender_account_number)) {
+  if (payment_details?.sender_account_number
+     && !isValidSenderAccount(payment_details.sender_account_number)) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
-      message: 'Sender Account Number must be 4-20 characters and may only contain digits, spaces, or hyphens.',
+      message:
+        'Sender Account Number must be 4-20 characters and may only contain digits, '
+        + 'spaces, or hyphens.',
     });
   }
 

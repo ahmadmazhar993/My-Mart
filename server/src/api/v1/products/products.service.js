@@ -30,7 +30,12 @@ const normalizeImagesPayload = (images) => {
   }
 
   if (normalized && typeof normalized === 'object') {
-    return [normalized.uploadedPath || normalized.src || normalized.path || JSON.stringify(normalized)];
+    return [
+      normalized.uploadedPath
+      || normalized.src
+      || normalized.path
+      || JSON.stringify(normalized),
+    ];
   }
 
   return [String(normalized)];
@@ -71,7 +76,15 @@ async function listProducts(req, res) {
   }
 }
 
-const productImageDir = path.join(__dirname, '..', '..', '..', '..', 'uploads', 'products');
+const productImageDir = path.join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'uploads',
+  'products'
+);
 
 const getProductImageFilename = (imagePath) => {
   if (!imagePath) return null;
@@ -102,7 +115,9 @@ const productImageStorage = multer.diskStorage({
     callback(null, productImageDir);
   },
   filename(req, file, callback) {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e6)}${path.extname(file.originalname)}`;
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e6)}${path.extname(
+      file.originalname
+    )}`;
     callback(null, uniqueName);
   },
 });
@@ -135,14 +150,23 @@ async function uploadProductImages(req, res) {
         });
       }
       if (err) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: err.message });
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: err.message,
+        });
       }
       if (req.productImageValidationError) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: req.productImageValidationError });
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: req.productImageValidationError,
+        });
       }
       const files = req.files || [];
       if (files.length === 0) {
-        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'No images were uploaded.' });
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: 'No images were uploaded.',
+        });
       }
 
       let oldImagePaths = [];
@@ -157,8 +181,8 @@ async function uploadProductImages(req, res) {
       const slug = productName
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
 
       const renamedPaths = [];
 
@@ -245,7 +269,11 @@ async function getProductReviews(req, res) {
         id: review.id,
         productId: review.product_id,
         userId: review.user_id,
-        userName: [review.firstName, review.lastName].filter(Boolean).join(' ') || review.email || 'Customer',
+        userName: (
+          [review.firstName, review.lastName].filter(Boolean).join(' ')
+          || review.email
+          || 'Customer'
+        ),
         rating: Number(review.rating),
         comment: review.comment,
         createdAt: review.createdOn,
@@ -277,7 +305,10 @@ async function createProductReview(req, res) {
 
     const normalizedRating = Number(rating);
     if (!Number.isInteger(normalizedRating) || normalizedRating < 1 || normalizedRating > 5) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Rating must be between 1 and 5.' });
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Rating must be between 1 and 5.',
+      });
     }
 
     const existingReview = await db('reviews').where({ product_id: id, user_id: userId }).first();
@@ -293,7 +324,10 @@ async function createProductReview(req, res) {
       .first('o.orderID as orderID');
 
     if (!purchasedOrder) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'You can only review products you have purchased.' });
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'You can only review products you have purchased.',
+      });
     }
 
     const [created] = await db('reviews').insert(
@@ -311,7 +345,12 @@ async function createProductReview(req, res) {
     const allReviews = await db('reviews').where({ product_id: id });
     const reviewCount = allReviews.length;
     const averageRating = reviewCount
-      ? Number((allReviews.reduce((total, item) => total + Number(item.rating), 0) / reviewCount).toFixed(2))
+      ? Number(
+        (
+          allReviews.reduce((total, item) => total + Number(item.rating), 0)
+          / reviewCount
+        ).toFixed(2)
+      )
       : 0;
 
     await db('products').where({ productID: id }).update({
@@ -326,7 +365,10 @@ async function createProductReview(req, res) {
         id: created.reviewID,
         productId: created.product_id,
         userId: created.user_id,
-        userName: [req.activeUser?.firstName, req.activeUser?.lastName].filter(Boolean).join(' ') || req.activeUser?.email || 'Customer',
+        userName:
+          ([req.activeUser?.firstName, req.activeUser?.lastName].filter(Boolean).join(' ')
+            || req.activeUser?.email
+            || 'Customer'),
         rating: Number(created.rating),
         comment: created.comment,
         createdAt: created.createdOn,
@@ -353,12 +395,16 @@ async function createProduct(req, res) {
       category_id: req.body.category_id,
       sku: req.body.sku,
       imageUrl: req.body.image_url ?? req.body.imageUrl,
-      images: req.body.images == null ? null : JSON.stringify(normalizeImagesPayload(req.body.images)),
+      images: req.body.images == null
+        ? null : JSON.stringify(normalizeImagesPayload(req.body.images)),
       isActive: req.body.is_active ?? true,
     };
 
     const [created] = await db('products').insert(payload, '*');
-    return res.status(StatusCodes.CREATED).json({ success: true, data: mapProduct(created) });
+    return res.status(StatusCodes.CREATED).json({
+      success: true,
+      data: mapProduct(created),
+    });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,

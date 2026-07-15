@@ -4,7 +4,12 @@ const router = express.Router();
 
 const { isAuthenticated, isAdmin } = require('../auth/auth.service');
 const {
-  listOrders, getOrderById, createOrder, updateOrderStatus, submitPaymentProof, uploadPaymentProofMiddleware,
+  listOrders,
+  createOrder,
+  getOrderById,
+  updateOrderStatus,
+  submitPaymentProof,
+  uploadPaymentProofMiddleware,
 } = require('./orders.service');
 const { validateCreateOrder, validateUpdateOrderStatus } = require('./orders.validation');
 

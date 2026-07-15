@@ -4,8 +4,8 @@ const { getPaymentMethodLabel, getOnlinePaymentInstructions } = require('../../.
 // const formatPrice = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
 
 const formatPrice = (amount) => {
-  console.log("formatPrice received:", amount, typeof amount);
-  return `Rs. ${Number(amount).toLocaleString("en-PK")}`;
+  console.log('formatPrice called with amount:', amount);
+  return `Rs. ${Number(amount).toLocaleString('en-PK')}`;
 };
 const buildOrderConfirmationBody = ({
   firstName,
@@ -52,10 +52,10 @@ const buildOrderConfirmationBody = ({
   outro: [
     ...(paymentMethod === 'online'
       ? [
-          `Payment status: Awaiting Payment`,
-          `Please transfer Rs. ${Number(totalPrice).toLocaleString('en-PK')} and upload your receipt from My Orders after payment.`,
-          ...getOnlinePaymentInstructions(orderId, totalPrice),
-        ]
+        'Payment status: Awaiting Payment',
+        `Please transfer Rs. ${Number(totalPrice).toLocaleString('en-PK')} and upload your receipt from My Orders after payment.`,
+        ...getOnlinePaymentInstructions(orderId, totalPrice),
+      ]
       : []),
     'We will send you another email when your order status changes.',
     `Questions? Contact us at ${site.supportEmail} or call ${site.phoneDisplay}.`,

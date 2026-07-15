@@ -391,7 +391,6 @@ const updateUserWithAdmin = async (req, res, next) => {
   }
 };
 
-
 const updateUserPassword = async (req, res, next) => {
   try {
     if (req.params.userID && !validate(req.params.userID)) {

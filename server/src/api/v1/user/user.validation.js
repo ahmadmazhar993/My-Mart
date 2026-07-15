@@ -159,7 +159,7 @@ const validateCreateUserForm = (req, res, next) => {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim().toLowerCase(),
-      password: password,
+      password,
       phoneNumber: phoneNumber && phoneNumber.trim(),
       accessTemplateID: role.trim(),
       status: Status || 'Pending',
