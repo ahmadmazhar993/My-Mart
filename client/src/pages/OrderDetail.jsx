@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Breadcrumb, EmptyState, ProductSkeleton } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
@@ -26,6 +26,7 @@ const PAYMENT_STYLES = {
 
 const OrderDetail = () => {
   const { id } = useParams();
+  const location = useLocation();
   const { isAuthenticated } = useAuthStore();
   const { addToast } = useToast();
   const [order, setOrder] = useState(null);
@@ -112,7 +113,8 @@ const OrderDetail = () => {
   };
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    const redirectTo = `/orders/${id}`;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(redirectTo)}`} replace />;
   }
 
   if (loading) {
