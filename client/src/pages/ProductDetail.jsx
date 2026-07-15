@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { Breadcrumb, ProductSkeleton } from '../components/ui';
 import { productService } from '../services';
-import { useCartStore, useAuthStore, useWishlistStore, useReviewStore } from '../store';
+import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { parseProductImages, normalizeProductImageUrl } from '../utils/product';
 
@@ -17,16 +17,28 @@ const ProductDetail = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviews, setReviews] = useState([]);
   const { addItem, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const { isInWishlist, toggleItem } = useWishlistStore();
-  const { addReview, getProductReviews } = useReviewStore();
 
   useEffect(() => {
+    if (!id) return;
+
     setLoading(true);
-    productService.getProductById(id)
-      .then((res) => setProduct(res.data?.data))
-      .catch(() => setProduct(null))
+    Promise.all([
+      productService.getProductById(id),
+      productService.getProductReviews(id),
+    ])
+      .then(([productRes, reviewsRes]) => {
+        setProduct(productRes.data?.data || null);
+        setReviews(reviewsRes.data?.data || []);
+      })
+      .catch(() => {
+        setProduct(null);
+        setReviews([]);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -85,23 +97,35 @@ const ProductDetail = () => {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = async (e) => {
     e.preventDefault();
-    if (!isAuthenticated) return;
-    addReview({
-      productId: product.id,
-      productName: product.name,
-      userId: user.id,
-      userName: user.first_name || user.email,
-      rating: reviewRating,
-      comment: reviewComment.trim(),
-    });
-    setReviewComment('');
-    setReviewSubmitted(true);
-    setTimeout(() => setReviewSubmitted(false), 3000);
+    if (!isAuthenticated || !product) return;
+
+    setReviewError('');
+    try {
+      const [reviewRes, productRes] = await Promise.all([
+        productService.createReview(product.id, {
+          rating: reviewRating,
+          comment: reviewComment.trim(),
+        }),
+        productService.getProductById(product.id),
+      ]);
+
+      const createdReview = reviewRes.data?.data || null;
+      if (createdReview) {
+        setReviews((prev) => [createdReview, ...prev]);
+      }
+      setProduct(productRes.data?.data || product);
+      setReviewComment('');
+      setReviewSubmitted(true);
+      setTimeout(() => setReviewSubmitted(false), 3000);
+    } catch (error) {
+      setReviewError(error.response?.data?.message || 'Failed to submit review. Please try again.');
+      setReviewSubmitted(false);
+    }
   };
 
-  const productReviews = getProductReviews(Number(id));
+  const productReviews = reviews;
   const inWishlist = isInWishlist(product.id);
 
   return (
@@ -253,6 +277,9 @@ const ProductDetail = () => {
                 placeholder="Share your experience with this product..."
                 className="input-field mb-3"
               />
+              {reviewError && (
+                <p className="text-sm text-red-600 mb-3">{reviewError}</p>
+              )}
               <button type="submit" className="btn-primary text-sm">
                 {reviewSubmitted ? '✓ Review Submitted' : 'Submit Review'}
               </button>
