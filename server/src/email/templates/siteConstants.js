@@ -1,9 +1,9 @@
-const { CLIENT_URL = 'http://10.36.13.15:5173', CONTACT_TO_EMAIL = 'support@ahmmart.com' } = process.env;
+const { CLIENT_URL = 'http://10.36.13.15:5173', CONTACT_TO_EMAIL = 'ahmmart993@gmail.com' } = process.env;
 
 module.exports = {
   brandName: 'AHM Mart',
   siteUrl: CLIENT_URL,
-  supportEmail: 'support@ahmmart.com',
+  supportEmail: 'ahmmart993@gmail.com',
   sellerEmail: 'sellers@ahmmart.com',
   phone: '0313-4591721',
   phoneDisplay: '0313-4591721',
