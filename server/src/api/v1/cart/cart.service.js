@@ -79,7 +79,10 @@ async function addToCart(req, res) {
       })
       .returning('*');
 
-    return res.status(StatusCodes.CREATED).json({ success: true, data: { itemId: item.cartItemID } });
+    return res.status(StatusCodes.CREATED).json({
+      success: true,
+      data: { itemId: item.cartItemID }
+    });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,

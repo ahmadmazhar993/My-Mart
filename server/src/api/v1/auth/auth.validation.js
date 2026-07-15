@@ -47,7 +47,8 @@ const validateLoginForm = (req, res, next) => {
 const validateRegisterForm = (req, res, next) => {
   try {
     const {
-      first_name, last_name, firstName, lastName, email, password, confirm_password: confirmPassword,
+      first_name, last_name, firstName, lastName,
+      email, password, confirm_password: confirmPassword,
     } = req.body;
 
     const resolvedFirstName = (first_name || firstName || '').trim();

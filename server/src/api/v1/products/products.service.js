@@ -44,18 +44,20 @@ async function listProducts(req, res) {
       .orderBy('createdOn', 'desc')
       .limit(Number(req.query.limit) || 100);
 
-    const data = await Promise.all(products.map(async (product) => {
-      const [cartItem, orderItem, review] = await Promise.all([
-        db('cart_items').where({ product_id: product.productID }).first(),
-        db('order_items').where({ product_id: product.productID }).first(),
-        db('reviews').where({ product_id: product.productID }).first(),
-      ]);
+    const data = await Promise.all(
+      products.map(async (product) => {
+        const [cartItem, orderItem, review] = await Promise.all([
+          db('cart_items').where({ product_id: product.productID }).first(),
+          db('order_items').where({ product_id: product.productID }).first(),
+          db('reviews').where({ product_id: product.productID }).first(),
+        ]);
 
-      return {
-        ...mapProduct(product),
-        can_delete: !(cartItem || orderItem || review),
-      };
-    }));
+        return {
+          ...mapProduct(product),
+          can_delete: !(cartItem || orderItem || review),
+        };
+      })
+    );
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -143,13 +145,14 @@ async function uploadProductImages(req, res) {
         return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'No images were uploaded.' });
       }
 
-      const oldImagePaths = Array.isArray(req.body.oldImagePath)
-        ? req.body.oldImagePath
-        : req.body.oldImagePath
-          ? [req.body.oldImagePath]
-          : [];
+      let oldImagePaths = [];
+      if (Array.isArray(req.body.oldImagePath)) {
+        oldImagePaths = req.body.oldImagePath;
+      } else if (req.body.oldImagePath) {
+        oldImagePaths = [req.body.oldImagePath];
+      }
 
-      const productName = req.body.name || "product";
+      const productName = req.body.name || 'product';
 
       const slug = productName
         .toLowerCase()
@@ -207,6 +210,132 @@ async function getProductById(req, res) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: err.message || 'Failed to load product',
+    });
+  }
+}
+
+async function getProductReviews(req, res) {
+  try {
+    const { id } = req.params;
+    const product = await db('products').where({ productID: id }).first();
+
+    if (!product) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    const reviews = await db('reviews')
+      .leftJoin('user', 'reviews.user_id', 'user.userID')
+      .select(
+        'reviews.reviewID as id',
+        'reviews.product_id',
+        'reviews.user_id',
+        'reviews.rating',
+        'reviews.comment',
+        'reviews.createdOn',
+        'user.email',
+        'user.firstName',
+        'user.lastName'
+      )
+      .where('reviews.product_id', id)
+      .orderBy('reviews.createdOn', 'desc');
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: reviews.map((review) => ({
+        id: review.id,
+        productId: review.product_id,
+        userId: review.user_id,
+        userName: [review.firstName, review.lastName].filter(Boolean).join(' ') || review.email || 'Customer',
+        rating: Number(review.rating),
+        comment: review.comment,
+        createdAt: review.createdOn,
+      })),
+    });
+  } catch (err) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: err.message || 'Failed to load product reviews',
+    });
+  }
+}
+
+async function createProductReview(req, res) {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    const userId = req.activeUser?.userID;
+
+    if (!userId) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Authentication required' });
+    }
+
+    const product = await db('products').where({ productID: id }).first();
+
+    if (!product) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    const normalizedRating = Number(rating);
+    if (!Number.isInteger(normalizedRating) || normalizedRating < 1 || normalizedRating > 5) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Rating must be between 1 and 5.' });
+    }
+
+    const existingReview = await db('reviews').where({ product_id: id, user_id: userId }).first();
+    if (existingReview) {
+      return res.status(StatusCodes.CONFLICT).json({ success: false, message: 'You have already reviewed this product.' });
+    }
+
+    const purchasedOrder = await db('orders as o')
+      .join('order_items as oi', 'oi.order_id', 'o.orderID')
+      .where('o.user_id', userId)
+      .where('oi.product_id', id)
+      .orderBy('o.createdOn', 'desc')
+      .first('o.orderID as orderID');
+
+    if (!purchasedOrder) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'You can only review products you have purchased.' });
+    }
+
+    const [created] = await db('reviews').insert(
+      {
+        product_id: id,
+        user_id: userId,
+        order_id: purchasedOrder.orderID,
+        rating: normalizedRating,
+        comment: comment?.trim() || null,
+        verifiedPurchase: true,
+      },
+      ['reviewID', 'product_id', 'user_id', 'order_id', 'rating', 'comment', 'createdOn']
+    );
+
+    const allReviews = await db('reviews').where({ product_id: id });
+    const reviewCount = allReviews.length;
+    const averageRating = reviewCount
+      ? Number((allReviews.reduce((total, item) => total + Number(item.rating), 0) / reviewCount).toFixed(2))
+      : 0;
+
+    await db('products').where({ productID: id }).update({
+      rating: averageRating,
+      reviewCount,
+      updatedOn: db.fn.now(),
+    });
+
+    return res.status(StatusCodes.CREATED).json({
+      success: true,
+      data: {
+        id: created.reviewID,
+        productId: created.product_id,
+        userId: created.user_id,
+        userName: [req.activeUser?.firstName, req.activeUser?.lastName].filter(Boolean).join(' ') || req.activeUser?.email || 'Customer',
+        rating: Number(created.rating),
+        comment: created.comment,
+        createdAt: created.createdOn,
+      },
+    });
+  } catch (err) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: err.message || 'Failed to submit review',
     });
   }
 }
@@ -311,6 +440,8 @@ async function deleteProduct(req, res) {
 module.exports = {
   listProducts,
   getProductById,
+  getProductReviews,
+  createProductReview,
   createProduct,
   updateProduct,
   deleteProduct,

@@ -43,7 +43,7 @@ Server runs on `http://localhost:5000`
 | `DB_NAME` | Database name | `ahm_mart_db` |
 | `APP_PORT` | Server port | `5000` |
 | `HOST_PATH` | Frontend URL for email links | `http://localhost:5173` |
-| `CONTACT_TO_EMAIL` | Contact form inbox | `support@ahmmart.com` |
+| `CONTACT_TO_EMAIL` | Contact form inbox | `ahmmart993@gmail.com` |
 
 ## Email
 
