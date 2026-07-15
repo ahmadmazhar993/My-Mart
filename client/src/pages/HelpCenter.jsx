@@ -112,7 +112,7 @@ const HelpCenter = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/pages/contact" className="btn-primary">Contact Us</Link>
-            <a href="mailto:support@ahmmart.com" className="btn-outline">Email Support</a>
+            <a href="mailto:ahmmart993@gmail.com" className="btn-outline">Email Support</a>
           </div>
         </div>
       </div>

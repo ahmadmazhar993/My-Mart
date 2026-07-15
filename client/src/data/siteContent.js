@@ -49,7 +49,7 @@ export const INFO_PAGES = {
     sections: [
       {
         heading: 'Customer Support',
-        body: 'Email: support@ahmmart.com\nPhone: 021-111-AHM-MART (0313-4591721)\nHours: Monday – Saturday, 9:00 AM – 9:00 PM PKT',
+        body: 'Email: ahmmart993@gmail.com\nPhone: +92 313 459 1721\nHours: Monday – Saturday, 9:00 AM – 9:00 PM PKT',
       },
       {
         heading: 'Business Address',
@@ -57,7 +57,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Seller Support',
-        body: 'For seller inquiries: sellers@ahmmart.com\nVisit our Become a Seller page to start selling on AHM Mart.',
+        body: 'For seller inquiries: ahmmart993@gmail.com\nVisit our Become a Seller page to start selling on AHM Mart.',
       },
     ],
   },
@@ -147,7 +147,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Ready to Begin?',
-        body: 'Visit our Become a Seller page to register, or email sellers@ahmmart.com for assistance.',
+        body: 'Visit our Become a Seller page to register, or email ahmmart993@gmail.com for assistance.',
       },
     ],
   },
@@ -183,7 +183,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Join the Program',
-        body: 'Contact affiliates@ahmmart.com to apply. Include your website, social media handles, and estimated monthly traffic.',
+        body: 'Contact ahmmart993@gmail.com to apply. Include your website, social media handles, and estimated monthly traffic.',
       },
     ],
   },
@@ -271,7 +271,7 @@ export const HELP_FAQ = [
       },
       {
         q: 'What are the delivery charges?',
-        a: 'Delivery is free on orders over Rs. 1,000. Standard delivery fee is Rs. 150 for orders below that amount.',
+        a: 'Delivery is free on orders over Rs. 2,000. Standard delivery fee is Rs. 150 for orders below that amount.',
       },
       {
         q: 'How long does delivery take?',

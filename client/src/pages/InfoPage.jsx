@@ -297,8 +297,8 @@ const InfoPage = () => {
   const contactMethods = [
     {
       title: 'Customer Support',
-      subtitle: 'support@ahmmart.com',
-      href: 'mailto:support@ahmmart.com',
+      subtitle: 'ahmmart993@gmail.com',
+      href: 'mailto:ahmmart993@gmail.com',
       detail: 'Monday – Saturday, 9 AM – 9 PM PKT',
       icon: '✉️',
     },
