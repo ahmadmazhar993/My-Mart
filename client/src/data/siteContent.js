@@ -165,7 +165,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Apply',
-        body: 'Email sellers@ahmmart.com with your shop name, product category, and contact details. Our onboarding team will guide you through the process.',
+        body: 'Email ahmmart993@gmail.com with your shop name, product category, and contact details. Our onboarding team will guide you through the process.',
       },
     ],
   },
@@ -247,7 +247,7 @@ export const INFO_PAGES = {
     sections: [
       {
         heading: 'Accepted Methods',
-        body: '• Bank Transfer (Meezan Bank)\n• Easypaisa\n• Cash on Delivery',
+        body: '• Bank Transfer\n• Cash on Delivery',
       },
       {
         heading: 'Security',

@@ -258,7 +258,7 @@ const InfoPage = () => {
           <div className="bg-white rounded-sm shadow-card p-6">
             <h3 className="text-lg font-bold mb-3">Contact seller success</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Email: <a href="mailto:sellers@ahmmart.com" className="text-primary hover:underline">sellers@ahmmart.com</a>
+              Email: <a href="mailto:ahmmart993@gmail.com" className="text-primary hover:underline">ahmmart993@gmail.com</a>
             </p>
             <p className="text-gray-600 text-sm leading-relaxed mt-2">
               Ready to accelerate your sales? We’ll help you list, promote, and sell with confidence.
@@ -311,8 +311,8 @@ const InfoPage = () => {
     },
     {
       title: 'Seller Inquiries',
-      subtitle: 'sellers@ahmmart.com',
-      href: 'mailto:sellers@ahmmart.com',
+      subtitle: 'ahmmart993@gmail.com',
+      href: 'mailto:ahmmart993@gmail.com',
       detail: 'Start selling on AHM Mart today',
       icon: '🏪',
     },
@@ -427,7 +427,7 @@ const InfoPage = () => {
           <div className="bg-white rounded-sm shadow-card p-6">
             <h3 className="text-lg font-semibold text-dark mb-3">Need seller support?</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Email <a href="mailto:sellers@ahmmart.com" className="text-primary hover:underline">sellers@ahmmart.com</a> or visit <Link to="/pages/become-seller" className="text-primary hover:underline">Become a Seller</Link>.
+              Email <a href="mailto:ahmmart993@gmail.com" className="text-primary hover:underline">ahmmart993@gmail.com</a> or visit <Link to="/pages/become-seller" className="text-primary hover:underline">Become a Seller</Link>.
             </p>
           </div>
         </div>
@@ -458,7 +458,7 @@ const InfoPage = () => {
               {[
                 { title: 'Clear information', detail: 'Every page is designed to help customers and partners act with confidence.' },
                 { title: 'Easy navigation', detail: 'Quick links and support are available from every page.' },
-                { title: 'Professional service', detail: 'AHM Mart helps you shop, sell, and pay with trusted tools.' },
+                { title: 'Professional service', detail: 'AHM Mart helps you shop and pay with trusted tools.' },
               ].map((item) => (
                 <div key={item.title} className="rounded-sm border border-gray-200 p-5 bg-slate-50">
                   <h3 className="text-sm font-semibold text-dark mb-2">{item.title}</h3>

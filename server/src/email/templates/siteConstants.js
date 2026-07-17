@@ -4,7 +4,7 @@ module.exports = {
   brandName: 'AHM Mart',
   siteUrl: CLIENT_URL,
   supportEmail: 'ahmmart993@gmail.com',
-  sellerEmail: 'sellers@ahmmart.com',
+  sellerEmail: 'ahmmart993@gmail.com',
   phone: '0313-4591721',
   phoneDisplay: '0313-4591721',
   address: 'AHM Mart (Pvt.) Ltd., Main Boulevard, Gulberg III, Lahore, Punjab 54000',

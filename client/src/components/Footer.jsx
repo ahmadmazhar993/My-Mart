@@ -26,7 +26,7 @@ const Footer = () => {
       links: [
         { label: 'Sell on AHM Mart', to: '/pages/sell' },
         { label: 'Become a Seller', to: '/pages/become-seller' },
-        { label: 'Affiliate Program', to: '/pages/affiliate' },
+        // { label: 'Affiliate Program', to: '/pages/affiliate' },
         { label: 'Advertise', to: '/pages/advertise' },
       ],
     },
@@ -34,7 +34,7 @@ const Footer = () => {
       title: 'Payment Methods',
       links: [
         { label: 'Cash on Delivery', to: '/pages/cash-on-delivery' },
-        { label: 'Easy Monthly Installments', to: '/pages/installments' },
+        // { label: 'Easy Monthly Installments', to: '/pages/installments' },
         { label: 'Digital Payments', to: '/pages/digital-payments' },
       ],
     },
