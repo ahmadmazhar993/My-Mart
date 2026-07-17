@@ -86,6 +86,26 @@ const productImageDir = path.join(
   'products'
 );
 
+const slugify = (value) => String(value || '')
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '');
+
+const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+
+const resolveProductByIdentifier = async (identifier) => {
+  if (!identifier) return null;
+
+  if (isUuid(identifier)) {
+    const byId = await db('products').where({ productID: identifier }).first();
+    if (byId) return byId;
+  }
+
+  const products = await db('products').select('*');
+  return products.find((product) => slugify(product.name) === identifier) || null;
+};
+
 const getProductImageFilename = (imagePath) => {
   if (!imagePath) return null;
   const normalized = String(imagePath).replace(/\\/g, '/');
@@ -210,8 +230,8 @@ async function uploadProductImages(req, res) {
 
 async function getProductById(req, res) {
   try {
-    const { id } = req.params;
-    const product = await db('products').where({ productID: id }).first();
+    const { identifier } = req.params;
+    const product = await resolveProductByIdentifier(identifier);
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
@@ -240,8 +260,8 @@ async function getProductById(req, res) {
 
 async function getProductReviews(req, res) {
   try {
-    const { id } = req.params;
-    const product = await db('products').where({ productID: id }).first();
+    const { identifier } = req.params;
+    const product = await resolveProductByIdentifier(identifier);
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
@@ -260,7 +280,7 @@ async function getProductReviews(req, res) {
         'user.firstName',
         'user.lastName'
       )
-      .where('reviews.product_id', id)
+      .where('reviews.product_id', product.productID)
       .orderBy('reviews.createdOn', 'desc');
 
     return res.status(StatusCodes.OK).json({
@@ -289,7 +309,7 @@ async function getProductReviews(req, res) {
 
 async function createProductReview(req, res) {
   try {
-    const { id } = req.params;
+    const { identifier } = req.params;
     const { rating, comment } = req.body;
     const userId = req.activeUser?.userID;
 
@@ -297,7 +317,7 @@ async function createProductReview(req, res) {
       return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Authentication required' });
     }
 
-    const product = await db('products').where({ productID: id }).first();
+    const product = await resolveProductByIdentifier(identifier);
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
@@ -311,7 +331,7 @@ async function createProductReview(req, res) {
       });
     }
 
-    const existingReview = await db('reviews').where({ product_id: id, user_id: userId }).first();
+    const existingReview = await db('reviews').where({ product_id: product.productID, user_id: userId }).first();
     if (existingReview) {
       return res.status(StatusCodes.CONFLICT).json({ success: false, message: 'You have already reviewed this product.' });
     }
@@ -319,7 +339,7 @@ async function createProductReview(req, res) {
     const purchasedOrder = await db('orders as o')
       .join('order_items as oi', 'oi.order_id', 'o.orderID')
       .where('o.user_id', userId)
-      .where('oi.product_id', id)
+      .where('oi.product_id', product.productID)
       .orderBy('o.createdOn', 'desc')
       .first('o.orderID as orderID');
 
@@ -332,7 +352,7 @@ async function createProductReview(req, res) {
 
     const [created] = await db('reviews').insert(
       {
-        product_id: id,
+        product_id: product.productID,
         user_id: userId,
         order_id: purchasedOrder.orderID,
         rating: normalizedRating,
@@ -342,7 +362,7 @@ async function createProductReview(req, res) {
       ['reviewID', 'product_id', 'user_id', 'order_id', 'rating', 'comment', 'createdOn']
     );
 
-    const allReviews = await db('reviews').where({ product_id: id });
+    const allReviews = await db('reviews').where({ product_id: product.productID });
     const reviewCount = allReviews.length;
     const averageRating = reviewCount
       ? Number(
@@ -353,7 +373,7 @@ async function createProductReview(req, res) {
       )
       : 0;
 
-    await db('products').where({ productID: id }).update({
+    await db('products').where({ productID: product.productID }).update({
       rating: averageRating,
       reviewCount,
       updatedOn: db.fn.now(),
@@ -415,7 +435,12 @@ async function createProduct(req, res) {
 
 async function updateProduct(req, res) {
   try {
-    const { id } = req.params;
+    const { identifier } = req.params;
+    const product = await resolveProductByIdentifier(identifier);
+    if (!product) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
     const payload = {};
 
     if (req.body.name != null) payload.name = req.body.name;
@@ -439,7 +464,7 @@ async function updateProduct(req, res) {
 
     payload.updatedOn = db.fn.now();
 
-    const [updated] = await db('products').where({ productID: id }).update(payload, '*');
+    const [updated] = await db('products').where({ productID: product.productID }).update(payload, '*');
     if (!updated) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
@@ -455,12 +480,16 @@ async function updateProduct(req, res) {
 
 async function deleteProduct(req, res) {
   try {
-    const { id } = req.params;
+    const { identifier } = req.params;
+    const product = await resolveProductByIdentifier(identifier);
+    if (!product) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
 
     const [cartItem, orderItem, review] = await Promise.all([
-      db('cart_items').where({ product_id: id }).first(),
-      db('order_items').where({ product_id: id }).first(),
-      db('reviews').where({ product_id: id }).first(),
+      db('cart_items').where({ product_id: product.productID }).first(),
+      db('order_items').where({ product_id: product.productID }).first(),
+      db('reviews').where({ product_id: product.productID }).first(),
     ]);
 
     if (cartItem || orderItem || review) {
@@ -470,7 +499,7 @@ async function deleteProduct(req, res) {
       });
     }
 
-    const deleted = await db('products').where({ productID: id }).del();
+    const deleted = await db('products').where({ productID: product.productID }).del();
     if (!deleted) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
