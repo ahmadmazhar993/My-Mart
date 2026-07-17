@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { useAuthStore, useReviewStore } from '../store';
+import { buildProductPath } from '../utils/product';
 
 const Reviews = () => {
   const { isAuthenticated, user } = useAuthStore();
@@ -40,7 +41,7 @@ const Reviews = () => {
             <div key={review.id} className="bg-white rounded-sm shadow-card p-5">
               <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
-                  <Link to={`/products/${review.productId}`} className="font-semibold text-dark hover:text-primary">
+                  <Link to={buildProductPath({ id: review.productId, name: review.productName || review.product?.name || 'product' })} className="font-semibold text-dark hover:text-primary">
                     {review.productName}
                   </Link>
                   <p className="text-xs text-gray-400 mt-0.5">

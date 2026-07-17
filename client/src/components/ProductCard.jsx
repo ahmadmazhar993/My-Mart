@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ProductImage from './ProductImage';
 import { useCartStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
+import { buildProductPath } from '../utils/product';
 
 const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const { addItem } = useCartStore();
@@ -45,7 +46,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   };
 
   return (
-    <Link to={`/products/${product.id}`} className="product-card block group">
+    <Link to={buildProductPath(product)} className="product-card block group">
       <div className={`relative ${compact ? 'aspect-square' : 'aspect-[4/5]'} bg-gray-50 overflow-hidden`}>
         <ProductImage
           product={product}

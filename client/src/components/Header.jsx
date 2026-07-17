@@ -31,6 +31,24 @@ const Header = () => {
   const { cart } = useCartStore();
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const getProductsPath = (query) => {
+    const next = location.pathname === '/products'
+      ? new URLSearchParams(location.search)
+      : new URLSearchParams();
+
+    if (query) next.set('search', query);
+    else next.delete('search');
+
+    const queryString = next.toString();
+    return `/products${queryString ? `?${queryString}` : ''}`;
+  };
+
+  const getReturnPath = () => {
+    const from = location.state?.from;
+    if (typeof from === 'string' && from.trim()) return from;
+    return '/products';
+  };
+
   useEffect(() => {
     setSearchQuery(urlSearch);
   }, [urlSearch]);
@@ -39,15 +57,22 @@ const Header = () => {
     const timer = setTimeout(() => {
       const trimmed = searchQuery.trim();
       if (location.pathname === '/products') {
-        const current = params.get('search') || '';
+        const current = new URLSearchParams(location.search).get('search') || '';
+        if (!trimmed && current) {
+          const returnPath = typeof location.state?.from === 'string' ? location.state.from : '';
+          if (returnPath) {
+            navigate(returnPath, { replace: true });
+            return;
+          }
+        }
+
         if (trimmed !== current) {
-          const next = new URLSearchParams(location.search);
-          if (trimmed) next.set('search', trimmed);
-          else next.delete('search');
-          navigate(`/products${next.toString() ? `?${next.toString()}` : ''}`, { replace: true });
+          navigate(getProductsPath(trimmed), { replace: true, state: location.state });
         }
       } else if (trimmed) {
-        navigate(`/products?search=${encodeURIComponent(trimmed)}`);
+        navigate(getProductsPath(trimmed), {
+          state: { from: `${location.pathname}${location.search}` },
+        });
       }
     }, 350);
     return () => clearTimeout(timer);
@@ -55,10 +80,15 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      navigate(getProductsPath(trimmed), {
+        state: location.pathname === '/products'
+          ? location.state
+          : { from: `${location.pathname}${location.search}` },
+      });
     } else {
-      navigate('/products');
+      navigate(getReturnPath());
     }
   };
 
@@ -73,6 +103,7 @@ const Header = () => {
 
   const activeCategory = params.get('category') || '';
   const isAllCategoriesActive = !activeCategory;
+  const shouldShowSearchBar = !['/help', '/pages'].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
 
   return (
     <header className="sticky top-0 z-50 shadow-header">
@@ -96,23 +127,25 @@ const Header = () => {
             </span>
           </Link>
 
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
-            <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search in AHM Mart"
-                className="flex-1 px-4 py-2 text-sm focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
-              >
-                <SearchIcon />
-              </button>
-            </div>
-          </form>
+          {shouldShowSearchBar && (
+            <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
+              <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search in AHM Mart"
+                  className="flex-1 px-4 py-2 text-sm focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
+                >
+                  <SearchIcon />
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="flex items-center gap-1 sm:gap-4 ml-auto">
             {isAuthenticated ? (
@@ -160,22 +193,25 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="container-main pb-3 sm:hidden">
-          <form onSubmit={handleSearch}>
-            <div className="flex border-2 border-primary rounded-sm overflow-hidden">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search in AHM Mart"
-                className="flex-1 px-3 py-2 text-sm focus:outline-none"
-              />
-              <button type="submit" className="bg-primary text-white px-4">
-                <SearchIcon />
-              </button>
-            </div>
-          </form>
-        </div>
+        {!shouldShowSearchBar && <div className="container-main pb-3 sm:hidden" />}
+        {shouldShowSearchBar && (
+          <div className="container-main pb-3 sm:hidden">
+            <form onSubmit={handleSearch}>
+              <div className="flex border-2 border-primary rounded-sm overflow-hidden">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search in AHM Mart"
+                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                />
+                <button type="submit" className="bg-primary text-white px-4">
+                  <SearchIcon />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border-b border-gray-100 hidden md:block">

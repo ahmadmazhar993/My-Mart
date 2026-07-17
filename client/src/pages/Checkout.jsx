@@ -7,6 +7,7 @@ import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymen
 import { orderService, userService } from '../services';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
+import { buildProductPath } from '../utils/product';
 import { validatePaymentReceiptFile, validateSenderAccount, validateTransactionReference } from '../utils/paymentValidation';
 
 const CITY_OPTIONS = [
@@ -311,7 +312,7 @@ const Checkout = () => {
       <Breadcrumb items={[
         { label: 'Home', to: '/' },
         ...(isBuyNow
-          ? [{ label: 'Product', to: `/products/${checkoutItems[0]?.id}` }]
+          ? [{ label: 'Product', to: buildProductPath({ id: checkoutItems[0]?.id, name: checkoutItems[0]?.name }) }]
           : [{ label: 'Cart', to: '/cart' }]),
         { label: isBuyNow ? 'Buy Now Checkout' : 'Checkout' },
       ]} />

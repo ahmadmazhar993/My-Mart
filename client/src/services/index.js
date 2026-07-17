@@ -23,12 +23,12 @@ export const userService = {
 
 export const productService = {
   getAllProducts: (params) => api.get('/products', { params }),
-  getProductById: (id) => api.get(`/products/${id}`),
-  getProductReviews: (id) => api.get(`/products/${id}/reviews`),
-  createReview: (id, data) => api.post(`/products/${id}/reviews`, data),
+  getProductById: (identifier) => api.get(`/products/${identifier}`),
+  getProductReviews: (identifier) => api.get(`/products/${identifier}/reviews`),
+  createReview: (identifier, data) => api.post(`/products/${identifier}/reviews`, data),
   createProduct: (data) => api.post('/products', data),
-  updateProduct: (id, data) => api.put(`/products/${id}`, data),
-  deleteProduct: (id) => api.delete(`/products/${id}`),
+  updateProduct: (identifier, data) => api.put(`/products/${identifier}`, data),
+  deleteProduct: (identifier) => api.delete(`/products/${identifier}`),
 };
 
 export const categoryService = {

@@ -5,10 +5,10 @@ import { Breadcrumb, ProductSkeleton } from '../components/ui';
 import { productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
-import { parseProductImages, normalizeProductImageUrl } from '../utils/product';
+import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug } from '../utils/product';
 
 const ProductDetail = () => {
-  const { id } = useParams();
+  const { identifier } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,12 +24,12 @@ const ProductDetail = () => {
   const { isInWishlist, toggleItem } = useWishlistStore();
 
   useEffect(() => {
-    if (!id) return;
+    if (!identifier) return;
 
     setLoading(true);
     Promise.all([
-      productService.getProductById(id),
-      productService.getProductReviews(id),
+      productService.getProductById(identifier),
+      productService.getProductReviews(identifier),
     ])
       .then(([productRes, reviewsRes]) => {
         setProduct(productRes.data?.data || null);
@@ -40,7 +40,15 @@ const ProductDetail = () => {
         setReviews([]);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [identifier]);
+
+  useEffect(() => {
+    if (!product || !identifier) return;
+    const expectedSlug = getProductSlug(product);
+    if (identifier !== expectedSlug) {
+      navigate(buildProductPath(product), { replace: true });
+    }
+  }, [product, identifier, navigate]);
 
   if (loading) {
     return (

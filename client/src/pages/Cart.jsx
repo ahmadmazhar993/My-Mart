@@ -4,6 +4,7 @@ import ProductImage from '../components/ProductImage';
 import { EmptyState } from '../components/ui';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
+import { buildProductPath } from '../utils/product';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -41,11 +42,11 @@ const Cart = () => {
           <div className="lg:col-span-2 space-y-3">
             {cart.map((item) => (
               <div key={item.id} className="bg-white rounded-sm shadow-card p-3 sm:p-4 flex gap-3 sm:gap-4">
-                <Link to={`/products/${item.id}`} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20">
+                <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20">
                   <ProductImage product={item} className="w-full h-full rounded-sm" />
                 </Link>
                 <div className="flex-1 min-w-0">
-                  <Link to={`/products/${item.id}`} className="font-medium text-sm sm:text-base text-dark hover:text-primary line-clamp-2">
+                  <Link to={buildProductPath({ id: item.id, name: item.name })} className="font-medium text-sm sm:text-base text-dark hover:text-primary line-clamp-2">
                     {item.name}
                   </Link>
                   <p className="text-primary font-bold text-sm mt-1">{formatPrice(item.price)}</p>
