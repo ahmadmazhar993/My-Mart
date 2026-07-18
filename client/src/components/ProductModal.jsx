@@ -63,10 +63,10 @@ const ProductModal = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
 
                 {/* Header */}
-                <div className="flex items-center justify-between border-b px-6 py-4">
+                <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
                     <h2 className="text-xl font-semibold">
                         {product ? "Edit Product" : "Add Product"}
                     </h2>
@@ -80,10 +80,9 @@ const ProductModal = ({
                 </div>
 
                 {/* Body */}
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
 
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Product Name <span className="text-red-500">*</span>
@@ -202,7 +201,7 @@ const ProductModal = ({
 
                     {/* Footer */}
 
-                    <div className="border-t px-6 py-4 flex justify-end gap-3">
+                    <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0 bg-white">
 
                         <button
                             type="button"

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { Breadcrumb, ProductSkeleton } from '../components/ui';
+import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
@@ -21,8 +22,9 @@ const ProductDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
-  const { addItem, setBuyNowItems } = useCartStore();
+  const { addItem, cart, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
+  const { addToast } = useToast();
   const { isInWishlist, toggleItem } = useWishlistStore();
 
   useEffect(() => {
@@ -104,6 +106,9 @@ const ProductDetail = () => {
   const images = parseProductImages(product);
   const normalizedImages = images.map((img) => normalizeProductImageUrl(img));
   const primaryImage = normalizeProductImageUrl(images.length > 0 ? images[0] : product.image_url || null);
+  const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
+  const currentCartQuantity = cart.find((entry) => String(entry.id) === String(product.id))?.quantity || 0;
+  const remainingStock = Math.max(0, availableStock - currentCartQuantity);
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
@@ -111,25 +116,63 @@ const ProductDetail = () => {
       return;
     }
 
+    if (availableStock <= 0) {
+      addToast('This product is currently out of stock.', 'error');
+      return;
+    }
+
+    if (quantity > remainingStock) {
+      const nextQuantity = remainingStock > 0 ? remainingStock : 0;
+      if (nextQuantity <= 0) {
+        addToast('You already have the full available stock in your cart.', 'error');
+      } else {
+        setQuantity(nextQuantity);
+        addToast(`Only ${nextQuantity} item${nextQuantity === 1 ? '' : 's'} left in stock.`, 'error');
+      }
+      return;
+    }
+
+    const safeQuantity = Math.min(quantity, remainingStock || quantity);
+
     setBuyNowItems([{
       id: product.id,
       name: product.name,
       price: effectivePrice,
       image: primaryImage,
       images: product.images,
-      quantity,
+      stock_quantity: availableStock,
+      quantity: safeQuantity,
     }]);
     navigate('/checkout?mode=buynow');
   };
 
   const handleAddToCart = () => {
+    if (availableStock <= 0) {
+      addToast('This product is currently out of stock.', 'error');
+      return;
+    }
+
+    if (remainingStock <= 0) {
+      addToast('You already have the full available stock in your cart.', 'error');
+      return;
+    }
+
+    if (quantity > remainingStock) {
+      const nextQuantity = remainingStock;
+      setQuantity(nextQuantity);
+      addToast(`Only ${nextQuantity} item${nextQuantity === 1 ? '' : 's'} left in stock.`, 'error');
+      return;
+    }
+
+    const safeQuantity = Math.min(quantity, remainingStock);
     addItem({
       id: product.id,
       name: product.name,
       price: effectivePrice,
       image: primaryImage,
       images: product.images,
-      quantity,
+      stock_quantity: availableStock,
+      quantity: safeQuantity,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -235,8 +278,19 @@ const ProductDetail = () => {
                 <span className="px-4 py-2 border-x border-gray-300 min-w-[48px] text-center">{quantity}</span>
                 <button
                   type="button"
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => {
+                    if (remainingStock <= 0) {
+                      addToast('You already have the full available stock in your cart.', 'error');
+                      return;
+                    }
+                    if (quantity >= remainingStock) {
+                      addToast(`Only ${remainingStock} item${remainingStock === 1 ? '' : 's'} left in stock.`, 'error');
+                      return;
+                    }
+                    setQuantity((current) => current + 1);
+                  }}
                   className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                  disabled={remainingStock <= 0}
                 >
                   +
                 </button>

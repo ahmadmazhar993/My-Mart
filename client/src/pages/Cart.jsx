@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { EmptyState } from '../components/ui';
+import { useToast } from '../components/ToastProvider';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
@@ -10,6 +11,7 @@ const Cart = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { cart, removeItem, updateQuantity, clearCart, clearBuyNowItems } = useCartStore();
+  const { addToast } = useToast();
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 250;
@@ -64,7 +66,14 @@ const Cart = () => {
                       </span>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => {
+                          const availableStock = Number(item.stock_quantity ?? item.stock ?? 0);
+                          if (availableStock > 0 && item.quantity >= availableStock) {
+                            addToast(`Only ${availableStock} item(s) left in stock.`, 'error');
+                            return;
+                          }
+                          updateQuantity(item.id, item.quantity + 1);
+                        }}
                         className="px-2 sm:px-2.5 py-1 hover:bg-gray-100 text-sm"
                       >
                         +

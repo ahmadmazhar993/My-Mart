@@ -13,12 +13,12 @@ const ConfirmDeleteModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        <div className="border-b px-6 py-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+        <div className="border-b px-6 py-4 shrink-0">
           <h2 className="text-xl font-semibold text-dark">{title}</h2>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 overflow-y-auto">
           <p className="text-gray-600 text-sm leading-relaxed">{message}</p>
           {itemName && (
             <p className="mt-3 text-sm font-semibold text-dark bg-gray-50 border border-gray-200 rounded-sm px-3 py-2 break-words">
@@ -27,7 +27,7 @@ const ConfirmDeleteModal = ({
           )}
         </div>
 
-        <div className="border-t px-6 py-4 flex justify-end gap-3">
+        <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0 bg-white">
           <button type="button" onClick={onClose} disabled={loading} className="btn-secondary">
             Cancel
           </button>

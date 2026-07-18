@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductImage from './ProductImage';
 import { useCartStore, useWishlistStore } from '../store';
+import { useToast } from './ToastProvider';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
 
 const ProductCard = ({ product, compact = false, showWishlist = true }) => {
-  const { addItem } = useCartStore();
+  const { addItem, cart } = useCartStore();
   const { isInWishlist, toggleItem } = useWishlistStore();
+  const { addToast } = useToast();
   const [added, setAdded] = useState(false);
   const inWishlist = isInWishlist(product.id);
   const effectivePrice = getEffectivePrice(product);
@@ -18,12 +20,22 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const currentCartQuantity = cart.find((entry) => String(entry.id) === String(product.id))?.quantity || 0;
+    const availableStock = Number(product.stock_quantity ?? 0);
+
+    if (availableStock > 0 && currentCartQuantity >= availableStock) {
+      addToast(`Only ${availableStock} item${availableStock === 1 ? '' : 's'} left in stock.`, 'error');
+      return;
+    }
+
     addItem({
       id: product.id,
       name: product.name,
       price: effectivePrice,
       image: product.image_url,
       images: product.images,
+      stock_quantity: availableStock,
       quantity: 1,
     });
     setAdded(true);

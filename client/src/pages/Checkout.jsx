@@ -554,14 +554,12 @@ const Checkout = () => {
 
         <div className="bg-white rounded-sm shadow-card p-6 h-fit sticky top-36">
           <h2 className="font-bold text-lg mb-4">Order Summary</h2>
-          <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+          <div className="space-y-2 mb-4">
             {checkoutItems.map((item) => (
-              <div key={item.id} className="flex gap-3">
-                <ProductImage product={item} className="w-14 h-14 rounded-sm flex-shrink-0" />
+              <div key={item.id} className="flex items-start gap-3 rounded-sm border border-gray-100 p-2">
+                <ProductImage product={item} className="w-14 h-14 rounded-sm object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                  <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                  <p className="text-sm font-semibold text-primary">{formatPrice(item.price * item.quantity)}</p>
                 </div>
               </div>
             ))}

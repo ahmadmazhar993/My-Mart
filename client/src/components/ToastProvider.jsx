@@ -21,7 +21,13 @@ const ToastProvider = ({ children }) => {
 
   const addToast = useCallback((message, type = 'success') => {
     const id = ++toastId;
-    setToasts((current) => [...current, { id, message, type }]);
+    const normalizedMessage = String(message).trim();
+
+    setToasts((current) => {
+      const filtered = current.filter((toast) => !(toast.type === type && toast.message === normalizedMessage));
+      return [...filtered, { id, message: normalizedMessage, type }];
+    });
+
     window.setTimeout(() => removeToast(id), 3200);
   }, [removeToast]);
 

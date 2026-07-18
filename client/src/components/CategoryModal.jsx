@@ -43,8 +43,8 @@ const CategoryModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b px-6 py-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between border-b px-6 py-4 shrink-0">
           <h2 className="text-xl font-semibold">
             {category ? 'Edit Category' : 'Add Category'}
           </h2>
@@ -53,8 +53,8 @@ const CategoryModal = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto space-y-4 p-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category Name <span className="text-red-500">*</span>
@@ -98,7 +98,7 @@ const CategoryModal = ({
             </div>
           </div>
 
-          <div className="border-t px-6 py-4 flex justify-end gap-3">
+          <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0 bg-white">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>

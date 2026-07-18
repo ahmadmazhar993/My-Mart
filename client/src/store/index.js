@@ -34,17 +34,26 @@ export const useCartStore = create(
 
       addItem: (item) => set((state) => {
         const existing = state.cart.find((c) => c.id === item.id);
+        const requestedQuantity = Math.max(1, Number(item.quantity || 1));
+        const availableStock = Number(item.stock_quantity ?? item.stock ?? 0);
+        const nextQuantity = existing
+          ? existing.quantity + requestedQuantity
+          : requestedQuantity;
+        const safeQuantity = availableStock > 0 ? Math.min(nextQuantity, availableStock) : nextQuantity;
+
+        if (safeQuantity <= 0) return state;
+
         if (existing) {
           return {
             cart: state.cart.map((c) =>
               c.id === item.id
-                ? { ...c, quantity: c.quantity + (item.quantity || 1) }
+                ? { ...c, quantity: safeQuantity }
                 : c
             ),
           };
         }
         return {
-          cart: [...state.cart, { ...item, quantity: item.quantity || 1 }],
+          cart: [...state.cart, { ...item, quantity: safeQuantity, stock_quantity: availableStock }],
         };
       }),
 
@@ -56,11 +65,19 @@ export const useCartStore = create(
         cart: state.cart.filter((item) => item.id !== id),
       })),
 
-      updateQuantity: (id, quantity) => set((state) => ({
-        cart: state.cart.map((item) =>
-          item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
-        ),
-      })),
+      updateQuantity: (id, quantity) => set((state) => {
+        const target = state.cart.find((item) => item.id === id);
+        const availableStock = Number(target?.stock_quantity ?? target?.stock ?? 0);
+        const safeQuantity = availableStock > 0
+          ? Math.min(Math.max(1, quantity), availableStock)
+          : Math.max(1, quantity);
+
+        return {
+          cart: state.cart.map((item) =>
+            item.id === id ? { ...item, quantity: safeQuantity } : item
+          ),
+        };
+      }),
 
       clearCart: () => set({ cart: [] }),
     }),
