@@ -94,14 +94,30 @@ const slugify = (value) => String(value || '')
 
 const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 
-const resolveFallbackUuid = async (value, table, column, where = {}) => {
-  if (value != null && value !== '' && isUuid(value)) {
-    return String(value);
-  }
+const resolveFallbackUuid = async (value, table, column, options = {}) => {
+  if (value == null || value === '') return null;
+  if (isUuid(value)) return String(value);
 
+  const normalized = String(value).trim();
   const row = await db(table)
     .first(`${column} as id`)
-    .where(where)
+    .where(function (builder) {
+      if (Array.isArray(options.matchBy) && options.matchBy.length > 0) {
+        options.matchBy.forEach((field, index) => {
+          if (index === 0) {
+            builder.whereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
+          } else {
+            builder.orWhereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
+          }
+        });
+      }
+      builder.orWhere(column, normalized);
+      if (options.where) {
+        Object.entries(options.where).forEach(([field, fieldValue]) => {
+          builder.andWhere(field, fieldValue);
+        });
+      }
+    })
     .orderByRaw('1');
 
   return row?.id || null;
@@ -421,7 +437,7 @@ async function createProduct(req, res) {
       req.body.category_id,
       'categories',
       'categoryID',
-      { isActive: true }
+      { matchBy: ['name', 'slug'], where: { isActive: true } }
     );
     const sellerId = await resolveFallbackUuid(
       req.body.seller_id,
@@ -492,7 +508,7 @@ async function updateProduct(req, res) {
         req.body.category_id,
         'categories',
         'categoryID',
-        { isActive: true }
+        { matchBy: ['name', 'slug'], where: { isActive: true } }
       );
     }
 

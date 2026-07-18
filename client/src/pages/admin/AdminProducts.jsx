@@ -105,7 +105,15 @@ const AdminProducts = () => {
     setSaving(true);
     setError('');
 
-    const selectedCategory = categories.find((category) => String(category.id) === String(form.category_id));
+    const selectedCategory = categories.find((category) => {
+      const submittedValue = String(form.category_id || '').trim().toLowerCase();
+      if (!submittedValue) return false;
+      return (
+        String(category.id || '').trim().toLowerCase() === submittedValue
+        || String(category.slug || '').trim().toLowerCase() === submittedValue
+        || String(category.name || '').trim().toLowerCase() === submittedValue
+      );
+    });
     const selectedSeller = (products.find((product) => String(product.id) === String(productId))?.seller_id) || null;
 
     const payload = {
