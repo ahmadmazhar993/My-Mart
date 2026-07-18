@@ -95,32 +95,44 @@ const slugify = (value) => String(value || '')
 const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 
 const resolveFallbackUuid = async (value, table, column, options = {}) => {
-  if (value == null || value === '') return null;
-  if (isUuid(value)) return String(value);
+  if (value != null && value !== '' && isUuid(value)) {
+    return String(value);
+  }
 
-  const normalized = String(value).trim();
-  const row = await db(table)
+  if (value != null && value !== '') {
+    const normalized = String(value).trim();
+    const row = await db(table)
+      .first(`${column} as id`)
+      .where(function (builder) {
+        if (Array.isArray(options.matchBy) && options.matchBy.length > 0) {
+          options.matchBy.forEach((field, index) => {
+            if (index === 0) {
+              builder.whereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
+            } else {
+              builder.orWhereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
+            }
+          });
+        }
+        builder.orWhere(column, normalized);
+        if (options.where) {
+          Object.entries(options.where).forEach(([field, fieldValue]) => {
+            builder.andWhere(field, fieldValue);
+          });
+        }
+      })
+      .orderByRaw('1');
+
+    if (row?.id) {
+      return String(row.id);
+    }
+  }
+
+  const fallbackRow = await db(table)
     .first(`${column} as id`)
-    .where(function (builder) {
-      if (Array.isArray(options.matchBy) && options.matchBy.length > 0) {
-        options.matchBy.forEach((field, index) => {
-          if (index === 0) {
-            builder.whereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
-          } else {
-            builder.orWhereRaw(`LOWER("${field}") = ?`, [normalized.toLowerCase()]);
-          }
-        });
-      }
-      builder.orWhere(column, normalized);
-      if (options.where) {
-        Object.entries(options.where).forEach(([field, fieldValue]) => {
-          builder.andWhere(field, fieldValue);
-        });
-      }
-    })
+    .where(options.where || {})
     .orderByRaw('1');
 
-  return row?.id || null;
+  return fallbackRow?.id ? String(fallbackRow.id) : null;
 };
 
 const resolveProductByIdentifier = async (identifier) => {
@@ -442,7 +454,8 @@ async function createProduct(req, res) {
     const sellerId = await resolveFallbackUuid(
       req.body.seller_id,
       'sellers',
-      'sellerID'
+      'sellerID',
+      { where: {} }
     );
 
     const payload = {
