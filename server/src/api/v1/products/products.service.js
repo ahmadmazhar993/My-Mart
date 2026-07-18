@@ -94,6 +94,19 @@ const slugify = (value) => String(value || '')
 
 const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 
+const resolveFallbackUuid = async (value, table, column, where = {}) => {
+  if (value != null && value !== '' && isUuid(value)) {
+    return String(value);
+  }
+
+  const row = await db(table)
+    .first(`${column} as id`)
+    .where(where)
+    .orderByRaw('1');
+
+  return row?.id || null;
+};
+
 const resolveProductByIdentifier = async (identifier) => {
   if (!identifier) return null;
 
@@ -404,6 +417,18 @@ async function createProductReview(req, res) {
 
 async function createProduct(req, res) {
   try {
+    const categoryId = await resolveFallbackUuid(
+      req.body.category_id,
+      'categories',
+      'categoryID',
+      { isActive: true }
+    );
+    const sellerId = await resolveFallbackUuid(
+      req.body.seller_id,
+      'sellers',
+      'sellerID'
+    );
+
     const payload = {
       name: req.body.name,
       description: req.body.description,
@@ -411,8 +436,8 @@ async function createProduct(req, res) {
       discountPrice: req.body.discount_price ?? req.body.discountPrice,
       discountPercentage: req.body.discount_percentage ?? req.body.discountPercentage,
       stockQuantity: req.body.stock_quantity ?? req.body.stockQuantity ?? 0,
-      seller_id: req.body.seller_id,
-      category_id: req.body.category_id,
+      seller_id: sellerId,
+      category_id: categoryId,
       sku: req.body.sku,
       imageUrl: req.body.image_url ?? req.body.imageUrl,
       images: req.body.images == null
@@ -460,6 +485,19 @@ async function updateProduct(req, res) {
     }
     if (req.body.is_active != null || req.body.isActive != null) {
       payload.isActive = req.body.is_active ?? req.body.isActive;
+    }
+
+    if (req.body.category_id != null) {
+      payload.category_id = await resolveFallbackUuid(
+        req.body.category_id,
+        'categories',
+        'categoryID',
+        { isActive: true }
+      );
+    }
+
+    if (req.body.seller_id != null) {
+      payload.seller_id = await resolveFallbackUuid(req.body.seller_id, 'sellers', 'sellerID');
     }
 
     payload.updatedOn = db.fn.now();

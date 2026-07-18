@@ -105,14 +105,17 @@ const AdminProducts = () => {
     setSaving(true);
     setError('');
 
+    const selectedCategory = categories.find((category) => String(category.id) === String(form.category_id));
+    const selectedSeller = (products.find((product) => String(product.id) === String(productId))?.seller_id) || null;
+
     const payload = {
       name: form.name,
       description: form.description,
       price: Number(form.price),
       discount_price: form.discount_price ? Number(form.discount_price) : null,
       stock_quantity: Number(form.stock_quantity),
-      category_id: Number(form.category_id),
-      seller_id: Number(form.seller_id || 1),
+      category_id: selectedCategory?.id || form.category_id,
+      seller_id: selectedSeller || form.seller_id || null,
       sku: form.sku,
       images: form.images || [],
       is_active: true,
