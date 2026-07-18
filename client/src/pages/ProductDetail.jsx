@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { Breadcrumb, ProductSkeleton } from '../components/ui';
-import { productService } from '../services';
+import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug } from '../utils/product';
@@ -19,6 +19,8 @@ const ProductDetail = () => {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviews, setReviews] = useState([]);
+  const [canReview, setCanReview] = useState(false);
+  const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
   const { addItem, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const { isInWishlist, toggleItem } = useWishlistStore();
@@ -30,17 +32,45 @@ const ProductDetail = () => {
     Promise.all([
       productService.getProductById(identifier),
       productService.getProductReviews(identifier),
+      isAuthenticated ? orderService.getAllOrders() : Promise.resolve({ data: { data: [] } }),
     ])
-      .then(([productRes, reviewsRes]) => {
-        setProduct(productRes.data?.data || null);
-        setReviews(reviewsRes.data?.data || []);
+      .then(([productRes, reviewsRes, ordersRes]) => {
+        const nextProduct = productRes.data?.data || null;
+        const nextReviews = reviewsRes.data?.data || [];
+        const nextOrders = ordersRes?.data?.data || [];
+
+        setProduct(nextProduct);
+        setReviews(nextReviews);
+
+        if (!nextProduct || !isAuthenticated || !user?.id) {
+          setCanReview(false);
+          setReviewEligibilityMessage('');
+          return;
+        }
+
+        const hasPurchased = nextOrders.some((order) => (
+          Array.isArray(order.items)
+          && order.items.some((item) => String(item.product_id) === String(nextProduct.id))
+        ));
+        const hasReviewed = nextReviews.some((review) => String(review.userId) === String(user.id));
+
+        setCanReview(hasPurchased && !hasReviewed);
+        setReviewEligibilityMessage(
+          hasReviewed
+            ? 'You have already reviewed this product.'
+            : hasPurchased
+              ? ''
+              : 'You can review this product after purchasing it.'
+        );
       })
       .catch(() => {
         setProduct(null);
         setReviews([]);
+        setCanReview(false);
+        setReviewEligibilityMessage('');
       })
       .finally(() => setLoading(false));
-  }, [identifier]);
+  }, [identifier, isAuthenticated, user?.id]);
 
   useEffect(() => {
     if (!product || !identifier) return;
@@ -124,6 +154,8 @@ const ProductDetail = () => {
         setReviews((prev) => [createdReview, ...prev]);
       }
       setProduct(productRes.data?.data || product);
+      setCanReview(false);
+      setReviewEligibilityMessage('You have already reviewed this product.');
       setReviewComment('');
       setReviewSubmitted(true);
       setTimeout(() => setReviewSubmitted(false), 3000);
@@ -263,35 +295,41 @@ const ProductDetail = () => {
           </h2>
 
           {isAuthenticated ? (
-            <form onSubmit={handleSubmitReview} className="bg-gray-50 rounded-sm p-4 mb-6">
-              <p className="text-sm font-semibold mb-2">Write a Review</p>
-              <div className="flex gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewRating(star)}
-                    className={`text-xl ${star <= reviewRating ? 'text-accent' : 'text-gray-300'}`}
-                  >
-                    ★
-                  </button>
-                ))}
+            canReview ? (
+              <form onSubmit={handleSubmitReview} className="bg-gray-50 rounded-sm p-4 mb-6">
+                <p className="text-sm font-semibold mb-2">Write a Review</p>
+                <div className="flex gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className={`text-xl ${star <= reviewRating ? 'text-accent' : 'text-gray-300'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  required
+                  rows={3}
+                  placeholder="Share your experience with this product..."
+                  className="input-field mb-3"
+                />
+                {reviewError && (
+                  <p className="text-sm text-red-600 mb-3">{reviewError}</p>
+                )}
+                <button type="submit" className="btn-primary text-sm">
+                  {reviewSubmitted ? '✓ Review Submitted' : 'Submit Review'}
+                </button>
+              </form>
+            ) : (
+              <div className="mb-6 rounded-sm border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                {reviewEligibilityMessage || 'Reviews will appear here once you purchase this product.'}
               </div>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                required
-                rows={3}
-                placeholder="Share your experience with this product..."
-                className="input-field mb-3"
-              />
-              {reviewError && (
-                <p className="text-sm text-red-600 mb-3">{reviewError}</p>
-              )}
-              <button type="submit" className="btn-primary text-sm">
-                {reviewSubmitted ? '✓ Review Submitted' : 'Submit Review'}
-              </button>
-            </form>
+            )
           ) : (
             <p className="text-sm text-gray-500 mb-4">
               <Link to="/login" className="text-primary font-semibold hover:underline">Login</Link>

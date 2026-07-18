@@ -30,11 +30,11 @@ const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-4 right-4 z-[1200] flex flex-col gap-2 w-[min(92vw,320px)]">
+      <div className="fixed inset-x-3 bottom-3 z-[1200] flex flex-col gap-2 sm:inset-auto sm:top-4 sm:right-4 sm:left-auto sm:w-[min(92vw,320px)]">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`rounded-lg border px-4 py-3 text-sm shadow-lg font-medium ${
+            className={`w-full rounded-lg border px-4 py-3 text-sm shadow-lg font-medium sm:w-auto ${
               toast.type === 'error'
                 ? 'border-red-200 bg-red-50 text-red-700'
                 : 'border-emerald-200 bg-emerald-50 text-emerald-800'

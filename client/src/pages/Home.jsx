@@ -49,7 +49,7 @@ const Home = () => {
       <section className="container-main pb-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { title: 'Free Shipping', desc: 'On orders over Rs. 1,000', icon: '🚚' },
+            { title: 'Free Shipping', desc: 'On orders over Rs. 2,000', icon: '🚚' },
             { title: 'Secure Payment', desc: '100% protected payments', icon: '🔒' },
             { title: 'Easy Returns', desc: '7-day return policy', icon: '↩️' },
           ].map((feature) => (
