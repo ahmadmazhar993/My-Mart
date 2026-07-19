@@ -15,6 +15,7 @@ const {
   verifyCurrentPassword,
   updateUserPassword,
   updateUserWithAdmin,
+  updateUserPreferences,
   updateUserStatusWithAdmin,
   removeUserById,
   sendUserResponse,
@@ -41,6 +42,7 @@ router
   .put(
     isAuthenticated,
     validateUpdatePreferencesForm,
+    updateUserPreferences,
     sendUserResponse,
   );
 

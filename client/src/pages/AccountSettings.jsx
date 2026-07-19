@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Breadcrumb } from '../components/ui';
 import { userService } from '../services';
 import { useAuthStore } from '../store';
+
+const CITY_OPTIONS = [
+  'Karachi',
+  'Lahore',
+  'Islamabad',
+];
 
 const AccountSettings = () => {
   const { isAuthenticated, user, setUser } = useAuthStore();
@@ -18,6 +24,7 @@ const AccountSettings = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -46,24 +53,78 @@ const AccountSettings = () => {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: '' });
   };
 
+  const validateForm = () => {
+    const nextErrors = {};
+
+    if (!form.first_name.trim()) {
+      nextErrors.first_name = 'First name is required.';
+    }
+    if (!form.last_name.trim()) {
+      nextErrors.last_name = 'Last name is required.';
+    }
+    if (!form.phone.trim()) {
+      nextErrors.phone = 'Phone number is required.';
+    } else if (!/^\d{10,15}$/.test(form.phone.replace(/\D/g, ''))) {
+      nextErrors.phone = 'Enter a valid phone number.';
+    }
+    if (!form.address.trim()) {
+      nextErrors.address = 'Address is required.';
+    }
+    if (!form.city.trim()) {
+      nextErrors.city = 'Please select a city.';
+    }
+    if (!form.postal_code.trim()) {
+      nextErrors.postal_code = 'Postal code is required.';
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const normalizeUpdatedUser = (updatedUser) => {
+    if (!updatedUser) return null;
+    return {
+      ...updatedUser,
+      firstName: updatedUser.first_name || updatedUser.firstName,
+      lastName: updatedUser.last_name || updatedUser.lastName,
+      phone: updatedUser.phone || updatedUser.phoneNumber,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      postal_code: updatedUser.postal_code || updatedUser.postalCode,
+      postalCode: updatedUser.postal_code || updatedUser.postalCode,
+    };
+  };
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSavingProfile(true);
     setError('');
     setMessage('');
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setSavingProfile(true);
 
     try {
       const response = await userService.updateProfile(form);
       const updatedUser = response.data?.data;
-      if (updatedUser) {
-        setUser({ ...user, ...updatedUser });
+      const normalizedUser = normalizeUpdatedUser(updatedUser);
+
+      if (normalizedUser) {
+        setUser({ ...user, ...normalizedUser, ...form });
       } else {
         setUser({ ...user, ...form });
       }
       setMessage('Account updated successfully.');
+      setTimeout(() => {
+        navigate('/profile');
+      }, 500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update account. Please try again.');
     } finally {
@@ -105,11 +166,13 @@ const AccountSettings = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold mb-1.5">First Name</label>
-                    <input name="first_name" value={form.first_name} onChange={handleChange} required className="input-field" />
+                    <input name="first_name" value={form.first_name} onChange={handleChange} className={`input-field ${errors.first_name ? 'border-red-300' : ''}`} />
+                    {errors.first_name && <p className="mt-1 text-xs text-red-600">{errors.first_name}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1.5">Last Name</label>
-                    <input name="last_name" value={form.last_name} onChange={handleChange} required className="input-field" />
+                    <input name="last_name" value={form.last_name} onChange={handleChange} className={`input-field ${errors.last_name ? 'border-red-300' : ''}`} />
+                    {errors.last_name && <p className="mt-1 text-xs text-red-600">{errors.last_name}</p>}
                   </div>
                 </div>
 
@@ -120,22 +183,36 @@ const AccountSettings = () => {
 
                 <div>
                   <label className="block text-sm font-semibold mb-1.5">Phone</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} className="input-field" placeholder="03XX XXXXXXX" />
+                  <input name="phone" value={form.phone} onChange={handleChange} className={`input-field ${errors.phone ? 'border-red-300' : ''}`} placeholder="03XX XXXXXXX" />
+                  {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold mb-1.5">Address</label>
-                  <textarea name="address" value={form.address} onChange={handleChange} rows={2} className="input-field" />
+                  <textarea name="address" value={form.address} onChange={handleChange} rows={2} className={`input-field ${errors.address ? 'border-red-300' : ''}`} />
+                  {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold mb-1.5">City</label>
-                    <input name="city" value={form.city} onChange={handleChange} className="input-field" />
+                    <select
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      className={`input-field ${errors.city ? 'border-red-300' : ''}`}
+                    >
+                      <option value="">Select a city</option>
+                      {CITY_OPTIONS.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                    {errors.city && <p className="mt-1 text-xs text-red-600">{errors.city}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1.5">Postal Code</label>
-                    <input name="postal_code" value={form.postal_code} onChange={handleChange} className="input-field" />
+                    <input name="postal_code" value={form.postal_code} onChange={handleChange} className={`input-field ${errors.postal_code ? 'border-red-300' : ''}`} />
+                    {errors.postal_code && <p className="mt-1 text-xs text-red-600">{errors.postal_code}</p>}
                   </div>
                 </div>
 

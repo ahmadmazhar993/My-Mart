@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useCartStore } from '../store';
 
@@ -27,8 +27,13 @@ const Header = () => {
   const urlSearch = location.pathname === '/products' ? (params.get('search') || '') : '';
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuthStore();
   const { cart } = useCartStore();
+
+  useEffect(() => {
+    setAccountMenuOpen(false);
+  }, [location.pathname]);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const getProductsPath = (query) => {
@@ -149,24 +154,31 @@ const Header = () => {
 
           <div className="flex items-center gap-1 sm:gap-4 ml-auto">
             {isAuthenticated ? (
-              <div className="relative group">
-                <button type="button" className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAccountMenuOpen((open) => !open)}
+                  className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors"
+                >
                   <UserIcon />
                   <span className="text-xs mt-0.5 hidden md:block max-w-[80px] truncate">
                     {(user?.firstName || user?.email?.split('@')[0] || 'Account').slice(0, 15)}
                   </span>
                 </button>
-                <div className="absolute right-0 top-full pt-1 hidden group-hover:block">
+                <div className={`absolute right-0 top-full pt-1 ${accountMenuOpen ? 'block' : 'hidden'}`}>
                   <div className="bg-white border border-gray-200 rounded-sm shadow-lg py-1 min-w-[160px]">
-                    <Link to="/profile" className="block px-4 py-2 text-sm hover:bg-gray-50">My Profile</Link>
-                    <Link to="/orders" className="block px-4 py-2 text-sm hover:bg-gray-50">My Orders</Link>
-                    <Link to="/wishlist" className="block px-4 py-2 text-sm hover:bg-gray-50">Wishlist</Link>
+                    <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Profile</Link>
+                    <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Orders</Link>
+                    <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">Wishlist</Link>
                     {user?.role === 'Admin' && (
-                      <Link to="/admin" className="block px-4 py-2 text-sm hover:bg-gray-50 text-primary font-semibold">Admin Panel</Link>
+                      <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 text-primary font-semibold">Admin Panel</Link>
                     )}
                     <button
                       type="button"
-                      onClick={logout}
+                      onClick={() => {
+                        logout();
+                        setAccountMenuOpen(false);
+                      }}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
                     >
                       Logout

@@ -342,6 +342,53 @@ const verifyCurrentPassword = async (req, res, next) => {
   }
 };
 
+const updateUserPreferences = async (req, res, next) => {
+  try {
+    const { activeUser, updateUserRequest } = req;
+
+    if (!updateUserRequest) {
+      logger.error(`[USER][Function::updateUserPreferences][Path::${req.path}][Method::${req.method}]::Error::Invalid update request`);
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
+        error: true,
+        message: 'Required fields are missing',
+      });
+    }
+
+    updateUserRequest.updatedOn = db.fn.now();
+
+    const [updatedUser] = await db('user')
+      .update(updateUserRequest, '*')
+      .where('userID', activeUser.userID)
+      .where('isDeleted', false);
+
+    if (!updatedUser || !updatedUser.userID) {
+      logger.error(`[USER][Function::updateUserPreferences][Path::${req.path}][Method::${req.method}]::Error::Unable to update user preferences`, updatedUser);
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
+        error: true,
+        message: 'Unable to update profile',
+      });
+    }
+
+    activityLogger({
+      targetEntity: 'Profile Management',
+      action: 'Update',
+      targetID: updatedUser.userID,
+      description: 'Updated profile preferences',
+      userID: activeUser.userID,
+      req,
+    });
+
+    req.updatedUser = updatedUser;
+    return next();
+  } catch (e) {
+    logger.error(`[USER][Function::updateUserPreferences][Path::${req.path}][Method::${req.method}]::Exception::`, e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: true,
+      message: e.message || e,
+    });
+  }
+};
+
 const updateUserWithAdmin = async (req, res, next) => {
   try {
     const {
@@ -724,6 +771,7 @@ module.exports = {
   getUserProfilePicture,
   createUser,
   verifyCurrentPassword,
+  updateUserPreferences,
   updateUserWithAdmin,
   updateUserPassword,
   updateProfilePicture,
