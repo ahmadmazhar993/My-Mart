@@ -88,7 +88,17 @@ async function listOrders(req, res) {
       .first('type')
       .where('accessTemplateID', req.activeUser.accessTemplateID);
 
-    if (roleRow?.type !== 'Admin') {
+    const isSellerScope = String(req.query.seller || '').toLowerCase() === 'me';
+    if (isSellerScope) {
+      const seller = await db('sellers').first('sellerID').where({ user_id: req.activeUser.userID });
+      if (!seller?.sellerID) {
+        return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Seller account is not configured' });
+      }
+      query = query
+        .join('order_items', 'order_items.order_id', 'orders.orderID')
+        .where('order_items.seller_id', seller.sellerID)
+        .groupBy('orders.orderID', 'u.userID');
+    } else if (roleRow?.type !== 'Admin') {
       query = query.where('orders.user_id', req.activeUser.userID);
     }
 
@@ -130,7 +140,11 @@ async function getOrderById(req, res) {
       .first('type')
       .where('accessTemplateID', req.activeUser.accessTemplateID);
 
-    if (roleRow?.type !== 'Admin' && order.user_id !== req.activeUser.userID) {
+    const seller = await db('sellers').first('sellerID').where({ user_id: req.activeUser.userID });
+    const isSellerOrder = seller?.sellerID
+      && await db('order_items').where({ order_id: order.orderID, seller_id: seller.sellerID }).first();
+
+    if (roleRow?.type !== 'Admin' && order.user_id !== req.activeUser.userID && !(seller?.sellerID && isSellerOrder)) {
       return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Access denied' });
     }
 
@@ -420,6 +434,16 @@ async function updateOrderStatus(req, res) {
         success: false,
         message: 'This order has already been delivered and cannot be cancelled.',
       });
+    }
+
+    const seller = await db('sellers').first('sellerID').where({ user_id: req.activeUser.userID });
+    const isSellerOrder = seller?.sellerID && await db('order_items').where({ order_id: order.orderID, seller_id: seller.sellerID }).first();
+
+    if (req.activeUser && !isSellerOrder && req.activeUser.accessTemplateID) {
+      const roleRow = await db('accessTemplate').first('type').where('accessTemplateID', req.activeUser.accessTemplateID);
+      if (roleRow?.type !== 'Admin') {
+        return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Access denied' });
+      }
     }
 
     const updatePayload = {

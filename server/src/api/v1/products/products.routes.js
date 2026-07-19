@@ -13,15 +13,15 @@ const {
   uploadProductImages,
 } = require('./products.service');
 const { validateCreateProduct, validateUpdateProduct } = require('./products.validation');
-const { isAuthenticated } = require('../auth/auth.service');
+const { isAuthenticated, isAuthenticatedOptional } = require('../auth/auth.service');
 
-router.get('/', listProducts);
+router.get('/', isAuthenticatedOptional, listProducts);
 router.get('/:identifier/reviews', getProductReviews);
 router.post('/:identifier/reviews', isAuthenticated, createProductReview);
 router.get('/:identifier', getProductById);
 router.post('/upload-images', uploadProductImages);
-router.post('/', validateCreateProduct, createProduct);
-router.put('/:identifier', validateUpdateProduct, updateProduct);
-router.delete('/:identifier', deleteProduct);
+router.post('/', isAuthenticated, validateCreateProduct, createProduct);
+router.put('/:identifier', isAuthenticated, validateUpdateProduct, updateProduct);
+router.delete('/:identifier', isAuthenticated, deleteProduct);
 
 module.exports = router;

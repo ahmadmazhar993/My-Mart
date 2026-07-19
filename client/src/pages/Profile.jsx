@@ -9,15 +9,23 @@ const Profile = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const menuItems = [
-    { icon: '📦', label: 'My Orders', to: '/orders', desc: 'Track, return, or buy again' },
-    { icon: '❤️', label: 'Wishlist', to: '/wishlist', desc: 'Your saved items' },
-    { icon: '⭐', label: 'Reviews', to: '/reviews', desc: 'Your product reviews' },
-    { icon: '⚙️', label: 'Account Settings', to: '/settings', desc: 'Manage your account' },
-    ...(user?.role === 'Admin'
-      ? [{ icon: '🛡️', label: 'Admin Panel', to: '/admin', desc: 'Manage products, orders & users' }]
-      : []),
-  ];
+  const isSellerAccount = user?.role === 'Seller' || user?.role === 'seller';
+  const isAdminAccount = user?.role === 'Admin' || user?.role === 'admin';
+
+  const menuItems = isSellerAccount
+    ? [
+        { icon: '🏪', label: 'Seller Dashboard', to: '/seller', desc: 'Manage your store and products' },
+        { icon: '❓', label: 'Help Center', to: '/help', desc: 'Get support and seller guidance' },
+      ]
+    : [
+        { icon: '📦', label: 'My Orders', to: '/orders', desc: 'Track, return, or buy again' },
+        { icon: '❤️', label: 'Wishlist', to: '/wishlist', desc: 'Your saved items' },
+        { icon: '⭐', label: 'Reviews', to: '/reviews', desc: 'Your product reviews' },
+        { icon: '⚙️', label: 'Account Settings', to: '/settings', desc: 'Manage your account' },
+        ...(isAdminAccount
+          ? [{ icon: '🛡️', label: 'Admin Panel', to: '/admin', desc: 'Manage products, orders & users' }]
+          : []),
+      ];
 
   return (
     <div className="container-main py-6 animate-fade-in">

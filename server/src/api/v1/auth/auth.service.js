@@ -31,9 +31,7 @@ const isAuthenticated = (req, res, next) => {
   try {
     let { token } = req.cookies;
 
-    if (!token && req.query?.token) {
-      token = req.query.token;
-    }
+    // Do not accept tokens via URL query for security; only cookies or Authorization header
 
     if (!token) {
       const authorizationHeader = req.headers.authorization;
@@ -88,6 +86,49 @@ const isAuthenticated = (req, res, next) => {
       error: true,
       message: e
     });
+  }
+};
+
+const isAuthenticatedOptional = (req, res, next) => {
+  try {
+    let { token } = req.cookies;
+
+    // Do not accept tokens via URL query for security; only cookies or Authorization header
+
+    if (!token) {
+      const authorizationHeader = req.headers.authorization;
+      if (authorizationHeader) {
+        token = authorizationHeader.split(' ').length === 2 ? authorizationHeader.split(' ')[1] : null;
+      }
+    }
+
+    if (!token) return next();
+
+    return jwt.verify(token, TOKEN_SECRET_KEY, (err, decoded) => {
+      if (err) {
+        logger.log('info', `[AUTH][Function::isAuthenticatedOptional][Path::${req.path}][Method::${req.method}]::Token verification failed. Proceeding without user.`, err);
+        return next();
+      }
+
+      return db('user').first()
+        .where('email', decoded.email)
+        .where('isActive', true)
+        .where('isDeleted', false)
+        .then((user) => {
+          if (!user) {
+            logger.log('info', `[AUTH][Function::isAuthenticatedOptional][Path::${req.path}][Method::${req.method}]::No such user for token`);
+            return next();
+          }
+          req.activeUser = user;
+          if (decoded.isMustChange) req.isMustChange = true;
+          if (decoded.isAdUser) req.isAdUser = true;
+          if (decoded.isAzureUser) req.isAzureUser = true;
+          return next();
+        });
+    });
+  } catch (e) {
+    logger.error(`[AUTH][Function::isAuthenticatedOptional][Path::${req.path}][Method::${req.method}]::Exception::`, e);
+    return next();
   }
 };
 
@@ -402,6 +443,7 @@ const sendAuthResponse = (req, res) => {
 
 module.exports = {
   isAuthenticated,
+  isAuthenticatedOptional,
   register,
   login,
   isAdmin,

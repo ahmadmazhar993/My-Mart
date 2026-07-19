@@ -23,6 +23,7 @@ export const userService = {
 
 export const productService = {
   getAllProducts: (params) => api.get('/products', { params }),
+  getSellerProducts: (params) => api.get('/products', { params: { ...params, seller: 'me' } }),
   getProductById: (identifier) => api.get(`/products/${identifier}`),
   getProductReviews: (identifier) => api.get(`/products/${identifier}/reviews`),
   createReview: (identifier, data) => api.post(`/products/${identifier}/reviews`, data),
@@ -41,6 +42,7 @@ export const categoryService = {
 
 export const orderService = {
   getAllOrders: () => api.get('/orders'),
+  getSellerOrders: () => api.get('/orders', { params: { seller: 'me' } }),
   getOrderById: (id) => api.get(`/orders/${id}`),
   createOrder: (data) => api.post('/orders', data),
   updateOrderStatus: (id, status, paymentStatus) => api.put(`/orders/${id}`, { status, paymentStatus }),

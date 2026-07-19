@@ -1,8 +1,31 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../store';
 
 const Footer = () => {
-  const footerSections = [
+  const location = useLocation();
+  const { user } = useAuthStore();
+  const isSellerAccount = user?.role === 'Seller' || user?.role === 'seller';
+  const isSellerView = isSellerAccount && location.pathname.startsWith('/seller');
+
+  const footerSections = isSellerView
+    ? [
+        {
+          title: 'Seller Tools',
+          links: [
+            { label: 'Seller Dashboard', to: '/seller' },
+            { label: 'Help Center', to: '/help' },
+          ],
+        },
+        {
+          title: 'Store Support',
+          links: [
+            { label: 'Seller Support', to: '/pages/become-seller' },
+            { label: 'Policies', to: '/pages/terms' },
+          ],
+        },
+      ]
+    : [
     {
       title: 'Customer Care',
       links: [
@@ -43,7 +66,7 @@ const Footer = () => {
   return (
     <footer className="bg-dark text-white mt-auto">
       <div className="container-main py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className={`grid gap-8 ${isSellerView ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
           {footerSections.map((section) => (
             <div key={section.title}>
               <h3 className="font-bold text-sm mb-4 text-white">{section.title}</h3>

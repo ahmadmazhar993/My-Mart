@@ -16,13 +16,16 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
 
-  if (isAuthenticated) {
-    const destination = redirect && redirect !== '/login'
-      ? redirect
-      : user?.role === 'Admin'
-        ? '/admin'
-        : '/';
+  const resolveRoleDestination = (authUser, fallbackRedirect) => {
+    const role = authUser?.role;
+    if (role === 'Admin' || role === 'admin') return '/admin';
+    if (role === 'Seller' || role === 'seller') return '/seller';
+    if (fallbackRedirect && fallbackRedirect !== '/login') return fallbackRedirect;
+    return '/';
+  };
 
+  if (isAuthenticated) {
+    const destination = resolveRoleDestination(user, redirect);
     return <Navigate to={destination} replace />;
   }
 
@@ -100,9 +103,7 @@ const Login = () => {
 
       login(authUser, token);
       addToast('Login successful.');
-      const destination = authUser?.role === 'Admin' && redirect === '/'
-        ? '/admin'
-        : redirect;
+      const destination = resolveRoleDestination(authUser, redirect);
       navigate(destination);
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.');

@@ -43,11 +43,29 @@ const normalizeImagesPayload = (images) => {
 
 async function listProducts(req, res) {
   try {
-    const products = await db('products')
+    const isSellerScope = String(req.query.seller || '').toLowerCase() === 'me';
+    let query = db('products')
       .select('*')
-      .where('isActive', true)
       .orderBy('createdOn', 'desc')
       .limit(Number(req.query.limit) || 100);
+
+    if (isSellerScope) {
+      if (!req.activeUser?.userID) {
+        return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Authentication required' });
+      }
+      const seller = await db('sellers').first('sellerID').where({ user_id: req.activeUser.userID });
+      if (!seller?.sellerID) {
+        return res.status(StatusCodes.FORBIDDEN).json({
+          success: false,
+          message: 'Seller account is not configured',
+        });
+      }
+      query = query.where('seller_id', seller.sellerID);
+    } else {
+      query = query.where('isActive', true);
+    }
+
+    const products = await query;
 
     const data = await Promise.all(
       products.map(async (product) => {
@@ -103,7 +121,7 @@ const resolveFallbackUuid = async (value, table, column, options = {}) => {
     const normalized = String(value).trim();
     const row = await db(table)
       .first(`${column} as id`)
-      .where(function (builder) {
+      .where((builder) => {
         if (Array.isArray(options.matchBy) && options.matchBy.length > 0) {
           options.matchBy.forEach((field, index) => {
             if (index === 0) {
@@ -145,6 +163,17 @@ const resolveProductByIdentifier = async (identifier) => {
 
   const products = await db('products').select('*');
   return products.find((product) => slugify(product.name) === identifier) || null;
+};
+
+const getSellerRecord = async (userId) => {
+  if (!userId) return null;
+  return db('sellers').first('sellerID').where({ user_id: userId });
+};
+
+const isAdminUser = async (req) => {
+  if (!req?.activeUser?.accessTemplateID) return false;
+  const roleRow = await db('accessTemplate').first('type').where('accessTemplateID', req.activeUser.accessTemplateID);
+  return roleRow?.type === 'Admin';
 };
 
 const getProductImageFilename = (imagePath) => {
@@ -451,12 +480,49 @@ async function createProduct(req, res) {
       'categoryID',
       { matchBy: ['name', 'slug'], where: { isActive: true } }
     );
-    const sellerId = await resolveFallbackUuid(
-      req.body.seller_id,
-      'sellers',
-      'sellerID',
-      { where: {} }
-    );
+
+    const sellerUserId = req.activeUser?.userID;
+    const sellerRecord = sellerUserId ? await getSellerRecord(sellerUserId) : null;
+    const isAdmin = await isAdminUser(req);
+
+    let effectiveSellerId = sellerRecord?.sellerID || null;
+    if (!effectiveSellerId) {
+      effectiveSellerId = await resolveFallbackUuid(
+        req.body.seller_id,
+        'sellers',
+        'sellerID',
+        { where: {} }
+      );
+    }
+
+    if (!effectiveSellerId) {
+      if (isAdmin) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          message: 'Admin users must specify a valid seller_id when creating a product.',
+        });
+      }
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Seller account is not configured',
+      });
+    }
+
+    if (sellerRecord?.sellerID
+      && req.body.seller_id
+      && String(req.body.seller_id) !== String(sellerRecord.sellerID)) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'You cannot assign a product to another seller.',
+      });
+    }
+
+    if (!sellerRecord?.sellerID && !isAdmin) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Seller account is not configured',
+      });
+    }
 
     const payload = {
       name: req.body.name,
@@ -465,7 +531,7 @@ async function createProduct(req, res) {
       discountPrice: req.body.discount_price ?? req.body.discountPrice,
       discountPercentage: req.body.discount_percentage ?? req.body.discountPercentage,
       stockQuantity: req.body.stock_quantity ?? req.body.stockQuantity ?? 0,
-      seller_id: sellerId,
+      seller_id: effectiveSellerId,
       category_id: categoryId,
       sku: req.body.sku,
       imageUrl: req.body.image_url ?? req.body.imageUrl,
@@ -493,6 +559,28 @@ async function updateProduct(req, res) {
     const product = await resolveProductByIdentifier(identifier);
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    const sellerUserId = req.activeUser?.userID;
+    const sellerRecord = sellerUserId ? await getSellerRecord(sellerUserId) : null;
+    const isAdmin = await isAdminUser(req);
+
+    if (!isAdmin && !sellerRecord) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'You can only manage products if your seller account is configured',
+      });
+    }
+
+    const sellerOwnsThisProduct = sellerRecord?.sellerID
+      && product.seller_id
+      && String(product.seller_id) !== String(sellerRecord.sellerID);
+
+    if (sellerOwnsThisProduct) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'You can only manage your own products',
+      });
     }
 
     const payload = {};
@@ -525,7 +613,7 @@ async function updateProduct(req, res) {
       );
     }
 
-    if (req.body.seller_id != null) {
+    if (req.body.seller_id != null && isAdmin) {
       payload.seller_id = await resolveFallbackUuid(req.body.seller_id, 'sellers', 'sellerID');
     }
 
@@ -551,6 +639,28 @@ async function deleteProduct(req, res) {
     const product = await resolveProductByIdentifier(identifier);
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    const sellerUserId = req.activeUser?.userID;
+    const sellerRecord = sellerUserId ? await getSellerRecord(sellerUserId) : null;
+    const isAdmin = await isAdminUser(req);
+
+    if (!isAdmin && !sellerRecord) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'You can only manage products if your seller account is configured',
+      });
+    }
+
+    const sellerOwnsThisProduct = sellerRecord?.sellerID
+      && product.seller_id
+      && String(product.seller_id) !== String(sellerRecord.sellerID);
+
+    if (sellerOwnsThisProduct) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'You can only manage your own products',
+      });
     }
 
     const [cartItem, orderItem, review] = await Promise.all([

@@ -18,6 +18,6 @@ router.get('/:id', isAuthenticated, getOrderById);
 router.post('/', isAuthenticated, validateCreateOrder, createOrder);
 router.post('/checkout', isAuthenticated, validateCreateOrder, createOrder);
 router.post('/:id/payment-proof', isAuthenticated, uploadPaymentProofMiddleware, submitPaymentProof);
-router.put('/:id', isAuthenticated, isAdmin, validateUpdateOrderStatus, updateOrderStatus);
+router.put('/:id', isAuthenticated, validateUpdateOrderStatus, updateOrderStatus);
 
 module.exports = router;

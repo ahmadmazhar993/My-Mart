@@ -36,6 +36,14 @@ import Reviews from './pages/Reviews';
 
 import AccountSettings from './pages/AccountSettings';
 
+import SellerDashboard from './pages/SellerDashboard';
+
+import SellerProducts from './pages/SellerProducts';
+
+import SellerOrders from './pages/SellerOrders';
+
+import SellerRouteGuard from './components/SellerRouteGuard';
+
 import HelpCenter from './pages/HelpCenter';
 
 import InfoPage from './pages/InfoPage';
@@ -68,23 +76,28 @@ function App() {
       </Route>
 
       <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/products/:identifier" element={<ProductDetail />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:id" element={<OrderDetail />} />
-        <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/reviews" element={<Reviews />} />
-        <Route path="/settings" element={<AccountSettings />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/help" element={<HelpCenter />} />
-        <Route path="/pages/:slug" element={<InfoPage />} />
+        <Route path="/seller" element={<SellerDashboard />} />
+        <Route path="/seller/products" element={<SellerProducts />} />
+        <Route path="/seller/orders" element={<SellerOrders />} />
+        <Route element={<SellerRouteGuard />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/:identifier" element={<ProductDetail />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<OrderDetail />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/reviews" element={<Reviews />} />
+          <Route path="/settings" element={<AccountSettings />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/pages/:slug" element={<InfoPage />} />
+        </Route>
       </Route>
     </Routes>
   );

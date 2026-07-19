@@ -109,6 +109,10 @@ const Header = () => {
   const activeCategory = params.get('category') || '';
   const isAllCategoriesActive = !activeCategory;
   const shouldShowSearchBar = !['/help', '/pages'].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+  const isSellerAccount = user?.role === 'Seller' || user?.role === 'seller';
+  const isAdminAccount = user?.role === 'Admin' || user?.role === 'admin';
+  const isSellerView = isSellerAccount && location.pathname.startsWith('/seller');
+  const shouldShowCategoryBar = !isSellerView;
 
   return (
     <header className="sticky top-0 z-50 shadow-header">
@@ -166,11 +170,20 @@ const Header = () => {
                   </span>
                 </button>
                 <div className={`absolute right-0 top-full pt-1 ${accountMenuOpen ? 'block' : 'hidden'}`}>
-                  <div className="bg-white border border-gray-200 rounded-sm shadow-lg py-1 min-w-[160px]">
-                    <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Profile</Link>
-                    <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Orders</Link>
-                    <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">Wishlist</Link>
-                    {user?.role === 'Admin' && (
+                  <div className="bg-white border border-gray-200 rounded-sm shadow-lg py-1 min-w-[180px]">
+                    {isSellerAccount ? (
+                      <>
+                        <Link to="/seller" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 text-primary font-semibold">Seller Dashboard</Link>
+                        <Link to="/help" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">Help Center</Link>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Profile</Link>
+                        <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Orders</Link>
+                        <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">Wishlist</Link>
+                      </>
+                    )}
+                    {isAdminAccount && (
                       <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 text-primary font-semibold">Admin Panel</Link>
                     )}
                     <button
@@ -193,15 +206,17 @@ const Header = () => {
               </Link>
             )}
 
-            <Link to="/cart" className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors relative">
-              <CartIcon />
-              {cartCount > 0 && (
-                <span className="absolute -top-0.5 right-0 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
-              <span className="text-xs mt-0.5 hidden md:block">Cart</span>
-            </Link>
+            {!isSellerView && (
+              <Link to="/cart" className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors relative">
+                <CartIcon />
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 right-0 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+                <span className="text-xs mt-0.5 hidden md:block">Cart</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -226,30 +241,32 @@ const Header = () => {
         )}
       </div>
 
-      <div className="bg-white border-b border-gray-100 hidden md:block">
-        <div className="container-main">
-          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
-            <Link
-              to="/products"
-              className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isAllCategoriesActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
-            >
-              All Categories
-            </Link>
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat.slug;
-              return (
-                <Link
-                  key={cat.slug}
-                  to={`/products?category=${cat.slug}`}
-                  className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
-                >
-                  {cat.name}
-                </Link>
-              );
-            })}
-          </nav>
+      {!isSellerView && (
+        <div className="bg-white border-b border-gray-100 hidden md:block">
+          <div className="container-main">
+            <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
+              <Link
+                to="/products"
+                className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isAllCategoriesActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
+              >
+                All Categories
+              </Link>
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat.slug;
+                return (
+                  <Link
+                    key={cat.slug}
+                    to={`/products?category=${cat.slug}`}
+                    className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
+                  >
+                    {cat.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 };
