@@ -191,6 +191,7 @@ const OrderDetail = () => {
                 <div key={item.id} className="flex justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                   <div>
                     <p className="font-medium">{item.product_name || 'Product'}</p>
+                    {item.variant_label && <p className="text-sm text-gray-500">Variant: {item.variant_label}</p>}
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                   </div>
                   <p className="font-semibold text-primary">{formatPrice(item.total_price || item.unit_price * item.quantity)}</p>

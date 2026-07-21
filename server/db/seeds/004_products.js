@@ -1,10 +1,10 @@
-exports.seed = function addProducts(knex) {
+exports.seed = async function addProducts(knex) {
   const img = (seed) => `https://picsum.photos/seed/${seed}/400/500`;
   const sellerElectronics = knex.raw('(SELECT "sellerID" FROM sellers WHERE "shopName" = \'AHM Electronics\' LIMIT 1)');
   const sellerFashion = knex.raw('(SELECT "sellerID" FROM sellers WHERE "shopName" = \'AHM Fashion Hub\' LIMIT 1)');
   const category = (slug) => knex.raw('(SELECT "categoryID" FROM categories WHERE slug = ? LIMIT 1)', [slug]);
 
-  return knex('products').insert([
+  const products = [
     {
       name: 'Samsung Galaxy A54 5G',
       description: '6.4" Super AMOLED display, 50MP camera, 5000mAh battery',
@@ -313,5 +313,53 @@ exports.seed = function addProducts(knex) {
       imageUrl: img('rc-racing-car'),
       isActive: true,
     },
-  ]);
+    {
+      name: 'Pepsi Bottle',
+      description: 'Refreshing carbonated drink available in multiple bottle sizes.',
+      price: 140,
+      discountPrice: 120,
+      discountPercentage: 14,
+      stockQuantity: 80,
+      seller_id: sellerElectronics,
+      category_id: category('groceries'),
+      sku: 'GROC-PEPSI',
+      rating: 4.6,
+      reviewCount: 27,
+      imageUrl: img('pepsi-bottle'),
+      variants: JSON.stringify([
+        { name: '345ML', label: '345ML', price: 120, stock_quantity: 30, sku: 'GROC-PEPSI-345' },
+        { name: '500ML', label: '500ML', price: 160, stock_quantity: 25, sku: 'GROC-PEPSI-500' },
+        { name: '1.5L', label: '1.5L', price: 260, stock_quantity: 25, sku: 'GROC-PEPSI-1500' },
+      ]),
+      isActive: true,
+    },
+    {
+      name: 'Fresh Milk Bottle',
+      description: 'Pure dairy milk available in family-friendly pack sizes.',
+      price: 220,
+      discountPrice: 200,
+      discountPercentage: 9,
+      stockQuantity: 60,
+      seller_id: sellerElectronics,
+      category_id: category('groceries'),
+      sku: 'GROC-MILK',
+      rating: 4.7,
+      reviewCount: 19,
+      imageUrl: img('fresh-milk'),
+      variants: JSON.stringify([
+        { name: '250ML', label: '250ML', price: 90, stock_quantity: 20, sku: 'GROC-MILK-250' },
+        { name: '500ML', label: '500ML', price: 180, stock_quantity: 20, sku: 'GROC-MILK-500' },
+        { name: '1L', label: '1L', price: 320, stock_quantity: 20, sku: 'GROC-MILK-1000' },
+      ]),
+      isActive: true,
+    },
+  ];
+
+  const existingProducts = await knex('products').select('sku').whereIn('sku', products.map((product) => product.sku));
+  const existingSkus = new Set(existingProducts.map((product) => product.sku));
+  const newProducts = products.filter((product) => !existingSkus.has(product.sku));
+
+  if (newProducts.length > 0) {
+    await knex('products').insert(newProducts);
+  }
 };

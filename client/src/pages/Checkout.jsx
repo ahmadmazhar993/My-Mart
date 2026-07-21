@@ -560,6 +560,7 @@ const Checkout = () => {
                 <ProductImage product={item} className="w-14 h-14 rounded-sm object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium line-clamp-2">{item.name}</p>
+                  {item.variant_label && <p className="text-xs text-gray-500">Variant: {item.variant_label}</p>}
                 </div>
               </div>
             ))}

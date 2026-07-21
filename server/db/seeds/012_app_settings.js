@@ -1,6 +1,14 @@
-exports.seed = function addAppSettings(knex) {
-    return knex('appSettings').insert([
-        {
+exports.seed = async function addAppSettings(knex) {
+    const admin = await knex('user').select('userID').where('email', 'admin@ahmmart.com').first();
+
+    if (!admin) {
+        return;
+    }
+
+    const existingSetting = await knex('appSettings').select('appSettingID').where('name', 'SMTP').first();
+
+    if (!existingSetting) {
+        await knex('appSettings').insert({
             name: 'SMTP',
             type: 'JSON',
             value: JSON.stringify({
@@ -11,8 +19,8 @@ exports.seed = function addAppSettings(knex) {
                 pass: '',
                 subjectPrefix: '[AHM MART] '
             }),
-            createdBy: knex.raw('(select "userID" from "user" where "email"=\'admin@ahmmart.com\')'),
-            updatedBy: knex.raw('(select "userID" from "user" where "email"=\'admin@ahmmart.com\')')
-        }
-    ]);
+            createdBy: admin.userID,
+            updatedBy: admin.userID
+        });
+    }
 };

@@ -126,6 +126,7 @@ const AdminProducts = () => {
       seller_id: selectedSeller || form.seller_id || null,
       sku: form.sku,
       images: form.images || [],
+      variants: form.variants || [],
       is_active: true,
     };
 

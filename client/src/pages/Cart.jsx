@@ -52,11 +52,14 @@ const Cart = () => {
                     {item.name}
                   </Link>
                   <p className="text-primary font-bold text-sm mt-1">{formatPrice(item.price)}</p>
+                  {item.variant_label && (
+                    <p className="text-xs text-gray-500 mt-1">Variant: {item.variant_label}</p>
+                  )}
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
                     <div className="flex items-center border border-gray-300 rounded-sm">
                       <button
                         type="button"
-                        onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                        onClick={() => updateQuantity(item, Math.max(1, item.quantity - 1))}
                         className="px-2 sm:px-2.5 py-1 hover:bg-gray-100 text-sm"
                       >
                         −
@@ -72,7 +75,7 @@ const Cart = () => {
                             addToast(`Only ${availableStock} item(s) left in stock.`, 'error');
                             return;
                           }
-                          updateQuantity(item.id, item.quantity + 1);
+                          updateQuantity(item, item.quantity + 1);
                         }}
                         className="px-2 sm:px-2.5 py-1 hover:bg-gray-100 text-sm"
                       >
@@ -81,7 +84,7 @@ const Cart = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item)}
                       className="text-red-500 text-xs font-medium hover:underline"
                     >
                       Remove

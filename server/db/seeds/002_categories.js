@@ -1,5 +1,5 @@
-exports.seed = function addCategories(knex) {
-  return knex('categories').insert([
+exports.seed = async function addCategories(knex) {
+  const seedCategories = [
     {
       name: 'Electronics',
       description: 'Phones, laptops, gadgets and more',
@@ -64,5 +64,13 @@ exports.seed = function addCategories(knex) {
       displayOrder: 8,
       isActive: true,
     },
-  ]);
+  ];
+
+  const existing = await knex('categories').select('slug').whereIn('slug', seedCategories.map((category) => category.slug));
+  const existingSlugs = new Set(existing.map((category) => category.slug));
+  const missingCategories = seedCategories.filter((category) => !existingSlugs.has(category.slug));
+
+  if (missingCategories.length > 0) {
+    await knex('categories').insert(missingCategories);
+  }
 };

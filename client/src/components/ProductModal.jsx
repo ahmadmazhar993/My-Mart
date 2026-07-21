@@ -2,6 +2,16 @@ import React, { useEffect, useState } from "react";
 import { parseProductImages } from "../utils/product";
 import ImageUploader from "./ImageUploader";
 
+const createEmptyVariant = () => ({
+    name: "",
+    label: "",
+    price: "",
+    discount_price: "",
+    discount_percentage: "",
+    stock_quantity: "",
+    sku: "",
+});
+
 const initialForm = {
     name: "",
     sku: "",
@@ -11,6 +21,7 @@ const initialForm = {
     category_id: "",
     images: [],
     description: "",
+    variants: [],
 };
 
 const ProductModal = ({
@@ -26,6 +37,18 @@ const ProductModal = ({
     useEffect(() => {
         if (product) {
             const existingImages = parseProductImages(product);
+            const parsedVariants = Array.isArray(product.variants)
+                ? product.variants.map((variant) => ({
+                    name: variant?.name || "",
+                    label: variant?.label || variant?.name || "",
+                    price: variant?.price ?? "",
+                    discount_price: variant?.discount_price ?? "",
+                    discount_percentage: variant?.discount_percentage ?? "",
+                    stock_quantity: variant?.stock_quantity ?? "",
+                    sku: variant?.sku || "",
+                }))
+                : [];
+
             setForm({
                 name: product.name || "",
                 sku: product.sku || "",
@@ -39,6 +62,7 @@ const ProductModal = ({
                         ? [product.image_url]
                         : [],
                 description: product.description || "",
+                variants: parsedVariants.length ? parsedVariants : [],
             });
         } else {
             setForm(initialForm);
@@ -56,7 +80,42 @@ const ProductModal = ({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSubmit(form, product?.id);
+        const normalizedVariants = (form.variants || [])
+            .map((variant) => ({
+                name: String(variant.name || variant.label || "").trim(),
+                label: String(variant.label || variant.name || "").trim(),
+                price: variant.price === "" ? null : Number(variant.price),
+                discount_price: variant.discount_price === "" ? null : Number(variant.discount_price),
+                discount_percentage: variant.discount_percentage === "" ? null : Number(variant.discount_percentage),
+                stock_quantity: variant.stock_quantity === "" ? null : Number(variant.stock_quantity),
+                sku: String(variant.sku || "").trim(),
+            }))
+            .filter((variant) => variant.name || variant.label || variant.sku || variant.price != null || variant.discount_price != null || variant.discount_percentage != null || variant.stock_quantity != null);
+
+        onSubmit({ ...form, variants: normalizedVariants }, product?.id);
+    };
+
+    const handleVariantChange = (index, field, value) => {
+        setForm((prev) => ({
+            ...prev,
+            variants: prev.variants.map((variant, variantIndex) => (
+                variantIndex === index ? { ...variant, [field]: value } : variant
+            )),
+        }));
+    };
+
+    const addVariant = () => {
+        setForm((prev) => ({
+            ...prev,
+            variants: [...prev.variants, createEmptyVariant()],
+        }));
+    };
+
+    const removeVariant = (index) => {
+        setForm((prev) => ({
+            ...prev,
+            variants: prev.variants.filter((_, variantIndex) => variantIndex !== index),
+        }));
     };
 
     if (!isOpen) return null;
@@ -181,6 +240,99 @@ const ProductModal = ({
                                 productName={form.name}
                                 onChange={(images) => setForm((prev) => ({ ...prev, images }))}
                             />
+                        </div>
+
+                        <div className="lg:col-span-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Variants
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={addVariant}
+                                    className="text-sm font-semibold text-primary hover:underline"
+                                >
+                                    + Add Variant
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-3">
+                                Add different variants with separate pricing and stock.
+                            </p>
+
+                            <div className="space-y-3">
+                                {(form.variants || []).map((variant, index) => (
+                                    <div key={`${variant.name || 'variant'}-${index}`} className="rounded-md border border-gray-200 p-3 bg-gray-50">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Name</label>
+                                                <input
+                                                    value={variant.name}
+                                                    onChange={(e) => handleVariantChange(index, 'name', e.target.value)}
+                                                    placeholder="Variant Name"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Label</label>
+                                                <input
+                                                    value={variant.label}
+                                                    onChange={(e) => handleVariantChange(index, 'label', e.target.value)}
+                                                    placeholder="Variant Label"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Price</label>
+                                                <input
+                                                    type="number"
+                                                    value={variant.price}
+                                                    onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                                                    placeholder="Price"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Discount</label>
+                                                <input
+                                                    type="number"
+                                                    value={variant.discount_price}
+                                                    onChange={(e) => handleVariantChange(index, 'discount_price', e.target.value)}
+                                                    placeholder="Discount price"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Stock</label>
+                                                <input
+                                                    type="number"
+                                                    value={variant.stock_quantity}
+                                                    onChange={(e) => handleVariantChange(index, 'stock_quantity', e.target.value)}
+                                                    placeholder="Stock"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="flex-1">
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">SKU</label>
+                                                    <input
+                                                        value={variant.sku}
+                                                        onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
+                                                        placeholder="SKU"
+                                                        className="input-field w-full"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeVariant(index)}
+                                                    className="text-red-600 text-sm font-semibold whitespace-nowrap self-end pb-2"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="lg:col-span-3">

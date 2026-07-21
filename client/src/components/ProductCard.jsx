@@ -4,7 +4,7 @@ import ProductImage from './ProductImage';
 import { useCartStore, useWishlistStore } from '../store';
 import { useToast } from './ToastProvider';
 import { formatPrice, getEffectivePrice } from '../utils/format';
-import { buildProductPath } from '../utils/product';
+import { buildProductPath, parseProductVariants } from '../utils/product';
 
 const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const { addItem, cart } = useCartStore();
@@ -12,10 +12,21 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const { addToast } = useToast();
   const [added, setAdded] = useState(false);
   const inWishlist = isInWishlist(product.id);
-  const effectivePrice = getEffectivePrice(product);
-  const hasDiscount = product.discount_price && product.discount_price < product.price;
-  const discount = product.discount_percentage
-    || (hasDiscount ? Math.round(((product.price - product.discount_price) / product.price) * 100) : null);
+  const variants = parseProductVariants(product);
+  const firstVariant = variants[0] || null;
+  const effectivePrice = firstVariant?.discount_price != null
+    ? Number(firstVariant.discount_price)
+    : getEffectivePrice(product);
+  const hasDiscount = Boolean(
+    firstVariant?.discount_price != null && firstVariant.discount_price < (firstVariant?.price ?? product.price)
+  ) || Boolean(product.discount_price && product.discount_price < product.price);
+  const discount = firstVariant?.discount_percentage != null
+    ? Number(firstVariant.discount_percentage)
+    : (firstVariant?.discount_price != null && firstVariant?.price != null
+      ? Math.round(((firstVariant.price - firstVariant.discount_price) / firstVariant.price) * 100)
+      : (product.discount_percentage || (product.discount_price && product.discount_price < product.price
+        ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+        : null)));
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -31,12 +42,14 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
 
     addItem({
       id: product.id,
+      product_id: product.id,
       name: product.name,
       price: effectivePrice,
       image: product.image_url,
       images: product.images,
       stock_quantity: availableStock,
       quantity: 1,
+      variants,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -90,7 +103,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
           </span>
           {hasDiscount && (
             <span className="text-gray-400 line-through text-xs">
-              {formatPrice(product.price)}
+              {firstVariant?.price != null ? formatPrice(firstVariant.price) : formatPrice(product.price)}
             </span>
           )}
         </div>
@@ -102,6 +115,11 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
             </div>
             <span className="text-xs text-gray-400">({product.review_count || 0})</span>
           </div>
+        )}
+        {variants.length > 0 && (
+          <p className="text-[11px] text-gray-500 mt-2">
+            {variants.length} variant{variants.length > 1 ? 's' : ''} available
+          </p>
         )}
         {!compact && (
           <button

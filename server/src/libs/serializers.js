@@ -16,6 +16,19 @@ const mapUser = (user) => {
   };
 };
 
+const parseVariants = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const mapProduct = (product) => {
   if (!product) return null;
 
@@ -34,6 +47,7 @@ const mapProduct = (product) => {
     review_count: product.reviewCount || 0,
     image_url: product.imageUrl,
     images: product.images,
+    variants: parseVariants(product.variants),
     is_active: product.isActive,
     created_at: product.createdOn,
     updated_at: product.updatedOn,

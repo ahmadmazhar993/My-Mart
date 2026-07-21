@@ -6,7 +6,7 @@ import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
-import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug } from '../utils/product';
+import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock } from '../utils/product';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -20,6 +20,7 @@ const ProductDetail = () => {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviews, setReviews] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
   const { addItem, cart, setBuyNowItems } = useCartStore();
@@ -82,6 +83,26 @@ const ProductDetail = () => {
     }
   }, [product, identifier, navigate]);
 
+  useEffect(() => {
+    if (!product) {
+      setSelectedVariant(null);
+      return;
+    }
+
+    const variants = parseProductVariants(product);
+    if (!variants.length) {
+      setSelectedVariant(null);
+      return;
+    }
+
+    setSelectedVariant((current) => {
+      if (current && variants.some((variant) => variant.name === current.name)) {
+        return current;
+      }
+      return variants[0];
+    });
+  }, [product]);
+
   if (loading) {
     return (
       <div className="container-main py-6">
@@ -100,14 +121,29 @@ const ProductDetail = () => {
   }
 
   const effectivePrice = getEffectivePrice(product);
-  const hasDiscount = product.discount_price && product.discount_price < product.price;
-  const discount = product.discount_percentage
-    || (hasDiscount ? Math.round(((product.price - product.discount_price) / product.price) * 100) : null);
+  const variantOptions = parseProductVariants(product);
+  const displayPrice = getProductVariantPrice(product, selectedVariant) ?? effectivePrice;
+  const variantStock = getProductVariantStock(product, selectedVariant);
+  const variantDiscountPrice = selectedVariant?.discount_price != null ? Number(selectedVariant.discount_price) : null;
+  const variantDiscountPercent = selectedVariant?.discount_percentage != null ? Number(selectedVariant.discount_percentage) : null;
+  const hasDiscount = Boolean(
+    variantDiscountPrice != null && variantDiscountPrice < (selectedVariant?.price ?? product.price)
+  ) || Boolean(product.discount_price && product.discount_price < product.price);
+  const discount = variantDiscountPercent != null
+    ? variantDiscountPercent
+    : (variantDiscountPrice != null && selectedVariant?.price != null
+      ? Math.round(((selectedVariant.price - variantDiscountPrice) / selectedVariant.price) * 100)
+      : (product.discount_percentage || (product.discount_price && product.discount_price < product.price
+        ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+        : null)));
   const images = parseProductImages(product);
   const normalizedImages = images.map((img) => normalizeProductImageUrl(img));
   const primaryImage = normalizeProductImageUrl(images.length > 0 ? images[0] : product.image_url || null);
-  const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
-  const currentCartQuantity = cart.find((entry) => String(entry.id) === String(product.id))?.quantity || 0;
+  const availableStock = Math.max(0, Number(variantStock ?? product.stock_quantity ?? 0));
+  const currentCartQuantity = cart.find((entry) => (
+    String(entry.id) === String(product.id)
+    && (!selectedVariant ? !entry.variant_name : String(entry.variant_name || '') === String(selectedVariant.name))
+  ))?.quantity || 0;
   const remainingStock = Math.max(0, availableStock - currentCartQuantity);
 
   const handleBuyNow = () => {
@@ -134,14 +170,21 @@ const ProductDetail = () => {
 
     const safeQuantity = Math.min(quantity, remainingStock || quantity);
 
+    const displayName = selectedVariant ? `${product.name} (${selectedVariant.name})` : product.name;
+
     setBuyNowItems([{
       id: product.id,
-      name: product.name,
-      price: effectivePrice,
+      product_id: product.id,
+      name: displayName,
+      price: displayPrice,
       image: primaryImage,
       images: product.images,
       stock_quantity: availableStock,
       quantity: safeQuantity,
+      variant_name: selectedVariant?.name || null,
+      variant_label: selectedVariant?.label || selectedVariant?.name || null,
+      variant_sku: selectedVariant?.sku || null,
+      variant_price: displayPrice,
     }]);
     navigate('/checkout?mode=buynow');
   };
@@ -165,14 +208,21 @@ const ProductDetail = () => {
     }
 
     const safeQuantity = Math.min(quantity, remainingStock);
+    const displayName = selectedVariant ? `${product.name} (${selectedVariant.name})` : product.name;
+
     addItem({
       id: product.id,
-      name: product.name,
-      price: effectivePrice,
+      product_id: product.id,
+      name: displayName,
+      price: displayPrice,
       image: primaryImage,
       images: product.images,
       stock_quantity: availableStock,
       quantity: safeQuantity,
+      variant_name: selectedVariant?.name || null,
+      variant_label: selectedVariant?.label || selectedVariant?.name || null,
+      variant_sku: selectedVariant?.sku || null,
+      variant_price: displayPrice,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -241,16 +291,42 @@ const ProductDetail = () => {
             )}
 
             <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-3xl font-extrabold text-primary">{formatPrice(effectivePrice)}</span>
+              <span className="text-3xl font-extrabold text-primary">{formatPrice(displayPrice)}</span>
               {hasDiscount && (
                 <>
-                  <span className="text-lg text-gray-400 line-through">{formatPrice(product.price)}</span>
-                  {discount && <span className="badge-sale text-sm">-{discount}%</span>}
+                  <span className="text-lg text-gray-400 line-through">
+                    {selectedVariant?.price != null ? formatPrice(selectedVariant.price) : formatPrice(product.price)}
+                  </span>
+                  {discount != null && <span className="badge-sale text-sm">-{discount}%</span>}
                 </>
               )}
             </div>
 
             <p className="text-gray-600 text-sm leading-relaxed mb-6">{product.description}</p>
+
+            {variantOptions.length > 0 && (
+              <div className="mb-6">
+                <label className="block text-sm font-semibold mb-2">Choose Variant</label>
+                <div className="flex flex-wrap gap-2">
+                  {variantOptions.map((variant) => {
+                    const isSelected = selectedVariant?.name === variant.name;
+                    return (
+                      <button
+                        key={variant.name}
+                        type="button"
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`rounded-sm border px-3 py-2 text-sm font-medium transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-primary'}`}
+                      >
+                        {variant.label || variant.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedVariant?.sku && (
+                  <p className="mt-2 text-xs text-gray-500">SKU: {selectedVariant.sku}</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex gap-2">
@@ -259,8 +335,8 @@ const ProductDetail = () => {
               </div>
               <div className="flex gap-2">
                 <span className="text-gray-500 w-24">Availability:</span>
-                <span className={`font-medium ${product.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {product.stock_quantity > 0 ? `In Stock (${product.stock_quantity})` : 'Out of Stock'}
+                <span className={`font-medium ${availableStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {availableStock > 0 ? `In Stock (${availableStock})` : 'Out of Stock'}
                 </span>
               </div>
             </div>

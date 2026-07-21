@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { buildCartItemKey } from '../utils/product';
 
 export const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
@@ -33,7 +34,8 @@ export const useCartStore = create(
       buyNowItems: null,
 
       addItem: (item) => set((state) => {
-        const existing = state.cart.find((c) => c.id === item.id);
+        const itemKey = buildCartItemKey(item);
+        const existing = state.cart.find((c) => buildCartItemKey(c) === itemKey);
         const requestedQuantity = Math.max(1, Number(item.quantity || 1));
         const availableStock = Number(item.stock_quantity ?? item.stock ?? 0);
         const nextQuantity = existing
@@ -46,8 +48,8 @@ export const useCartStore = create(
         if (existing) {
           return {
             cart: state.cart.map((c) =>
-              c.id === item.id
-                ? { ...c, quantity: safeQuantity }
+              buildCartItemKey(c) === itemKey
+                ? { ...c, quantity: safeQuantity, price: item.price ?? c.price, stock_quantity: availableStock }
                 : c
             ),
           };
@@ -61,21 +63,29 @@ export const useCartStore = create(
 
       clearBuyNowItems: () => set({ buyNowItems: null }),
 
-      removeItem: (id) => set((state) => ({
-        cart: state.cart.filter((item) => item.id !== id),
-      })),
+      removeItem: (itemOrId) => set((state) => {
+        const targetKey = typeof itemOrId === 'object' ? buildCartItemKey(itemOrId) : null;
+        return {
+          cart: state.cart.filter((item) => (
+            targetKey ? buildCartItemKey(item) !== targetKey : String(item.id) !== String(itemOrId)
+          )),
+        };
+      }),
 
-      updateQuantity: (id, quantity) => set((state) => {
-        const target = state.cart.find((item) => item.id === id);
+      updateQuantity: (itemOrId, quantity) => set((state) => {
+        const targetKey = typeof itemOrId === 'object' ? buildCartItemKey(itemOrId) : null;
+        const target = state.cart.find((item) => (
+          targetKey ? buildCartItemKey(item) === targetKey : String(item.id) === String(itemOrId)
+        ));
         const availableStock = Number(target?.stock_quantity ?? target?.stock ?? 0);
         const safeQuantity = availableStock > 0
           ? Math.min(Math.max(1, quantity), availableStock)
           : Math.max(1, quantity);
 
         return {
-          cart: state.cart.map((item) =>
-            item.id === id ? { ...item, quantity: safeQuantity } : item
-          ),
+          cart: state.cart.map((item) => (
+            targetKey ? (buildCartItemKey(item) === targetKey ? { ...item, quantity: safeQuantity } : item) : (String(item.id) === String(itemOrId) ? { ...item, quantity: safeQuantity } : item)
+          )),
         };
       }),
 

@@ -41,6 +41,40 @@ const normalizeImagesPayload = (images) => {
   return [String(normalized)];
 };
 
+const normalizeVariantsPayload = (variants) => {
+  if (variants == null) return null;
+
+  let normalized = variants;
+  if (typeof normalized === 'string') {
+    try {
+      normalized = JSON.parse(normalized);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(normalized)) {
+    return [];
+  }
+
+  return normalized
+    .map((variant) => {
+      if (!variant || typeof variant !== 'object') return null;
+      const name = String(variant.name || variant.label || '').trim();
+      if (!name) return null;
+      return {
+        name,
+        label: String(variant.label || variant.name || '').trim() || name,
+        price: variant.price == null || variant.price === '' ? null : Number(variant.price),
+        discount_price: variant.discount_price == null || variant.discount_price === '' ? null : Number(variant.discount_price),
+        discount_percentage: variant.discount_percentage == null || variant.discount_percentage === '' ? null : Number(variant.discount_percentage),
+        stock_quantity: variant.stock_quantity == null || variant.stock_quantity === '' ? null : Number(variant.stock_quantity),
+        sku: String(variant.sku || '').trim(),
+      };
+    })
+    .filter(Boolean);
+};
+
 async function listProducts(req, res) {
   try {
     const products = await db('products')
@@ -471,6 +505,8 @@ async function createProduct(req, res) {
       imageUrl: req.body.image_url ?? req.body.imageUrl,
       images: req.body.images == null
         ? null : JSON.stringify(normalizeImagesPayload(req.body.images)),
+      variants: req.body.variants == null
+        ? null : JSON.stringify(normalizeVariantsPayload(req.body.variants)),
       isActive: req.body.is_active ?? true,
     };
 
@@ -508,6 +544,9 @@ async function updateProduct(req, res) {
     }
     if (req.body.images != null) {
       payload.images = JSON.stringify(normalizeImagesPayload(req.body.images));
+    }
+    if (req.body.variants != null) {
+      payload.variants = JSON.stringify(normalizeVariantsPayload(req.body.variants));
     }
     if (req.body.image_url != null || req.body.imageUrl != null) {
       payload.imageUrl = req.body.image_url ?? req.body.imageUrl;
