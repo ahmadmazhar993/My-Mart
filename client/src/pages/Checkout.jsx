@@ -275,6 +275,9 @@ const Checkout = () => {
         items: checkoutItems.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
+          variant_name: item.variant_name || null,
+          variant_label: item.variant_label || null,
+          variant_sku: item.variant_sku || null,
         })),
         payment_details: {
           transaction_id: transactionId || null,
