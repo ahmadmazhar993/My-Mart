@@ -37,6 +37,19 @@ const isValidSenderAccount = (value) => {
   return /^[0-9 -]{4,20}$/.test(value);
 };
 
+const parseProductVariants = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const uploadPaymentProofMiddleware = (req, res, next) => {
   const upload = multer({
     storage: paymentProofStorage,
@@ -147,6 +160,9 @@ async function getOrderById(req, res) {
       product_name: item.product_name,
       image_url: item.imageUrl,
       quantity: item.quantity,
+      variant_name: item.variant_name || null,
+      variant_label: item.variant_label || item.variant_name || null,
+      variant_sku: item.variant_sku || null,
       unit_price: Number(item.unitPrice),
       total_price: Number(item.totalPrice),
     }));
@@ -211,11 +227,29 @@ async function createOrder(req, res) {
         if (!product) {
           throw new Error(`Product ${item.product_id} not found`);
         }
-        if (product.stockQuantity < item.quantity) {
+        const requestedVariant = item.variant_sku || item.variant_name || item.variant_label;
+        const variants = parseProductVariants(product.variants);
+        const selectedVariant = requestedVariant
+          ? variants.find((variant) => (
+            (item.variant_sku && String(variant.sku || '') === String(item.variant_sku))
+            || (item.variant_name && String(variant.name || '') === String(item.variant_name))
+            || (item.variant_label && String(variant.label || '') === String(item.variant_label))
+          ))
+          : null;
+
+        if (requestedVariant && !selectedVariant) {
+          throw new Error(`Variant for ${product.name} is no longer available`);
+        }
+
+        const availableStock = selectedVariant?.stock_quantity ?? product.stockQuantity;
+        if (availableStock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
 
-        const unitPrice = Number(product.discountPrice ?? product.price);
+        const unitPrice = Number(
+          selectedVariant?.discount_price ?? selectedVariant?.price
+            ?? product.discountPrice ?? product.price
+        );
         const lineTotal = unitPrice * item.quantity;
         subtotal += lineTotal;
 
@@ -225,6 +259,9 @@ async function createOrder(req, res) {
           quantity: item.quantity,
           unitPrice,
           totalPrice: lineTotal,
+          variant_name: selectedVariant?.name || item.variant_name || null,
+          variant_label: selectedVariant?.label || item.variant_label || selectedVariant?.name || item.variant_name || null,
+          variant_sku: selectedVariant?.sku || item.variant_sku || null,
         });
       }
 
@@ -253,6 +290,9 @@ async function createOrder(req, res) {
           quantity: line.quantity,
           unitPrice: line.unitPrice,
           totalPrice: line.totalPrice,
+          variant_name: line.variant_name,
+          variant_label: line.variant_label,
+          variant_sku: line.variant_sku,
         });
         await trx('products')
           .where({ productID: line.product_id })

@@ -36,7 +36,10 @@ const buildOrderConfirmationBody = ({
   table: items.length ? [{
     title: 'Order items',
     data: items.map((item) => ({
-      Product: item.product_name || `Product #${item.product_id}`,
+      Product: [
+        item.product_name || `Product #${item.product_id}`,
+        item.variant_label || item.variant_name,
+      ].filter(Boolean).join(' - '),
       Qty: item.quantity,
       Price: formatPrice(item.totalPrice ?? item.unitPrice * item.quantity),
     })),
