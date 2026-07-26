@@ -11,10 +11,12 @@ import { buildProductPath } from '../utils/product';
 import { validatePaymentReceiptFile, validateSenderAccount, validateTransactionReference } from '../utils/paymentValidation';
 
 const CITY_OPTIONS = [
-  'Karachi',
+  // 'Karachi',
   'Lahore',
-  'Islamabad',
+  // 'Islamabad',
 ];
+
+const MINIMUM_ORDER_AMOUNT = 500;
 
 const getPaymentIcon = (type) => {
   switch (type) {
@@ -102,6 +104,8 @@ const Checkout = () => {
   const subtotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 250;
   const total = subtotal + shipping;
+  const orderAmountRemaining = Math.max(MINIMUM_ORDER_AMOUNT - subtotal, 0);
+  const hasMinimumOrderAmount = subtotal >= MINIMUM_ORDER_AMOUNT;
 
   const handleCopyAccount = async (value, e) => {
     e?.preventDefault();
@@ -257,6 +261,13 @@ const Checkout = () => {
 
     if (Object.keys(nextErrors).length > 0) {
       const message = 'Please complete the highlighted fields before placing your order.';
+      setError(message);
+      addToast(message, 'error');
+      return;
+    }
+
+    if (!hasMinimumOrderAmount) {
+      const message = `Minimum order amount is Rs. ${MINIMUM_ORDER_AMOUNT}. Please add ${formatPrice(orderAmountRemaining)} more to continue.`;
       setError(message);
       addToast(message, 'error');
       return;
@@ -549,8 +560,17 @@ const Checkout = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-              {loading ? 'Placing Order...' : `Place Order — ${formatPrice(total)}`}
+            {subtotal < MINIMUM_ORDER_AMOUNT && (
+              <div className="rounded-sm border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
+                Minimum order amount is Rs. {MINIMUM_ORDER_AMOUNT}. Add {formatPrice(orderAmountRemaining)} more to continue.
+              </div>
+            )}
+            <button type="submit" disabled={loading || !hasMinimumOrderAmount} className="btn-primary w-full py-3">
+              {loading
+                ? 'Placing Order...'
+                : hasMinimumOrderAmount
+                  ? `Place Order — ${formatPrice(total)}`
+                  : `Add ${formatPrice(orderAmountRemaining)} more to order`}
             </button>
           </form>
         </div>

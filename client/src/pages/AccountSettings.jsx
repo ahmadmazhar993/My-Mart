@@ -5,9 +5,9 @@ import { userService } from '../services';
 import { useAuthStore } from '../store';
 
 const CITY_OPTIONS = [
-  'Karachi',
+  // 'Karachi',
   'Lahore',
-  'Islamabad',
+  // 'Islamabad',
 ];
 
 const AccountSettings = () => {
