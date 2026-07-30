@@ -7,7 +7,8 @@ import { buildProductPath } from '../utils/product';
 const Reviews = () => {
   const { isAuthenticated, user } = useAuthStore();
   const { reviews } = useReviewStore();
-  const myReviews = reviews.filter((r) => r.userId === user?.id);
+  const currentUserId = user?.id || user?.userID;
+  const myReviews = reviews.filter((r) => r.userId === currentUserId);
 
   if (!isAuthenticated) {
     return <Navigate to="/login?redirect=/reviews" replace />;
