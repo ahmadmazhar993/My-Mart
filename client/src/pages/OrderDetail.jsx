@@ -111,7 +111,7 @@ const OrderDetail = () => {
       setUploading(false);
     }
   };
-
+  
   if (!isAuthenticated) {
     const redirectTo = `/orders/${id}`;
     return <Navigate to={`/login?redirect=${encodeURIComponent(redirectTo)}`} replace />;
@@ -190,7 +190,14 @@ const OrderDetail = () => {
               {order.items?.map((item) => (
                 <div key={item.id} className="flex justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                   <div>
-                    <p className="font-medium">{item.product_name || 'Product'}</p>
+                    <div className="flex items-center gap-3">
+                      <p className="font-medium">{item.product_name || 'Product'}</p>
+                      {item.has_review ? (
+                        <span className="text-sm text-green-600 font-semibold">Reviewed</span>
+                      ) : (
+                        <Link to={`/products/${item.product_id}`} className="text-sm text-primary hover:underline">Write review</Link>
+                      )}
+                    </div>
                     {item.variant_label && <p className="text-sm text-gray-500">Variant: {item.variant_label}</p>}
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                   </div>
