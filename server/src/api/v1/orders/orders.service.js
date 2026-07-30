@@ -115,11 +115,37 @@ async function listOrders(req, res) {
       acc[payment.order_id] = payment;
       return acc;
     }, {});
+
+    // Fetch order items for the listed orders and group them by order_id
+    const orderItems = orderIds.length
+      ? await db('order_items')
+        .select('order_items.*', 'products.name as product_name', 'products.images')
+        .leftJoin('products', 'products.productID', 'order_items.product_id')
+        .whereIn('order_items.order_id', orderIds)
+      : [];
+
+    const itemsByOrder = orderItems.reduce((acc, item) => {
+      if (!acc[item.order_id]) acc[item.order_id] = [];
+      acc[item.order_id].push({
+        id: item.orderItemID,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        image_url: item.images?.[0] || null,
+        quantity: item.quantity,
+        variant_name: item.variant_name || null,
+        variant_label: item.variant_label || item.variant_name || null,
+        variant_sku: item.variant_sku || null,
+        unit_price: Number(item.unitPrice),
+        total_price: Number(item.totalPrice),
+      });
+      return acc;
+    }, {});
+
     return res.status(StatusCodes.OK).json({
       message: 'Orders retrieved successfully',
       success: true,
       data: orders.map((order) => ({
-        ...mapOrder(order, paymentByOrder[order.orderID]),
+        ...mapOrder({ ...order, items: itemsByOrder[order.orderID] || [] }, paymentByOrder[order.orderID]),
         userName: order.userName,
       })),
     });
@@ -148,10 +174,26 @@ async function getOrderById(req, res) {
       return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'Access denied' });
     }
 
-    const items = await db('order_items')
-      .select('order_items.*', 'products.name as product_name', 'products.imageUrl')
+    let items = await db('order_items')
+      .select('order_items.*', 'products.name as product_name', 'products.images')
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', order.orderID);
+
+    // Determine whether the current user has reviewed each product in this order
+    const productIds = items.map((i) => i.product_id).filter(Boolean);
+    let reviewedProductIds = [];
+    if (productIds.length) {
+      const userReviews = await db('reviews')
+        .whereIn('product_id', productIds)
+        .andWhere('user_id', req.activeUser.userID)
+        .select('product_id');
+      reviewedProductIds = userReviews.map((r) => r.product_id);
+    }
+
+    items = items.map((item) => ({
+      ...item,
+      has_review: reviewedProductIds.includes(item.product_id),
+    }));
 
     const payment = await db('payments').where({ order_id: order.orderID }).first();
     const mappedOrder = mapOrder(order, payment);
@@ -159,7 +201,7 @@ async function getOrderById(req, res) {
       id: item.orderItemID,
       product_id: item.product_id,
       product_name: item.product_name,
-      image_url: item.imageUrl,
+      image_url: item.images?.[0] || null,
       quantity: item.quantity,
       variant_name: item.variant_name || null,
       variant_label: item.variant_label || item.variant_name || null,
@@ -407,11 +449,23 @@ async function submitPaymentProof(req, res) {
       proof_uploaded_at: new Date().toISOString(),
     };
 
+    // Update payment record with metadata and mark as completed
     await db('payments')
       .where({ order_id: id })
       .update({
         transactionID: transaction_id || payment?.transactionID || null,
         metadata,
+        status: 'completed',
+        processedOn: db.fn.now(),
+        updatedOn: db.fn.now(),
+      });
+
+    // Mark the order as paid and move it into processing
+    await db('orders')
+      .where({ orderID: id })
+      .update({
+        paymentStatus: 'paid',
+        status: 'processing',
         updatedOn: db.fn.now(),
       });
 
@@ -494,6 +548,11 @@ async function updateOrderStatus(req, res) {
       updatePayload.deliveredOn = db.fn.now();
     }
 
+    // Auto-mark Cash on Delivery orders as paid when they're delivered
+    if (normalizedStatus === 'delivered' && order.paymentMethod === 'cod') {
+      updatePayload.paymentStatus = 'paid';
+    }
+
     const [updatedOrder] = await db('orders')
       .where({ orderID: id })
       .update(updatePayload, '*');
@@ -507,6 +566,16 @@ async function updateOrderStatus(req, res) {
       paymentUpdate.status = 'pending';
     } else if (normalizedPaymentStatus === 'refunded') {
       paymentUpdate.status = 'refunded';
+    }
+
+    // If the order was auto-marked as paid (e.g., COD delivered), ensure payment record is completed
+    if (updatePayload.paymentStatus === 'paid') {
+      paymentUpdate.status = 'completed';
+    }
+
+    // set processedOn timestamp when payment marked completed
+    if (paymentUpdate.status === 'completed') {
+      paymentUpdate.processedOn = db.fn.now();
     }
 
     if (Object.keys(paymentUpdate).length) {
