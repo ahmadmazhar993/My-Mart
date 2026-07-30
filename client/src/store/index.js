@@ -2,17 +2,27 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildCartItemKey } from '../utils/product';
 
+const normalizeUser = (user) => {
+  if (!user) return null;
+  return {
+    ...user,
+    id: user.id ?? user.userID,
+    userID: user.userID ?? user.id,
+  };
+};
+
 export const useAuthStore = create((set) => ({
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  user: normalizeUser(JSON.parse(localStorage.getItem('user') || 'null')),
   token: localStorage.getItem('token') || null,
   isAuthenticated: !!localStorage.getItem('token'),
 
   login: (user, token) => {
+    const normalized = normalizeUser(user);
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(normalized));
     useCartStore.getState().clearCart();
     useWishlistStore.getState().clearItems();
-    set({ user, token, isAuthenticated: true });
+    set({ user: normalized, token, isAuthenticated: true });
   },
 
   logout: () => {
@@ -22,8 +32,9 @@ export const useAuthStore = create((set) => ({
   },
 
   setUser: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
-    set({ user });
+    const normalized = normalizeUser(user);
+    localStorage.setItem('user', JSON.stringify(normalized));
+    set({ user: normalized });
   },
 }));
 
