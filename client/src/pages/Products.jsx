@@ -42,8 +42,7 @@ const Products = () => {
 
   const filtered = products
     .filter((p) => {
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())
-        && !(p.description || '').toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (categoryId && p.category_id !== categoryId) return false;
       if (saleOnly && !p.discount_price) return false;
       if (priceRange === 'under-500' && (p.discount_price || p.price) >= 500) return false;
@@ -112,7 +111,7 @@ const Products = () => {
           <div className="bg-white rounded-sm shadow-card p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold text-dark">{pageTitle}</h1>
-              <p className="text-sm text-gray-500">{filtered.length} products found</p>
+              <p className="text-sm text-gray-500">{filtered.length=== 1 ? `${filtered.length} product found` : `${filtered.length} products found`}</p>
             </div>
             <select
               value={sort}

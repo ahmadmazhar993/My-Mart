@@ -98,12 +98,14 @@ const Header = () => {
   };
 
   const categories = [
+    { name: 'Accessories', slug: 'accessories' },
+    { name: 'Beauty', slug: 'beauty' },
     { name: 'Electronics', slug: 'electronics' },
     { name: 'Fashion', slug: 'clothing' },
-    { name: 'Accessories', slug: 'accessories' },
+    { name: 'Groceries', slug: 'groceries' },
     { name: 'Home & Living', slug: 'home' },
-    { name: 'Beauty', slug: 'beauty' },
     { name: 'Sports', slug: 'sports' },
+    { name: 'Toys & Games', slug: 'toys' },
   ];
 
   const activeCategory = params.get('category') || '';
@@ -124,16 +126,19 @@ const Header = () => {
       </div>
 
       <div className="bg-white border-b border-gray-100">
-        <div className="container-main flex items-center gap-4 lg:gap-8 py-3">
+        <div className="container-main flex items-center gap-2 lg:gap-5 py-3">
           <Link to="/" className="flex-shrink-0">
-            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              <span className="text-primary">AHM</span>
-              <span className="text-dark"> Mart</span>
-            </span>
+            <div className="flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1 ">
+              <img src="logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                <span className="text-dark">A<span className="text-dark">H</span>M</span>
+                <span className="text-primary"> Mart</span>
+              </span>
+            </div>
           </Link>
 
           {shouldShowSearchBar && (
-            <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
+            <form onSubmit={handleSearch} className="flex-1 max-w-full hidden sm:flex">
               <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
                 <input
                   type="text"

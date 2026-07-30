@@ -110,7 +110,9 @@ const Cart = () => {
                 <span className="font-medium">{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
               </div>
               {shipping > 0 && (
-                <p className="text-xs text-primary">Add {formatPrice(2000 - subtotal)} more for free shipping</p>
+                <Link to="/products" className="text-primary text-xs font-medium hover:underline block text-right">
+                  <p className="text-xs text-primary font-medium text-right">Add {formatPrice(2000 - subtotal)} more for free shipping</p>
+                </Link>
               )}
             </div>
             <div className="flex justify-between font-bold text-base sm:text-lg mb-6">
@@ -123,7 +125,7 @@ const Cart = () => {
             <button
               type="button"
               onClick={clearCart}
-              className="btn-secondary w-full py-2 sm:py-2.5 text-xs sm:text-sm"
+              className="btn-secondary w-full py-2 sm:py-2.5 text-xs sm:text-sm color-red-500 hover:bg-red-50 hover:text-red-600"
             >
               Clear Cart
             </button>
