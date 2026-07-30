@@ -618,10 +618,36 @@ async function deleteProduct(req, res) {
   }
 }
 
+async function checkProductPurchased(req, res) {
+  try {
+    const { identifier } = req.params;
+    const product = await resolveProductByIdentifier(identifier);
+    if (!product) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    const userId = req.activeUser?.userID;
+    if (!userId) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Authentication required' });
+    }
+
+    const purchased = await db('orders as o')
+      .join('order_items as oi', 'oi.order_id', 'o.orderID')
+      .where('o.user_id', userId)
+      .andWhere('oi.product_id', product.productID)
+      .first();
+
+    return res.status(StatusCodes.OK).json({ success: true, data: { purchased: Boolean(purchased) } });
+  } catch (err) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message || 'Failed to check purchase status' });
+  }
+}
+
 module.exports = {
   listProducts,
   getProductById,
   getProductReviews,
+  checkProductPurchased,
   createProductReview,
   createProduct,
   updateProduct,

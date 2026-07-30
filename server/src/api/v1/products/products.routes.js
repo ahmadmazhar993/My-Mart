@@ -11,12 +11,14 @@ const {
   updateProduct,
   deleteProduct,
   uploadProductImages,
+  checkProductPurchased
 } = require('./products.service');
 const { validateCreateProduct, validateUpdateProduct } = require('./products.validation');
 const { isAuthenticated } = require('../auth/auth.service');
 
 router.get('/', listProducts);
 router.get('/:identifier/reviews', getProductReviews);
+router.get('/:identifier/purchased', isAuthenticated, checkProductPurchased);
 router.post('/:identifier/reviews', isAuthenticated, createProductReview);
 router.get('/:identifier', getProductById);
 router.post('/upload-images', uploadProductImages);
