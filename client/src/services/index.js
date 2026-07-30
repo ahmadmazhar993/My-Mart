@@ -25,6 +25,7 @@ export const productService = {
   getAllProducts: (params) => api.get('/products', { params }),
   getProductById: (identifier) => api.get(`/products/${identifier}`),
   getProductReviews: (identifier) => api.get(`/products/${identifier}/reviews`),
+  checkPurchased: (identifier) => api.get(`/products/${identifier}/purchased`),
   createReview: (identifier, data) => api.post(`/products/${identifier}/reviews`, data),
   createProduct: (data) => api.post('/products', data),
   updateProduct: (identifier, data) => api.put(`/products/${identifier}`, data),
