@@ -25,6 +25,7 @@ const ProductDetail = () => {
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
   const { addItem, cart, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
+  const currentUserId = user?.id || user?.userID;
   const { addToast } = useToast();
   const { isInWishlist, toggleItem } = useWishlistStore();
 
@@ -36,26 +37,28 @@ const ProductDetail = () => {
       productService.getProductById(identifier),
       productService.getProductReviews(identifier),
       isAuthenticated ? orderService.getAllOrders() : Promise.resolve({ data: { data: [] } }),
+      isAuthenticated ? productService.checkPurchased(identifier) : Promise.resolve({ data: { purchased: false } }),
     ])
-      .then(([productRes, reviewsRes, ordersRes]) => {
+      .then(([productRes, reviewsRes, ordersRes, purchasedRes]) => {
         const nextProduct = productRes.data?.data || null;
         const nextReviews = reviewsRes.data?.data || [];
         const nextOrders = ordersRes?.data?.data || [];
+        const purchasedFlag = purchasedRes?.data?.data?.purchased ?? purchasedRes?.data?.purchased ?? false;
 
         setProduct(nextProduct);
         setReviews(nextReviews);
 
-        if (!nextProduct || !isAuthenticated || !user?.id) {
+        if (!nextProduct || !isAuthenticated || !currentUserId) {
           setCanReview(false);
           setReviewEligibilityMessage('');
           return;
         }
 
-        const hasPurchased = nextOrders.some((order) => (
+        const hasPurchased = purchasedFlag || nextOrders.some((order) => (
           Array.isArray(order.items)
           && order.items.some((item) => String(item.product_id) === String(nextProduct.id))
         ));
-        const hasReviewed = nextReviews.some((review) => String(review.userId) === String(user.id));
+        const hasReviewed = nextReviews.some((review) => String(review.userId) === String(currentUserId));
 
         setCanReview(hasPurchased && !hasReviewed);
         setReviewEligibilityMessage(
@@ -73,7 +76,7 @@ const ProductDetail = () => {
         setReviewEligibilityMessage('');
       })
       .finally(() => setLoading(false));
-  }, [identifier, isAuthenticated, user?.id]);
+  }, [identifier, isAuthenticated, currentUserId]);
 
   useEffect(() => {
     if (!product || !identifier) return;
