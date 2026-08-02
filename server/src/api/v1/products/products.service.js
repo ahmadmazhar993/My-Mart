@@ -70,6 +70,7 @@ const normalizeVariantsPayload = (variants) => {
         discount_percentage: variant.discount_percentage == null || variant.discount_percentage === '' ? null : Number(variant.discount_percentage),
         stock_quantity: variant.stock_quantity == null || variant.stock_quantity === '' ? null : Number(variant.stock_quantity),
         sku: String(variant.sku || '').trim(),
+        image: String(variant.image || variant.image_url || variant.imageUrl || '').trim(),
       };
     })
     .filter(Boolean);

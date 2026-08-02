@@ -33,10 +33,10 @@ const AdminProducts = () => {
     : '';
   const [searchQuery, setSearchQuery] = useState(urlSearch);
 
-  const loadData = (nextPage = page) => {
+  const loadData = (nextPage = page, search = urlSearch) => {
     setLoading(true);
     Promise.all([
-      productService.getAllProducts({ page: nextPage, limit: 10 }),
+      productService.getAllProducts({ page: nextPage, limit: 10, search }),
       categoryService.getAllCategories(),
     ])
       .then(([productsRes, categoriesRes]) => {
@@ -48,7 +48,7 @@ const AdminProducts = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(page); }, [page]);
+  useEffect(() => { loadData(page, urlSearch); }, [page, urlSearch]);
 
   useEffect(() => {
     setSearchQuery(urlSearch);
@@ -72,23 +72,14 @@ const AdminProducts = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredProducts = products.filter((product) => {
-    const query = urlSearch.toLowerCase().trim();
-
-    if (!query) return true;
-
-    return (
-      product.name.toLowerCase().includes(query) ||
-      (product.description || "").toLowerCase().includes(query) ||
-      (product.sku || "").toLowerCase().includes(query)
-    );
-  });
-
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/admin/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      setPage(1);
+      navigate(`/admin/products?search=${encodeURIComponent(trimmed)}`);
     } else {
+      setPage(1);
       navigate('/admin/products');
     }
   };
@@ -220,7 +211,7 @@ const AdminProducts = () => {
       <div className="bg-white rounded-sm shadow-card overflow-hidden">
         {loading ? (
           <p className="p-5 text-gray-500">Loading...</p>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 mb-4">No products found.</p>
             <button type="button" onClick={handleAdd} className="btn-primary">
@@ -241,7 +232,7 @@ const AdminProducts = () => {
                 </tr>
               </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <tr key={product.id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{product.name}</td>
                       <td className="px-4 py-3 text-gray-600">

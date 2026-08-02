@@ -37,7 +37,7 @@ const Products = () => {
     Promise.all([
       productService.getAllProducts({
         page,
-        limit: 12,
+        limit: 20,
         search: search || undefined,
         category_id: categoryId || undefined,
         sale: saleOnly || undefined,
@@ -161,7 +161,7 @@ const Products = () => {
 
               <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-gray-600">
-                  {products.length ? `Showing ${((page - 1) * 12) + 1}-${Math.min(page * 12, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
+                  {products.length ? `Showing ${((page - 1) * 20) + 1}-${Math.min(page * 20, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
