@@ -118,8 +118,8 @@ const Header = () => {
         <div className="container-main flex items-center justify-between py-1.5">
           <span>Free shipping on orders over Rs. 2,000</span>
           <div className="hidden sm:flex items-center gap-4">
-            <Link to="/pages/sell" className="hover:underline">Sell on AHM Mart</Link>
-            <span className="opacity-60">|</span>
+            {/* <Link to="/pages/sell" className="hover:underline">Sell on AHM Mart</Link> */}
+            {/* <span className="opacity-60">|</span> */}
             <Link to="/help" className="hover:underline">Help Center</Link>
           </div>
         </div>
