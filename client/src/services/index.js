@@ -17,7 +17,7 @@ export const userService = {
   getProfile: () => api.get('/user/profile'),
   updateProfile: (data) => api.put('/user/update-preferences', data),
   changePassword: (data) => api.put('/user/update-password', data),
-  getAllUsers: () => api.get('/user'),
+  getAllUsers: (params = {}) => api.get('/user', { params }),
   updateUser: (id, data) => api.put(`/user/${id}`, data),
 };
 
@@ -41,7 +41,7 @@ export const categoryService = {
 };
 
 export const orderService = {
-  getAllOrders: () => api.get('/orders'),
+  getAllOrders: (params = {}) => api.get('/orders', { params }),
   getOrderById: (id) => api.get(`/orders/${id}`),
   createOrder: (data) => api.post('/orders', data),
   updateOrderStatus: (id, status, paymentStatus) => api.put(`/orders/${id}`, { status, paymentStatus }),

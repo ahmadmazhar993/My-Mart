@@ -77,11 +77,51 @@ const normalizeVariantsPayload = (variants) => {
 
 async function listProducts(req, res) {
   try {
-    const products = await db('products')
-      .select('*')
-      .where('isActive', true)
-      .orderBy('createdOn', 'desc')
-      .limit(Number(req.query.limit) || 100);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+    const search = String(req.query.search || '').trim().toLowerCase();
+    const categoryId = req.query.category_id;
+    const saleOnly = req.query.sale === 'true';
+    const priceRange = req.query.priceRange || 'all';
+
+    const baseQuery = db('products').where('isActive', true);
+
+    if (search) {
+      baseQuery.whereRaw('LOWER(name) LIKE ?', [`%${search}%`]);
+    }
+
+    if (categoryId) {
+      baseQuery.where('category_id', categoryId);
+    }
+
+    if (saleOnly) {
+      baseQuery.whereNotNull('discountPrice');
+    }
+
+    if (priceRange === 'under-500') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) < ?)', [500])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) < ?)', [500]);
+      });
+    } else if (priceRange === '500-2000') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000]);
+      });
+    } else if (priceRange === 'over-2000') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) > ?)', [2000])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) > ?)', [2000]);
+      });
+    }
+
+    const filteredQuery = baseQuery.clone();
+    const countQuery = baseQuery.clone();
+    const orderedQuery = filteredQuery.select('*').orderBy('createdOn', 'desc');
+
+    const totalResult = await countQuery.count({ total: '*' }).first();
+    const products = await orderedQuery.clone().limit(limit).offset(offset);
 
     const data = await Promise.all(
       products.map(async (product) => {
@@ -98,9 +138,20 @@ async function listProducts(req, res) {
       })
     );
 
+    const total = Number(totalResult?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
     return res.status(StatusCodes.OK).json({
       success: true,
       data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

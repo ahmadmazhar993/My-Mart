@@ -27,17 +27,23 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const { addToast } = useToast();
 
-  const loadUsers = () => {
+  const loadUsers = (nextPage = page) => {
     setLoading(true);
-    userService.getAllUsers()
-      .then((res) => setUsers(res.data?.data || []))
+    setError('');
+    userService.getAllUsers({ page: nextPage, limit: 10 })
+      .then((res) => {
+        setUsers(res.data?.data || []);
+        setPagination(res.data?.pagination || null);
+      })
       .catch(() => setError('Failed to load users'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(page); }, [page]);
 
   const handleStatusChange = async (userId, status) => {
     if (userId === currentUser?.id) {
@@ -49,7 +55,7 @@ const AdminUsers = () => {
     try {
       await userService.updateUser(userId, { status });
       addToast(`User status updated to ${status}.`);
-      loadUsers();
+      loadUsers(page);
     } catch {
       setError('Failed to update user status.');
       addToast('Failed to update user status.', 'error');
@@ -57,6 +63,8 @@ const AdminUsers = () => {
       setUpdating(null);
     }
   };
+
+  const totalPages = pagination?.totalPages || 1;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -73,9 +81,10 @@ const AdminUsers = () => {
         {loading ? (
           <p className="p-5 text-gray-500">Loading...</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
                 <tr className="text-left text-gray-500">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Email</th>
@@ -84,47 +93,77 @@ const AdminUsers = () => {
                   <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">
-                      {[user.fullName].filter(Boolean).join(' ') || '—'}
-                      {user.id === currentUser?.id && (
-                        <span className="ml-1 text-xs text-gray-400">(you)</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${roleBadge(user.role)}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${statusBadge(user.status.toLowerCase())}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.id === currentUser?.id ? (
-                        <span className="text-xs text-gray-400">—</span>
-                      ) : (
-                        <select
-                          value={user.status}
-                          disabled={updating === user.id}
-                          onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                          className="input-field py-1.5 text-xs capitalize w-28"
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="banned">Banned</option>
-                        </select>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">
+                        {[user.fullName].filter(Boolean).join(' ') || '—'}
+                        {user.id === currentUser?.id && (
+                          <span className="ml-1 text-xs text-gray-400">(you)</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${roleBadge(user.role)}`}>
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${statusBadge(user.status.toLowerCase())}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.id === currentUser?.id ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <select
+                            value={user.status}
+                            disabled={updating === user.id}
+                            onChange={(e) => handleStatusChange(user.id, e.target.value)}
+                            className="input-field py-1.5 text-xs capitalize w-28"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="banned">Banned</option>
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-600">
+                {users.length ? `Showing ${((page - 1) * 10) + 1}-${Math.min(page * 10, pagination?.total || users.length)} of ${pagination?.total || users.length} users` : 'No records'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={!pagination?.hasPrevPage}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span className="ml-1">Previous</span>
+                </button>
+                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
+                  Page {page}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pagination?.hasNextPage}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="mr-1">Next</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

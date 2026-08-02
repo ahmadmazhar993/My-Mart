@@ -31,11 +31,15 @@ const AdminDashboard = () => {
     ])
       .then(([productsRes, categoriesRes, ordersRes, usersRes]) => {
         const orders = ordersRes.data?.data || [];
+        const productsTotal = productsRes.data?.pagination?.total ?? (productsRes.data?.data || []).length;
+        const ordersTotal = ordersRes.data?.pagination?.total ?? orders.length;
+        const usersTotal = usersRes.data?.pagination?.total ?? (usersRes.data?.data || []).length;
+
         setStats({
-          products: (productsRes.data?.data || []).length,
+          products: productsTotal,
           categories: (categoriesRes.data?.data || []).length,
-          orders: orders.length,
-          users: (usersRes.data?.data || []).length,
+          orders: ordersTotal,
+          users: usersTotal,
         });
         setRecentOrders(orders.slice(0, 5));
       })

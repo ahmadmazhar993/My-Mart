@@ -22,23 +22,37 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState('popular');
   const [priceRange, setPriceRange] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, category, saleOnly, priceRange]);
+
+  const categoryMatch = categories.find((c) => c.slug === category);
+  const categoryId = categoryMatch?.id;
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      productService.getAllProducts({ limit: 100 }),
+      productService.getAllProducts({
+        page,
+        limit: 12,
+        search: search || undefined,
+        category_id: categoryId || undefined,
+        sale: saleOnly || undefined,
+        priceRange,
+      }),
       categoryService.getAllCategories(),
     ])
       .then(([productsRes, categoriesRes]) => {
         setProducts(productsRes.data?.data || []);
+        setPagination(productsRes.data?.pagination || null);
         setCategories(categoriesRes.data?.data || []);
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-  }, []);
-
-  const categoryMatch = categories.find((c) => c.slug === category);
-  const categoryId = categoryMatch?.id;
+  }, [page, search, categoryId, saleOnly, priceRange]);
 
   const filtered = products
     .filter((p) => {
@@ -69,6 +83,8 @@ const Products = () => {
       : category
         ? categoryMatch?.name || category.charAt(0).toUpperCase() + category.slice(1)
         : 'All Products';
+
+  const totalPages = pagination?.totalPages || 1;
 
   return (
     <div className="container-main py-6 animate-fade-in">
@@ -136,11 +152,43 @@ const Products = () => {
               />
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filtered.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {filtered.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-gray-600">
+                  {products.length ? `Showing ${((page - 1) * 12) + 1}-${Math.min(page * 12, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={!pagination?.hasPrevPage}
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span aria-hidden="true">←</span>
+                    <span className="ml-1">Previous</span>
+                  </button>
+                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
+                    Page {page}
+                  </span>
+                  {pagination?.hasNextPage ? (
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => current + 1)}
+                      className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary"
+                    >
+                      <span className="mr-1">Next</span>
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

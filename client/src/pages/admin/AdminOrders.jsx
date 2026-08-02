@@ -25,16 +25,22 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
-  const loadOrders = () => {
+  const loadOrders = (nextPage = page) => {
     setLoading(true);
-    orderService.getAllOrders()
-      .then((res) => setOrders(res.data?.data || []))
+    setError('');
+    orderService.getAllOrders({ page: nextPage, limit: 10 })
+      .then((res) => {
+        setOrders(res.data?.data || []);
+        setPagination(res.data?.pagination || null);
+      })
       .catch(() => setError('Failed to load orders'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => { loadOrders(page); }, [page]);
 
   const getProductNames = (order) => {
     const fromProductName = order?.product_name;
@@ -75,7 +81,7 @@ const AdminOrders = () => {
     try {
       await orderService.updateOrderStatus(id, status);
       broadcastOrderUpdate();
-      loadOrders();
+      loadOrders(page);
     } catch {
       setError('Failed to update order status');
     }
@@ -85,7 +91,7 @@ const AdminOrders = () => {
     try {
       await orderService.updateOrderStatus(id, undefined, 'paid');
       broadcastOrderUpdate();
-      loadOrders();
+      loadOrders(page);
     } catch {
       setError('Failed to update payment status');
     }
@@ -102,6 +108,18 @@ const AdminOrders = () => {
       </span>
     );
   };
+
+  const totalPages = pagination?.totalPages || 1;
+  const limit = pagination?.limit || 10;
+  const totalItems = pagination?.total || orders.length;
+  const startItem = orders.length ? (page - 1) * limit + 1 : 0;
+  const endItem = Math.min(page * limit, totalItems);
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).filter((pageNumber) => {
+    if (totalPages <= 5) return true;
+    if (pageNumber === 1 || pageNumber === totalPages) return true;
+    return Math.abs(pageNumber - page) <= 1;
+  });
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -256,6 +274,35 @@ const AdminOrders = () => {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-600">
+                {orders.length ? `Showing ${startItem}-${endItem} of ${totalItems} orders` : 'No records'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={!pagination?.hasPrevPage}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span className="ml-1">Previous</span>
+                </button>
+                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
+                  Page {page}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pagination?.hasNextPage}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="mr-1">Next</span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
             </div>
           </>
         )}

@@ -89,14 +89,17 @@ const uploadPaymentProofMiddleware = (req, res, next) => {
 
 async function listOrders(req, res) {
   try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
     let query = db('orders')
       .leftJoin('user as u', 'orders.user_id', 'u.userID')
       .select(
         'orders.*',
         db.raw('u."firstName" || \' \' || u."lastName" as "userName"')
       )
-      .orderBy('orders.createdOn', 'desc')
-      .limit(100);
+      .orderBy('orders.createdOn', 'desc');
 
     const roleRow = await db('accessTemplate')
       .first('type')
@@ -106,7 +109,16 @@ async function listOrders(req, res) {
       query = query.where('orders.user_id', req.activeUser.userID);
     }
 
-    const orders = await query;
+    const countQuery = query.clone()
+      .clear('select')
+      .clear('order')
+      .clear('limit')
+      .clear('offset')
+      .count({ total: '*' });
+
+    const [{ total }] = await countQuery;
+    const paginatedQuery = query.clone().limit(limit).offset(offset);
+    const orders = await paginatedQuery;
     const orderIds = orders.map((order) => order.orderID);
     const payments = orderIds.length
       ? await db('payments').whereIn('order_id', orderIds)
@@ -116,7 +128,6 @@ async function listOrders(req, res) {
       return acc;
     }, {});
 
-    // Fetch order items for the listed orders and group them by order_id
     const orderItems = orderIds.length
       ? await db('order_items')
         .select('order_items.*', 'products.name as product_name', 'products.images')
@@ -141,6 +152,8 @@ async function listOrders(req, res) {
       return acc;
     }, {});
 
+    const totalPages = Math.max(1, Math.ceil(Number(total) / limit));
+
     return res.status(StatusCodes.OK).json({
       message: 'Orders retrieved successfully',
       success: true,
@@ -148,6 +161,14 @@ async function listOrders(req, res) {
         ...mapOrder({ ...order, items: itemsByOrder[order.orderID] || [] }, paymentByOrder[order.orderID]),
         userName: order.userName,
       })),
+      pagination: {
+        page,
+        limit,
+        total: Number(total),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
