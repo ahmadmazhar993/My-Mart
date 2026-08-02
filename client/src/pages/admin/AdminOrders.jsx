@@ -19,6 +19,30 @@ const AdminOrders = () => {
 
   useEffect(() => { loadOrders(); }, []);
 
+  const getProductNames = (order) => {
+    const fromProductName = order?.product_name;
+    if (typeof fromProductName === 'string' && fromProductName.trim()) {
+      return fromProductName;
+    }
+
+    const fromProductNames = order?.product_names;
+    if (typeof fromProductNames === 'string' && fromProductNames.trim()) {
+      return fromProductNames;
+    }
+
+    const productItems = Array.isArray(order?.products)
+      ? order.products
+      : Array.isArray(order?.items)
+        ? order.items
+        : [];
+
+    const names = productItems
+      .map((item) => item?.product_name || item?.name || item?.product?.name || item?.product?.product_name)
+      .filter(Boolean);
+
+    return names.length ? names.join(', ') : '—';
+  };
+
   const broadcastOrderUpdate = () => {
     if (typeof BroadcastChannel !== 'undefined') {
       const channel = new BroadcastChannel('orders-updates');
@@ -73,6 +97,7 @@ const AdminOrders = () => {
                 <tr className="text-left text-gray-500">
                   <th className="px-4 py-3 font-medium">Order #</th>
                   <th className="px-4 py-3 font-medium">Customer</th>
+                  <th className="px-4 py-3 font-medium">Product Name</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Payment Method</th>
                   <th className="px-4 py-3 font-medium">Payment Status</th>
@@ -85,6 +110,7 @@ const AdminOrders = () => {
                   <tr key={order.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">#{order.display_order_id || order.id}</td>
                     <td className="px-4 py-3">{String(order.userName)}</td>
+                    <td className="px-4 py-3">{getProductNames(order)}</td>
                     <td className="px-4 py-3 font-semibold">Rs. {Number(order.total_price).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       {PAYMENT_METHOD_LABELS[order.payment_method] || order.payment_method || '—'}
