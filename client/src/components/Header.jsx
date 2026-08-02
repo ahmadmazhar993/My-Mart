@@ -147,7 +147,7 @@ const Header = () => {
 
             {/* Tablet & Desktop */}
             <div className="hidden sm:flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1">
-              <img src="logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
+              <img src="/logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
               <span className="text-3xl font-extrabold tracking-tight">
                 <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
