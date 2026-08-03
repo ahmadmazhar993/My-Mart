@@ -17,8 +17,14 @@ const getAllUsers = async (req, res, next) => {
     let {
       search, pageNum, perPage, sortBy, order, offSet
     } = req.query;
-    pageNum = (pageNum && pageNum !== 0 && pageNum !== '0' ? (pageNum * 1) - 1 : 0);
-    perPage = (perPage && perPage !== 0 && perPage !== '0' ? (perPage * 1) : 10);
+
+    const requestedPage = parseInt(req.query.page || pageNum || '1', 10);
+    const requestedLimit = parseInt(req.query.limit || perPage || '10', 10);
+    const page = Number.isNaN(requestedPage) || requestedPage < 1 ? 1 : requestedPage;
+    const limit = Number.isNaN(requestedLimit) || requestedLimit < 1 ? 10 : Math.min(requestedLimit, 100);
+
+    pageNum = page - 1;
+    perPage = limit;
     offSet = offSet && !Number.isNaN(offSet * 1) ? (offSet * 1) : (pageNum * perPage);
     search = `%${search || ''}%`;
     let status = ['Active', 'inActive'];
@@ -98,24 +104,31 @@ const getAllUsers = async (req, res, next) => {
       .offset(offSet);
 
     allUsers.map((users) => ['isDeleted', 'deletedBy'].forEach((e) => delete users[e]));
-    const total = await db('user')
-      .select(db.raw('cast(sum(count(distinct "user"."userID")) over() as int) total'))
+    const totalResult = await db('user')
       .join('accessTemplate', 'user.accessTemplateID', '=', 'accessTemplate.accessTemplateID')
       .where((builder) => {
-        // builder.whereIn('user.status', status);
         builder.where('isDeleted', false);
         if (rawWhere !== '') {
           builder.whereRaw(rawWhere, [search, search, search, search]);
         }
       })
-      .groupBy('user.userID', 'accessTemplate.type');
+      .countDistinct({ total: 'user.userID' })
+      .first();
+
+    const total = Number(totalResult?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
 
     req.allUsers = {
       data: allUsers,
       pagination: {
-        total: (total.length > 0 && total[0].total) || 0,
-        perPage: perPage || 10,
-        pageNum: pageNum + 1
+        total,
+        perPage,
+        pageNum: page,
+        page: page,
+        limit: perPage,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
       }
     };
     return next();

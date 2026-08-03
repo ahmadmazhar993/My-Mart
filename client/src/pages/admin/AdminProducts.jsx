@@ -20,6 +20,8 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -31,18 +33,22 @@ const AdminProducts = () => {
     : '';
   const [searchQuery, setSearchQuery] = useState(urlSearch);
 
-  const loadData = () => {
+  const loadData = (nextPage = page, search = urlSearch) => {
     setLoading(true);
-    Promise.all([productService.getAllProducts(), categoryService.getAllCategories()])
+    Promise.all([
+      productService.getAllProducts({ page: nextPage, limit: 10, search }),
+      categoryService.getAllCategories(),
+    ])
       .then(([productsRes, categoriesRes]) => {
         setProducts(productsRes.data?.data || []);
+        setPagination(productsRes.data?.pagination || null);
         setCategories(categoriesRes.data?.data || []);
       })
       .catch(() => setError('Failed to load products'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(page, urlSearch); }, [page, urlSearch]);
 
   useEffect(() => {
     setSearchQuery(urlSearch);
@@ -66,23 +72,14 @@ const AdminProducts = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredProducts = products.filter((product) => {
-    const query = urlSearch.toLowerCase().trim();
-
-    if (!query) return true;
-
-    return (
-      product.name.toLowerCase().includes(query) ||
-      (product.description || "").toLowerCase().includes(query) ||
-      (product.sku || "").toLowerCase().includes(query)
-    );
-  });
-
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/admin/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      setPage(1);
+      navigate(`/admin/products?search=${encodeURIComponent(trimmed)}`);
     } else {
+      setPage(1);
       navigate('/admin/products');
     }
   };
@@ -139,7 +136,7 @@ const AdminProducts = () => {
         addToast('Product created successfully.');
       }
       handleCloseModal();
-      loadData();
+      loadData(page);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to save product';
       setError(msg);
@@ -165,7 +162,7 @@ const AdminProducts = () => {
       await productService.deleteProduct(deleteTarget.id);
       setDeleteTarget(null);
       addToast('Product deleted successfully.');
-      loadData();
+      loadData(page);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to delete product';
       setError(msg);
@@ -174,6 +171,8 @@ const AdminProducts = () => {
       setDeleting(false);
     }
   };
+
+  const totalPages = pagination?.totalPages || 1;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -212,7 +211,7 @@ const AdminProducts = () => {
       <div className="bg-white rounded-sm shadow-card overflow-hidden">
         {loading ? (
           <p className="p-5 text-gray-500">Loading...</p>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 mb-4">No products found.</p>
             <button type="button" onClick={handleAdd} className="btn-primary">
@@ -220,9 +219,10 @@ const AdminProducts = () => {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
                 <tr className="text-left text-gray-500">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Category</th>
@@ -231,32 +231,63 @@ const AdminProducts = () => {
                   <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{product.name}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {categories.find((c) => c.id === product.category_id)?.name || product.category_id}
-                    </td>
-                    <td className="px-4 py-3">{formatPrice(product.discount_price || product.price)}</td>
-                    <td className="px-4 py-3">{product.stock_quantity}</td>
-                    <td className="px-4 py-3">
-                      <button type="button" onClick={() => handleEdit(product)} className="text-primary font-semibold mr-3 hover:underline">Edit</button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(product)}
-                        disabled={product.can_delete === false}
-                        title={product.can_delete === false ? 'This product is in use and cannot be deleted.' : 'Delete product'}
-                        className="text-red-600 font-semibold hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{product.name}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {categories.find((c) => c.id === product.category_id)?.name || product.category_id}
+                      </td>
+                      <td className="px-4 py-3">{formatPrice(product.discount_price || product.price)}</td>
+                      <td className="px-4 py-3">{product.stock_quantity}</td>
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => handleEdit(product)} className="text-primary font-semibold mr-3 hover:underline">Edit</button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClick(product)}
+                          disabled={product.can_delete === false}
+                          title={product.can_delete === false ? 'This product is in use and cannot be deleted.' : 'Delete product'}
+                          className="text-red-600 font-semibold hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-600">
+                {products.length ? `Showing ${((page - 1) * 10) + 1}-${Math.min(page * 10, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No records'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={!pagination?.hasPrevPage}
+                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span className="ml-1">Previous</span>
+                </button>
+                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
+                  Page {page}
+                </span>
+                {pagination?.hasNextPage ? (
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => current + 1)}
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary"
+                  >
+                    <span className="mr-1">Next</span>
+                    <span aria-hidden="true">→</span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </>
         )}
       </div>
 

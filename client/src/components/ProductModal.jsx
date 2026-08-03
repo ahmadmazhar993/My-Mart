@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import api from "../services/api";
 import { parseProductImages } from "../utils/product";
+import ImageCropModal from "./ImageCropModal";
 import ImageUploader from "./ImageUploader";
 
 const createEmptyVariant = () => ({
@@ -10,6 +12,7 @@ const createEmptyVariant = () => ({
     discount_percentage: "",
     stock_quantity: "",
     sku: "",
+    image: "",
 });
 
 const initialForm = {
@@ -33,6 +36,11 @@ const ProductModal = ({
     saving = false,
 }) => {
     const [form, setForm] = useState(initialForm);
+    const [variantCropIndex, setVariantCropIndex] = useState(null);
+    const [variantCropImageSrc, setVariantCropImageSrc] = useState('');
+    const [variantCropFile, setVariantCropFile] = useState(null);
+    const [pendingVariantIndex, setPendingVariantIndex] = useState(null);
+    const fileInputRefs = useRef({});
 
     useEffect(() => {
         if (product) {
@@ -46,6 +54,7 @@ const ProductModal = ({
                     discount_percentage: variant?.discount_percentage ?? "",
                     stock_quantity: variant?.stock_quantity ?? "",
                     sku: variant?.sku || "",
+                    image: variant?.image || variant?.image_url || variant?.imageUrl || "",
                 }))
                 : [];
 
@@ -89,6 +98,7 @@ const ProductModal = ({
                 discount_percentage: variant.discount_percentage === "" ? null : Number(variant.discount_percentage),
                 stock_quantity: variant.stock_quantity === "" ? null : Number(variant.stock_quantity),
                 sku: String(variant.sku || "").trim(),
+                image: String(variant.image || "").trim(),
             }))
             .filter((variant) => variant.name || variant.label || variant.sku || variant.price != null || variant.discount_price != null || variant.discount_percentage != null || variant.stock_quantity != null);
 
@@ -102,6 +112,62 @@ const ProductModal = ({
                 variantIndex === index ? { ...variant, [field]: value } : variant
             )),
         }));
+    };
+
+    const handleVariantImageUpload = async (index, file) => {
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('images', file);
+        formData.append('name', form.name || 'variant');
+
+        try {
+            const response = await api.post('/products/upload-images', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            const uploadedPath = response.data?.data?.[0] || null;
+            if (uploadedPath) {
+                handleVariantChange(index, 'image', uploadedPath);
+            }
+        } catch (err) {
+            console.error('Variant image upload failed', err);
+        }
+    };
+
+    const openVariantCropper = (index, file) => {
+        if (!file) return;
+        setPendingVariantIndex(index);
+        setVariantCropIndex(index);
+        setVariantCropFile(file);
+        setVariantCropImageSrc(URL.createObjectURL(file));
+    };
+
+    const closeVariantCropper = () => {
+        if (variantCropImageSrc?.startsWith('blob:')) {
+            URL.revokeObjectURL(variantCropImageSrc);
+        }
+        setVariantCropIndex(null);
+        setVariantCropImageSrc('');
+        setVariantCropFile(null);
+        setPendingVariantIndex(null);
+    };
+
+    const handleVariantCropSave = async (blob) => {
+        if (variantCropIndex == null || !variantCropFile) return;
+
+        const fileName = `${Date.now()}-${variantCropIndex + 1}.jpeg`;
+        const croppedFile = new File([blob], fileName, { type: 'image/jpeg' });
+
+        try {
+            await handleVariantImageUpload(variantCropIndex, croppedFile);
+        } finally {
+            closeVariantCropper();
+        }
+    };
+
+    const triggerVariantImagePicker = (index) => {
+        setPendingVariantIndex(index);
+        fileInputRefs.current[index]?.click();
     };
 
     const addVariant = () => {
@@ -311,20 +377,48 @@ const ProductModal = ({
                                                     className="input-field w-full"
                                                 />
                                             </div>
-                                            <div className="flex gap-2">
-                                                <div className="flex-1">
-                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">SKU</label>
-                                                    <input
-                                                        value={variant.sku}
-                                                        onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
-                                                        placeholder="SKU"
-                                                        className="input-field w-full"
-                                                    />
-                                                </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">SKU</label>
+                                                <input
+                                                    value={variant.sku}
+                                                    onChange={(e) => handleVariantChange(index, 'sku', e.target.value)}
+                                                    placeholder="SKU"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Variant Image</label>
+                                                <input
+                                                    ref={(element) => {
+                                                        fileInputRefs.current[index] = element;
+                                                    }}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) {
+                                                            openVariantCropper(pendingVariantIndex ?? index, file);
+                                                            e.target.value = null;
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => triggerVariantImagePicker(index)}
+                                                    className="btn-secondary w-full text-sm"
+                                                >
+                                                    {variant.image ? 'Change Image' : 'Upload Image'}
+                                                </button>
+                                                {variant.image ? (
+                                                    <div className="mt-2 text-xs text-gray-600 break-all">{variant.image}</div>
+                                                ) : null}
+                                            </div>
+                                            <div className="flex items-end">
                                                 <button
                                                     type="button"
                                                     onClick={() => removeVariant(index)}
-                                                    className="text-red-600 text-sm font-semibold whitespace-nowrap self-end pb-2"
+                                                    className="text-red-600 text-sm font-semibold whitespace-nowrap"
                                                 >
                                                     Remove
                                                 </button>
@@ -352,6 +446,14 @@ const ProductModal = ({
                     </div>
 
                     {/* Footer */}
+
+                    <ImageCropModal
+                        open={variantCropIndex != null}
+                        imageSrc={variantCropImageSrc}
+                        onClose={closeVariantCropper}
+                        onSave={handleVariantCropSave}
+                        title="Crop Variant Image"
+                    />
 
                     <div className="border-t px-6 py-4 flex justify-end gap-3 shrink-0 bg-white">
 

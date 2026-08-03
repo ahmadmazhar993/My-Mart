@@ -6,7 +6,7 @@ import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
-import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock } from '../utils/product';
+import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl } from '../utils/product';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -141,7 +141,7 @@ const ProductDetail = () => {
         : null)));
   const images = parseProductImages(product);
   const normalizedImages = images.map((img) => normalizeProductImageUrl(img));
-  const primaryImage = normalizeProductImageUrl(images.length > 0 ? images[0] : product.image_url || null);
+  const primaryImage = getProductImageUrl(product) || normalizeProductImageUrl(images.length > 0 ? images[0] : product.image_url || null);
   const availableStock = Math.max(0, Number(variantStock ?? product.stock_quantity ?? 0));
   const currentCartQuantity = cart.find((entry) => (
     String(entry.id) === String(product.id)
@@ -275,7 +275,7 @@ const ProductDetail = () => {
       <div className="bg-white rounded-sm shadow-card overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           <div className="bg-gray-50 p-6 flex items-center justify-center min-h-[400px]">
-            <ProductImage product={product} className="max-h-[400px] w-full rounded-sm" />
+            <ProductImage product={product} variant={selectedVariant} className="max-h-[400px] w-full rounded-sm" />
           </div>
 
           <div className="p-6 md:p-8">

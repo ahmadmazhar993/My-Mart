@@ -184,24 +184,76 @@ const OrderDetail = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-sm shadow-card p-5">
+          {/* <div className="bg-white rounded-sm shadow-card p-5">
             <h2 className="font-semibold text-lg mb-4">Items</h2>
             <div className="space-y-3">
               {order.items?.map((item) => (
                 <div key={item.id} className="flex justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                   <div>
                     <div className="flex items-center gap-3">
-                      <p className="font-medium">{item.product_name || 'Product'}</p>
+                      <Link to={`/products/${item.product_id}`} className="font-medium text-primary hover:underline">
+                        {item.product_name || 'Product'}
+                      </Link>
                       {item.has_review ? (
                         <span className="text-sm text-green-600 font-semibold">Reviewed</span>
                       ) : (
-                        <Link to={`/products/${item.product_id}`} className="text-sm text-primary hover:underline">Write review</Link>
+                        <Link to={`/products/${item.product_id}`} className="text-sm text-black hover:underline">Write review</Link>
                       )}
                     </div>
                     {item.variant_label && <p className="text-sm text-gray-500">Variant: {item.variant_label}</p>}
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                   </div>
                   <p className="font-semibold text-primary">{formatPrice(item.total_price || item.unit_price * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
+          </div> */}
+          <div className="bg-white rounded-sm shadow-card p-5">
+            <h2 className="font-semibold text-lg mb-4">Items</h2>
+
+            <div className="space-y-3">
+              {order.items?.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                >
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        to={`/products/${item.product_id}`}
+                        className="font-semibold text-primary hover:text-primary/80 hover:underline transition-colors"
+                      >
+                        {item.product_name || "Product"}
+                      </Link>
+
+                      {item.has_review ? (
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          ✓ Reviewed
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/products/${item.product_id}`}
+                          className="text-sm font-medium text-amber-600 hover:text-amber-700 hover:underline transition-colors"
+                        >
+                          Write Review
+                        </Link>
+                      )}
+                    </div>
+
+                    {item.variant_label && (
+                      <p className="text-sm text-gray-500">
+                        Variant: {item.variant_label}
+                      </p>
+                    )}
+
+                    <p className="text-sm text-gray-500">
+                      Qty: {item.quantity}
+                    </p>
+                  </div>
+
+                  <p className="font-semibold text-gray-900">
+                    {formatPrice(item.total_price || item.unit_price * item.quantity)}
+                  </p>
                 </div>
               ))}
             </div>

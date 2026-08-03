@@ -46,6 +46,7 @@ export function normalizeVariant(variant) {
     discount_percentage: variant.discount_percentage != null ? Number(variant.discount_percentage) : null,
     stock_quantity: variant.stock_quantity != null ? Number(variant.stock_quantity) : null,
     sku: variant.sku || '',
+    image: variant.image || variant.image_url || variant.imageUrl || null,
   };
 }
 
@@ -106,14 +107,22 @@ const getApiBaseUrl = () => {
 export function normalizeProductImageUrl(url) {
   if (!url) return null;
   if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('data:')) return url;
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) return url;
   return `${baseUrl.replace(/\/+$/, '')}/${String(url).replace(/^\/+/, '')}`;
 }
 
-export function getProductImageUrl(product) {
+export function getProductImageUrl(product, selectedVariant = null) {
+  if (selectedVariant?.image) return normalizeProductImageUrl(selectedVariant.image);
+
+  const variants = parseProductVariants(product);
+  const variantImage = variants.find((variant) => variant?.image);
+  if (variantImage?.image) return normalizeProductImageUrl(variantImage.image);
+
   const images = parseProductImages(product);
   if (images.length > 0) return normalizeProductImageUrl(images[0]);
+
   if (product?.image_url) return normalizeProductImageUrl(product.image_url);
   return null;
 }

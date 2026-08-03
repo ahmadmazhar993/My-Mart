@@ -118,8 +118,8 @@ const Header = () => {
         <div className="container-main flex items-center justify-between py-1.5">
           <span>Free shipping on orders over Rs. 2,000</span>
           <div className="hidden sm:flex items-center gap-4">
-            <Link to="/pages/sell" className="hover:underline">Sell on AHM Mart</Link>
-            <span className="opacity-60">|</span>
+            {/* <Link to="/pages/sell" className="hover:underline">Sell on AHM Mart</Link> */}
+            {/* <span className="opacity-60">|</span> */}
             <Link to="/help" className="hover:underline">Help Center</Link>
           </div>
         </div>
@@ -127,11 +127,29 @@ const Header = () => {
 
       <div className="bg-white border-b border-gray-100">
         <div className="container-main flex items-center gap-2 lg:gap-5 py-3">
-          <Link to="/" className="flex-shrink-0">
+          {/* <Link to="/" className="flex-shrink-0">
             <div className="flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1 ">
               <img src="logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
               <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                 <span className="text-dark">A<span className="text-dark">H</span>M</span>
+                <span className="text-primary"> Mart</span>
+              </span>
+            </div>
+          </Link> */}
+          <Link to="/" className="flex-shrink-0">
+            {/* Mobile */}
+            <div className="flex items-center sm:hidden">
+              <span className="text-2xl font-extrabold tracking-tight whitespace-nowrap">
+                <span className="text-dark">AHM</span>
+                <span className="text-primary"> Mart</span>
+              </span>
+            </div>
+
+            {/* Tablet & Desktop */}
+            <div className="hidden sm:flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1">
+              <img src="/logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
+              <span className="text-3xl font-extrabold tracking-tight">
+                <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
               </span>
             </div>
