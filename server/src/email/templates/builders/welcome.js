@@ -5,7 +5,7 @@ const buildWelcomeBody = ({ firstName }) => ({
   title: `Welcome to ${site.brandName}!`,
   intro: [
     `Hi ${firstName},`,
-    `Thank you for creating an account on ${site.brandName}. You're now ready to shop Pakistan's trusted marketplace for great deals, fast delivery, and secure checkout.`,
+    `Thank you for creating an account on ${site.brandName}. You're now ready to shop Pakistan's trusted marketplace, fast delivery, and secure checkout.`,
   ],
   action: [{
     instructions: 'Start exploring our catalog and add your favourites to the cart.',
@@ -17,7 +17,7 @@ const buildWelcomeBody = ({ firstName }) => ({
   }],
   outro: [
     'Track orders, manage your profile, and save items from your account dashboard.',
-    `Need help? Visit our Help Center or contact ${site.supportEmail}.`,
+    `Need help? Come to our Help Center or contact ${site.supportEmail}.`,
   ],
   signature: 'The AHM Mart Team',
 });
