@@ -4,6 +4,7 @@ import ProductImage from '../components/ProductImage';
 import { Breadcrumb } from '../components/ui';
 import { useToast } from '../components/ToastProvider';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
+import { getShippingInfo } from '../config/shipping';
 import { orderService, userService } from '../services';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
@@ -15,8 +16,6 @@ const CITY_OPTIONS = [
   'Lahore',
   // 'Islamabad',
 ];
-
-const MINIMUM_ORDER_AMOUNT = 500;
 
 const getPaymentIcon = (type) => {
   switch (type) {
@@ -52,7 +51,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
-  const { cart, clearCart, buyNowItems, clearBuyNowItems } = useCartStore();
+  const { cart, clearCart, buyNowItems, clearBuyNowItems, updateQuantity } = useCartStore();
   const { addToast } = useToast();
 
   const isBuyNow = new URLSearchParams(location.search).get('mode') === 'buynow';
@@ -60,6 +59,9 @@ const Checkout = () => {
     () => (isBuyNow ? (buyNowItems || []) : cart),
     [isBuyNow, buyNowItems, cart],
   );
+
+  // Quantity editing only makes sense for the persistent cart, not a one-off Buy Now flow
+  const canEditQuantity = !isBuyNow && typeof updateQuantity === 'function';
 
   const [form, setForm] = useState({
     fullName: '',
@@ -102,10 +104,10 @@ const Checkout = () => {
   }, [isAuthenticated, user]);
 
   const subtotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 2000 || subtotal === 0 ? 0 : 250;
+  const shippingInfo = getShippingInfo(subtotal);
+  const shipping = shippingInfo.cost;
   const total = subtotal + shipping;
-  const orderAmountRemaining = Math.max(MINIMUM_ORDER_AMOUNT - subtotal, 0);
-  const hasMinimumOrderAmount = subtotal >= MINIMUM_ORDER_AMOUNT;
+  const totalItemCount = checkoutItems.reduce((n, item) => n + item.quantity, 0);
 
   const handleCopyAccount = async (value, e) => {
     e?.preventDefault();
@@ -146,6 +148,13 @@ const Checkout = () => {
       }
     }
   };
+
+const handleQuantityChange = (item, delta) => {
+  if (!canEditQuantity) return;
+  const nextQty = Math.max(1, (item.quantity || 1) + delta);
+  if (nextQty === item.quantity) return;
+  updateQuantity(item, nextQty);
+};
 
   if (!isAuthenticated) {
     const redirectPath = isBuyNow ? '/checkout?mode=buynow' : '/checkout';
@@ -261,13 +270,6 @@ const Checkout = () => {
 
     if (Object.keys(nextErrors).length > 0) {
       const message = 'Please complete the highlighted fields before placing your order.';
-      setError(message);
-      addToast(message, 'error');
-      return;
-    }
-
-    if (!hasMinimumOrderAmount) {
-      const message = `Minimum order amount is Rs. ${MINIMUM_ORDER_AMOUNT}. Please add ${formatPrice(orderAmountRemaining)} more to continue.`;
       setError(message);
       addToast(message, 'error');
       return;
@@ -560,52 +562,119 @@ const Checkout = () => {
               </div>
             </div>
 
-            {subtotal < MINIMUM_ORDER_AMOUNT && (
-              <div className="rounded-sm border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
-                Minimum order amount is Rs. {MINIMUM_ORDER_AMOUNT}. Add {formatPrice(orderAmountRemaining)} more to continue.
-              </div>
-            )}
-            <button type="submit" disabled={loading || !hasMinimumOrderAmount} className="btn-primary w-full py-3">
-              {loading
-                ? 'Placing Order...'
-                : hasMinimumOrderAmount
-                  ? `Place Order — ${formatPrice(total)}`
-                  : `Add ${formatPrice(orderAmountRemaining)} more to order`}
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+              {loading ? 'Placing Order...' : `Place Order — ${formatPrice(total)}`}
             </button>
           </form>
         </div>
 
-        <div className="bg-white rounded-sm shadow-card p-6 h-fit sticky top-36">
+        <div className="bg-white rounded-lg shadow-card p-6 h-fit sticky top-36">
           <h2 className="font-bold text-lg mb-4">Order Summary</h2>
-          <div className="space-y-2 mb-4">
+
+          {/* Shipping tier nudge */}
+          {shippingInfo.nextTier ? (
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary-50/50 p-3">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="text-gray-600">
+                  {shippingInfo.nextTier.cost === 0 ? (
+                    <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more for <span className="font-semibold text-green-600">FREE delivery</span></>
+                  ) : (
+                    <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more to cut delivery to <span className="font-semibold text-primary">{formatPrice(shippingInfo.nextTier.cost)}</span></>
+                  )}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-green-500 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (subtotal / shippingInfo.nextTier.minSubtotal) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 flex items-center gap-1.5">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              You've unlocked FREE delivery!
+            </div>
+          )}
+
+          {/* Line items */}
+          <div className="space-y-3 mb-4 max-h-80 overflow-y-auto pr-1">
             {checkoutItems.map((item) => (
-              <div key={item.id} className="flex items-start gap-3 rounded-sm border border-gray-100 p-2">
-                <ProductImage product={item} className="w-14 h-14 rounded-sm object-cover flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                  {item.variant_label && <p className="text-xs text-gray-500">Variant: {item.variant_label}</p>}
+              <div key={`${item.id}-${item.variant_sku || ''}`} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+                <ProductImage product={item} className="w-16 h-16 rounded-md object-cover flex-shrink-0 border border-gray-100" />
+
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-dark line-clamp-2">{item.name}</p>
+                    {item.variant_label && (
+                      <p className="text-xs text-gray-500 mt-0.5">{item.variant_label}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2">
+                    {canEditQuantity ? (
+                      <div className="flex items-center border border-gray-200 rounded-full">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange(item, -1)}
+                          disabled={item.quantity <= 1}
+                          className="w-6 h-6 flex items-center justify-center text-gray-500 disabled:opacity-30"
+                          aria-label="Decrease quantity"
+                        >
+                          −
+                        </button>
+                        <span className="text-xs font-semibold w-6 text-center">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange(item, 1)}
+                          className="w-6 h-6 flex items-center justify-center text-gray-500"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
+                    )}
+
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-dark">{formatPrice(item.price * item.quantity)}</p>
+                      {item.quantity > 1 && (
+                        <p className="text-[11px] text-gray-400">{formatPrice(item.price)} each</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Totals */}
           <div className="border-t pt-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span className="text-gray-500">Subtotal ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
+              <span className="font-medium">{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Shipping</span>
-              <span>{shipping === 0 ? 'FREE' : formatPrice(shipping)}</span>
+              <span className="text-gray-500">Delivery</span>
+              <span className={shipping === 0 ? 'text-green-600 font-medium' : 'font-medium text-amber-600'}>
+                {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Payment</span>
-              <span>{PAYMENT_METHOD_LABELS[paymentMethod]}</span>
+              <span className="text-gray-500">Payment method</span>
+              <span className="font-medium">{PAYMENT_METHOD_LABELS[paymentMethod]}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg pt-2 border-t">
+            <div className="flex justify-between items-baseline font-bold text-lg pt-3 mt-1 border-t">
               <span>Total</span>
               <span className="text-primary">{formatPrice(total)}</span>
             </div>
           </div>
+
           {!isBuyNow && (
             <Link to="/cart" className="block text-center text-sm text-primary mt-4 hover:underline">
               &larr; Back to Cart
