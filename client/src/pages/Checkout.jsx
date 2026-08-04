@@ -93,7 +93,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuthStore();
-  const { cart, clearCart, buyNowItems, clearBuyNowItems, updateQuantity } = useCartStore();
+  const { cart, clearCart, buyNowItems, clearBuyNowItems, updateQuantity, removeItem } = useCartStore();
   const { addToast } = useToast();
 
   const isBuyNow = new URLSearchParams(location.search).get('mode') === 'buynow';
@@ -192,18 +192,28 @@ const Checkout = () => {
 
   const handleQuantityChange = (item, delta) => {
     if (!canEditQuantity) return;
-    const nextQty = Math.max(1, (item.quantity || 1) + delta);
-    if (nextQty === item.quantity) return;
 
     if (delta > 0) {
       const availableStock = Number(item.stock_quantity ?? item.stock ?? 0);
-      if (availableStock > 0 && nextQty > availableStock) {
-        addToast(`Only ${availableStock} item(s) left in stock.`, 'error');
+      if (availableStock > 0 && item.quantity >= availableStock) {
+        addToast(`You already have the maximum available quantity (${availableStock}) in your cart.`, 'error');
         return;
       }
     }
 
+    const nextQty = Math.max(1, (item.quantity || 1) + delta);
+    if (nextQty === item.quantity) return;
     updateQuantity(item, nextQty);
+  };
+
+  // ADD THIS — right after handleQuantityChange
+  const handleRemoveItem = (item) => {
+    if (isBuyNow) {
+      clearBuyNowItems();
+      navigate(buildProductPath({ id: item.id, name: item.name }));
+      return;
+    }
+    removeItem(item);
   };
 
   if (!isAuthenticated) {
@@ -802,30 +812,40 @@ const Checkout = () => {
                   </div>
 
                   <div className="flex items-center justify-between mt-2">
-                    {canEditQuantity ? (
-                      <div className="flex items-center border border-gray-200 rounded-full">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(item, -1)}
-                          disabled={item.quantity <= 1}
-                          className="w-6 h-6 flex items-center justify-center text-gray-500 disabled:opacity-30"
-                          aria-label="Decrease quantity"
-                        >
-                          −
-                        </button>
-                        <span className="text-xs font-semibold w-6 text-center">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(item, 1)}
-                          className="w-6 h-6 flex items-center justify-center text-gray-500"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {canEditQuantity ? (
+                        <div className="flex items-center border border-gray-200 rounded-full">
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item, -1)}
+                            disabled={item.quantity <= 1}
+                            className="w-6 h-6 flex items-center justify-center text-gray-500 disabled:opacity-30"
+                            aria-label="Decrease quantity"
+                          >
+                            −
+                          </button>
+                          <span className="text-xs font-semibold w-6 text-center">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item, 1)}
+                            className="w-6 h-6 flex items-center justify-center text-gray-500"
+                            aria-label="Increase quantity"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(item)}
+                        className="text-[11px] font-medium text-red-500 hover:text-red-600 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
 
                     <div className="text-right">
                       <p className="text-sm font-semibold text-dark">{formatPrice(item.price * item.quantity)}</p>
