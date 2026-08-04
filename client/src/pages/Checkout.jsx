@@ -605,8 +605,10 @@ const handleQuantityChange = (item, delta) => {
           <div className="space-y-3 mb-4 max-h-80 overflow-y-auto pr-1">
             {checkoutItems.map((item) => (
               <div key={`${item.id}-${item.variant_sku || ''}`} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                <ProductImage product={item} className="w-16 h-16 rounded-md object-cover flex-shrink-0 border border-gray-100" />
-
+                {/* <ProductImage product={item} className="w-16 h-16 rounded-md object-cover flex-shrink-0 border border-gray-100" /> */}
+                <div className="w-16 h-16 flex-shrink-0 rounded-md border border-gray-100 overflow-hidden">
+                  <ProductImage product={item} className="w-full h-full object-cover" />
+                </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <p className="text-sm font-medium text-dark line-clamp-2">{item.name}</p>

@@ -205,8 +205,11 @@ const Cart = () => {
                 key={`${item.id}-${item.variant_sku || ''}`}
                 className="bg-white rounded-lg shadow-card p-3 sm:p-4 flex gap-3 sm:gap-4 border border-transparent hover:border-gray-100 transition"
               >
-                <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20">
+                {/* <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20">
                   <ProductImage product={item} className="w-full h-full rounded-md object-cover border border-gray-100" />
+                </Link> */}
+                <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20 block rounded-md border border-gray-100 overflow-hidden">
+                  <ProductImage product={item} className="w-full h-full object-cover" />
                 </Link>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
