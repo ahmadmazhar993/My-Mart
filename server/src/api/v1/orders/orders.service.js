@@ -90,7 +90,7 @@ const uploadPaymentProofMiddleware = (req, res, next) => {
 async function listOrders(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
     const offset = (page - 1) * limit;
 
     let query = db('orders')
@@ -364,7 +364,8 @@ async function createOrder(req, res) {
         });
         await trx('products')
           .where({ productID: line.product_id })
-          .decrement('stockQuantity', line.quantity);
+          .decrement('stockQuantity', line.quantity)
+          .increment('soldQuantity', line.quantity);
       }));
 
       await trx('payments').insert({

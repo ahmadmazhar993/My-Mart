@@ -79,7 +79,7 @@ const normalizeVariantsPayload = (variants) => {
 async function listProducts(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
     const offset = (page - 1) * limit;
     const search = String(req.query.search || '').trim().toLowerCase();
     const categoryId = req.query.category_id;

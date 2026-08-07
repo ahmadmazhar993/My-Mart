@@ -18,10 +18,10 @@ const getAllUsers = async (req, res, next) => {
       search, pageNum, perPage, sortBy, order, offSet
     } = req.query;
 
-    const requestedPage = parseInt(req.query.page || pageNum || '1', 10);
-    const requestedLimit = parseInt(req.query.limit || perPage || '10', 10);
+    const requestedPage = parseInt(req.query.page || pageNum || '1', 14);
+    const requestedLimit = parseInt(req.query.limit || perPage || '14', 14);
     const page = Number.isNaN(requestedPage) || requestedPage < 1 ? 1 : requestedPage;
-    const limit = Number.isNaN(requestedLimit) || requestedLimit < 1 ? 10 : Math.min(requestedLimit, 100);
+    const limit = Number.isNaN(requestedLimit) || requestedLimit < 1 ? 14 : Math.min(requestedLimit, 100);
 
     pageNum = page - 1;
     perPage = limit;
@@ -100,7 +100,7 @@ const getAllUsers = async (req, res, next) => {
       })
       .groupBy('user.userID', 'accessTemplate.name')
       .orderBy(sortBy, order)
-      .limit(perPage || 10)
+      .limit(perPage || 14)
       .offset(offSet);
 
     allUsers.map((users) => ['isDeleted', 'deletedBy'].forEach((e) => delete users[e]));
