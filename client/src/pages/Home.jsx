@@ -12,7 +12,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    productService.getAllProducts({ limit: 20 })
+    productService.getAllProducts({ limit: 25 })
       .then((res) => setProducts(res.data?.data || []))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));

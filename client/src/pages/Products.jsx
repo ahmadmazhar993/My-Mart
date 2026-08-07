@@ -37,7 +37,7 @@ const Products = () => {
     Promise.all([
       productService.getAllProducts({
         page,
-        limit: 20,
+        limit: 24,
         search: search || undefined,
         category_id: categoryId || undefined,
         sale: saleOnly || undefined,
@@ -85,6 +85,34 @@ const Products = () => {
         : 'All Products';
 
   const totalPages = pagination?.totalPages || 1;
+  const limit = pagination?.limit || 24;
+
+  const getPageNumbers = (current, total) => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let last;
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (last) {
+        if (i - last === 2) {
+          rangeWithDots.push(last + 1);
+        } else if (i - last > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      last = i;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
     <div className="container-main py-6 animate-fade-in">
@@ -127,7 +155,7 @@ const Products = () => {
           <div className="bg-white rounded-sm shadow-card p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold text-dark">{pageTitle}</h1>
-              <p className="text-sm text-gray-500">{filtered.length=== 1 ? `${filtered.length} product found` : `${filtered.length} products found`}</p>
+              <p className="text-sm text-gray-500">{filtered.length === 1 ? `${filtered.length} product found` : `${filtered.length} products found`}</p>
             </div>
             <select
               value={sort}
@@ -161,31 +189,76 @@ const Products = () => {
 
               <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-gray-600">
-                  {products.length ? `Showing ${((page - 1) * 20) + 1}-${Math.min(page * 20, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
+                  {products.length ? `Showing ${((page - 1) * 24) + 1}-${Math.min(page * 24, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={!pagination?.hasPrevPage}
-                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span aria-hidden="true">←</span>
-                    <span className="ml-1">Previous</span>
-                  </button>
-                  <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
-                    Page {page}
-                  </span>
-                  {pagination?.hasNextPage ? (
+                <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-gray-600">
+                    {products.length ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPage(1)}
+                      disabled={page === 1}
+                      aria-label="First page"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      «
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => Math.max(1, current - 1))}
+                      disabled={!pagination?.hasPrevPage}
+                      aria-label="Previous page"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ‹
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {getPageNumbers(page, totalPages).map((p, idx) =>
+                        p === '...' ? (
+                          <span key={`dots-${idx}`} className="inline-flex h-8 w-8 items-center justify-center text-sm text-gray-400">
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setPage(p)}
+                            aria-current={p === page ? 'page' : undefined}
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${p === page
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
+                              }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => setPage((current) => current + 1)}
-                      className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary"
+                      disabled={!pagination?.hasNextPage}
+                      aria-label="Next page"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      <span className="mr-1">Next</span>
-                      <span aria-hidden="true">→</span>
+                      ›
                     </button>
-                  ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => setPage(totalPages)}
+                      disabled={page === totalPages}
+                      aria-label="Last page"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
             </>

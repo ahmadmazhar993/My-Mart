@@ -115,11 +115,32 @@ const AdminOrders = () => {
   const startItem = orders.length ? (page - 1) * limit + 1 : 0;
   const endItem = Math.min(page * limit, totalItems);
 
-  const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1).filter((pageNumber) => {
-    if (totalPages <= 5) return true;
-    if (pageNumber === 1 || pageNumber === totalPages) return true;
-    return Math.abs(pageNumber - page) <= 1;
-  });
+  const getPageNumbers = (current, total) => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let last;
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (last) {
+        if (i - last === 2) {
+          rangeWithDots.push(last + 1);
+        } else if (i - last > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      last = i;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -280,27 +301,68 @@ const AdminOrders = () => {
               <div className="text-sm text-gray-600">
                 {orders.length ? `Showing ${startItem}-${endItem} of ${totalItems} orders` : 'No records'}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  aria-label="First page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  «
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={!pagination?.hasPrevPage}
-                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Previous page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <span aria-hidden="true">←</span>
-                  <span className="ml-1">Previous</span>
+                  ‹
                 </button>
-                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
-                  Page {page}
-                </span>
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers(page, totalPages).map((p, idx) =>
+                    p === '...' ? (
+                      <span key={`dots-${idx}`} className="inline-flex h-8 w-8 items-center justify-center text-sm text-gray-400">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        aria-current={p === page ? 'page' : undefined}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${p === page
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setPage((current) => current + 1)}
                   disabled={!pagination?.hasNextPage}
-                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Next page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <span className="mr-1">Next</span>
-                  <span aria-hidden="true">→</span>
+                  ›
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                  aria-label="Last page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  »
                 </button>
               </div>
             </div>

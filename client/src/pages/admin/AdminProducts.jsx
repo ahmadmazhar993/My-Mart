@@ -36,7 +36,7 @@ const AdminProducts = () => {
   const loadData = (nextPage = page, search = urlSearch) => {
     setLoading(true);
     Promise.all([
-      productService.getAllProducts({ page: nextPage, limit: 10, search }),
+      productService.getAllProducts({ page: nextPage, limit: 25, search }),
       categoryService.getAllCategories(),
     ])
       .then(([productsRes, categoriesRes]) => {
@@ -173,36 +173,84 @@ const AdminProducts = () => {
   };
 
   const totalPages = pagination?.totalPages || 1;
+  const limit = pagination?.limit || 25;
+
+  const getPageNumbers = (current, total) => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let last;
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (last) {
+        if (i - last === 2) {
+          rangeWithDots.push(last + 1);
+        } else if (i - last > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      last = i;
+    }
+
+    return rangeWithDots;
+  };
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-dark">Products</h2>
-          <p className="text-gray-500 text-sm">Manage your store inventory</p>
-        </div>
-        <button type="button" onClick={handleAdd} className="btn-primary shrink-0">
-          + Add Product
-        </button>
-      </div>
+      <div className="flex flex-col gap-3">
+        <form onSubmit={handleSearch} className="flex w-full sm:hidden">
+          <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Products..."
+              className="flex-1 px-4 py-2 text-sm focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
+            >
+              <SearchIcon />
+            </button>
+          </div>
+        </form>
 
-      <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
-        <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Products..."
-            className="flex-1 px-4 py-2 text-sm focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
-          >
-            <SearchIcon />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-dark">Products</h2>
+            <p className="text-gray-500 text-sm">Manage your store inventory</p>
+          </div>
+          <button type="button" onClick={handleAdd} className="btn-primary shrink-0">
+            + Add Product
           </button>
         </div>
-      </form>
+
+        <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
+          <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Products..."
+              className="flex-1 px-4 py-2 text-sm focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
+            >
+              <SearchIcon />
+            </button>
+          </div>
+        </form>
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-sm text-sm">{error}</div>
@@ -223,14 +271,14 @@ const AdminProducts = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
-                <tr className="text-left text-gray-500">
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Category</th>
-                  <th className="px-4 py-3 font-medium">Price</th>
-                  <th className="px-4 py-3 font-medium">Stock</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Category</th>
+                    <th className="px-4 py-3 font-medium">Price</th>
+                    <th className="px-4 py-3 font-medium">Stock</th>
+                    <th className="px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {products.map((product) => (
                     <tr key={product.id} className="border-t border-gray-100 hover:bg-gray-50">
@@ -260,31 +308,71 @@ const AdminProducts = () => {
 
             <div className="flex flex-col gap-3 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-600">
-                {products.length ? `Showing ${((page - 1) * 10) + 1}-${Math.min(page * 10, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No records'}
+                {products.length ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No records'}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPage(1)}
+                  disabled={page === 1}
+                  aria-label="First page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  «
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={!pagination?.hasPrevPage}
-                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Previous page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <span aria-hidden="true">←</span>
-                  <span className="ml-1">Previous</span>
+                  ‹
                 </button>
-                <span className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600">
-                  Page {page}
-                </span>
-                {pagination?.hasNextPage ? (
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => current + 1)}
-                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-primary hover:text-primary"
-                  >
-                    <span className="mr-1">Next</span>
-                    <span aria-hidden="true">→</span>
-                  </button>
-                ) : null}
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers(page, totalPages).map((p, idx) =>
+                    p === '...' ? (
+                      <span key={`dots-${idx}`} className="inline-flex h-8 w-8 items-center justify-center text-sm text-gray-400">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        aria-current={p === page ? 'page' : undefined}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${p === page
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!pagination?.hasNextPage}
+                  aria-label="Next page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ›
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page === totalPages}
+                  aria-label="Last page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  »
+                </button>
               </div>
             </div>
           </>
