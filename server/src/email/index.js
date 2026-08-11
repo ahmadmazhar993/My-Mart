@@ -104,7 +104,7 @@ const getSmtpObj = async () => {
     default:
       smtpObj.host = smtp.host;
       smtpObj.secure = false;
-      smtpObj.ignoreTLS = true;
+      smtpObj.ignoreTLS = false;
       smtpObj.tls = { rejectUnauthorized: false, ciphers: 'SSLv3' };
       if (smtp.port) {
         smtpObj.port = smtp.port;
@@ -123,7 +123,7 @@ const getSmtpObj = async () => {
 };
 
 const sendEmail = async ({
-  body = {}, from = 'noreply@ahmmart.com', to = null,
+  body = {}, from = 'support@ahmmart.store', to = null,
   subject = 'AHM Mart', attachments = []
 }) => {
   if (!to || to === '') {
@@ -141,7 +141,8 @@ const sendEmail = async ({
 
   const response = await warpedSendMail({
     body,
-    from: { name: 'AHM Mart', address: (smtpObj.auth && smtpObj.auth.user) || from },
+    // from: { name: 'AHM Mart', address: (smtpObj.auth && smtpObj.auth.user) || from },
+    from: { name: 'AHM Mart', address: from },
     to,
     subject,
     subjectPrefix,
@@ -179,6 +180,10 @@ const verifySmtpSettings = async (smtp) => {
       smtpObj.tls = { rejectUnauthorized: false, ciphers: 'SSLv3' };
       if (smtp.port) {
         smtpObj.port = smtp.port;
+      }
+      // Brevo uses STARTTLS on port 587
+      if (smtp.port === 587) {
+        smtpObj.requireTLS = true;
       }
       break;
   }

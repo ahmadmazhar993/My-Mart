@@ -74,7 +74,7 @@ const InfoPage = () => {
       case 'careers':
         return {
           title: 'Join our team',
-          description: 'Explore open roles and send your resume to careers@ahmmart.com to begin your career with AHM Mart.',
+          description: 'Explore open roles and send your resume to support@ahmmart.store to begin your career with AHM Mart.',
           links: [
             { label: 'Apply Now', to: '/pages/contact' },
             { label: 'About Us', to: '/pages/about' },
@@ -258,7 +258,7 @@ const InfoPage = () => {
           <div className="bg-white rounded-sm shadow-card p-6">
             <h3 className="text-lg font-bold mb-3">Contact seller success</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Email: <a href="mailto:ahmmart993@gmail.com" className="text-primary hover:underline">ahmmart993@gmail.com</a>
+              Email: <a href="mailto:support@ahmmart.store" className="text-primary hover:underline">support@ahmmart.store</a>
             </p>
             <p className="text-gray-600 text-sm leading-relaxed mt-2">
               Ready to accelerate your sales? We’ll help you list, promote, and sell with confidence.
@@ -297,8 +297,8 @@ const InfoPage = () => {
   const contactMethods = [
     {
       title: 'Customer Support',
-      subtitle: 'ahmmart993@gmail.com',
-      href: 'mailto:ahmmart993@gmail.com',
+      subtitle: 'support@ahmmart.store',
+      href: 'mailto:support@ahmmart.store',
       detail: 'Monday – Saturday, 9 AM – 9 PM PKT',
       icon: '✉️',
     },
@@ -311,8 +311,8 @@ const InfoPage = () => {
     },
     {
       title: 'Seller Inquiries',
-      subtitle: 'ahmmart993@gmail.com',
-      href: 'mailto:ahmmart993@gmail.com',
+      subtitle: 'support@ahmmart.store',
+      href: 'mailto:support@ahmmart.store',
       detail: 'Start selling on AHM Mart today',
       icon: '🏪',
     },
@@ -366,9 +366,10 @@ const InfoPage = () => {
             <div className="rounded-sm bg-primary/5 border border-primary/20 p-6">
               <h3 className="font-semibold text-dark mb-3">Business address</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                AHM Mart (Pvt.) Ltd.
-                Main Boulevard, Gulberg III
-                Lahore, Punjab 54000
+                AHM Mart (Pvt.) Ltd.<br />
+                Near Lahore General Hospital, Ismail Nagar<br />
+                Lahore, Punjab 54760<br />
+                Pakistan
               </p>
             </div>
             <div className="rounded-sm bg-gray-50 border border-gray-200 p-6">
@@ -427,7 +428,7 @@ const InfoPage = () => {
           <div className="bg-white rounded-sm shadow-card p-6">
             <h3 className="text-lg font-semibold text-dark mb-3">Need seller support?</h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Email <a href="mailto:ahmmart993@gmail.com" className="text-primary hover:underline">ahmmart993@gmail.com</a> or visit <Link to="/pages/become-seller" className="text-primary hover:underline">Become a Seller</Link>.
+              Email <a href="mailto:support@ahmmart.store" className="text-primary hover:underline">support@ahmmart.store</a> or visit <Link to="/pages/become-seller" className="text-primary hover:underline">Become a Seller</Link>.
             </p>
           </div>
         </div>

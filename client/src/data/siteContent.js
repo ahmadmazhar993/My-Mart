@@ -49,15 +49,15 @@ export const INFO_PAGES = {
     sections: [
       {
         heading: 'Customer Support',
-        body: 'Email: ahmmart993@gmail.com\nPhone: +92 313 459 1721\nHours: Monday – Saturday, 9:00 AM – 9:00 PM PKT',
+        body: 'Email: support@ahmmart.store\nPhone: +92 323 881 8508\nHours: Monday – Saturday, 9:00 AM – 9:00 PM PKT',
       },
       {
         heading: 'Business Address',
-        body: 'AHM Mart (Pvt.) Ltd.\nMain Boulevard, Gulberg III\nLahore, Punjab 54000\nPakistan',
+        body: 'AHM Mart (Pvt.) Ltd.\nNear Lahore General Hospital, Ismail Nagar\nLahore, Punjab 54600\nPakistan',
       },
       {
         heading: 'Seller Support',
-        body: 'For seller inquiries: ahmmart993@gmail.com\nVisit our Become a Seller page to start selling on AHM Mart.',
+        body: 'For seller inquiries: support@ahmmart.store\nVisit our Become a Seller page to start selling on AHM Mart.',
       },
     ],
   },
@@ -93,7 +93,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Apply Now',
-        body: 'Send your CV and cover letter to careers@ahmmart.com with the position title in the subject line. We review applications on a rolling basis.',
+        body: 'Send your CV and cover letter to support@ahmmart.store with the position title in the subject line. We review applications on a rolling basis.',
       },
     ],
   },
@@ -147,7 +147,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Ready to Begin?',
-        body: 'Visit our Become a Seller page to register, or email ahmmart993@gmail.com for assistance.',
+        body: 'Visit our Become a Seller page to register, or email support@ahmmart.store for assistance.',
       },
     ],
   },
@@ -165,7 +165,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Apply',
-        body: 'Email ahmmart993@gmail.com with your shop name, product category, and contact details. Our onboarding team will guide you through the process.',
+        body: 'Email support@ahmmart.store with your shop name, product category, and contact details. Our onboarding team will guide you through the process.',
       },
     ],
   },
@@ -183,7 +183,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Join the Program',
-        body: 'Contact ahmmart993@gmail.com to apply. Include your website, social media handles, and estimated monthly traffic.',
+        body: 'Contact support@ahmmart.store to apply. Include your website, social media handles, and estimated monthly traffic.',
       },
     ],
   },
@@ -201,7 +201,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'Get a Quote',
-        body: 'Email advertise@ahmmart.com with your campaign objectives and budget. We respond within 2 business days.',
+        body: 'Email support@ahmmart.store with your campaign objectives and budget. We respond within 2 business days.',
       },
     ],
   },
