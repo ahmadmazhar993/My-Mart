@@ -11,12 +11,14 @@ const {
   updateProduct,
   deleteProduct,
   uploadProductImages,
-  checkProductPurchased
+  checkProductPurchased,
+  googleProductFeed
 } = require('./products.service');
 const { validateCreateProduct, validateUpdateProduct } = require('./products.validation');
 const { isAuthenticated } = require('../auth/auth.service');
 
 router.get('/', listProducts);
+router.get('/google-feed.xml', googleProductFeed);
 router.get('/:identifier/reviews', getProductReviews);
 router.get('/:identifier/purchased', isAuthenticated, checkProductPurchased);
 router.post('/:identifier/reviews', isAuthenticated, createProductReview);

@@ -695,6 +695,360 @@ async function checkProductPurchased(req, res) {
   }
 }
 
+const escapeXml = (value) => {
+  if (value === null || value === undefined) return '';
+
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
+const getAbsoluteUrl = (value) => {
+  if (!value) return null;
+
+  const url = String(value).trim();
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  return `https://ahmmart.store/${url.replace(/^\/+/, '')}`;
+};
+
+// const googleProductFeed = async (req, res) => {
+//   try {
+//     const products = await db('products')
+//       .where('isActive', true)
+//       .select('*')
+//       .orderBy('createdOn', 'desc');
+
+//     const items = products
+//       .map((product) => {
+//         const id = product.productID;
+//         const title = product.name;
+//         const description = product.description || product.name;
+
+//         // Use discounted price when available
+//         const finalPrice =
+//           product.discountPrice != null
+//             ? Number(product.discountPrice)
+//             : Number(product.price);
+
+//         // Product availability
+//         const availability =
+//           Number(product.stockQuantity || 0) > 0
+//             ? 'in_stock'
+//             : 'out_of_stock';
+
+//         // Product page URL
+//         const productUrl =
+//           `https://ahmmart.store/products/${slugify(product.name)}`;
+
+//         // Get images from PostgreSQL JSON column
+//         let productImages = [];
+
+//         if (Array.isArray(product.images)) {
+//           productImages = product.images;
+//         } else if (typeof product.images === 'string') {
+//           try {
+//             const parsedImages = JSON.parse(product.images);
+
+//             if (Array.isArray(parsedImages)) {
+//               productImages = parsedImages;
+//             }
+//           } catch (error) {
+//             productImages = [];
+//           }
+//         }
+
+//         // Convert image paths to absolute URLs
+//         const imageUrls = productImages
+//           .filter(Boolean)
+//           .map((image) => getAbsoluteUrl(image))
+//           .filter(Boolean);
+
+//         // First image = main image
+//         const imageUrl = imageUrls[0];
+
+//         // Skip products that don't have an image
+//         if (!imageUrl) {
+//           return '';
+//         }
+
+//         // Remaining images = additional images
+//         const additionalImages = imageUrls
+//           .slice(1)
+//           .map(
+//             (url) =>
+//               `<g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`
+//           )
+//           .join('');
+
+//         return `
+//     <item>
+//       <g:id>${escapeXml(id)}</g:id>
+//       <g:title>${escapeXml(title)}</g:title>
+//       <g:description>${escapeXml(description)}</g:description>
+//       <g:link>${escapeXml(productUrl)}</g:link>
+//       <g:image_link>${escapeXml(imageUrl)}</g:image_link>
+//       ${additionalImages}
+//       <g:availability>${availability}</g:availability>
+//       <g:condition>new</g:condition>
+//       <g:price>${finalPrice.toFixed(2)} PKR</g:price>
+//       ${product.sku
+//             ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>`
+//             : ''
+//           }
+//     </item>`;
+//       })
+//       .filter(Boolean)
+//       .join('');
+
+//     const xml = `<?xml version="1.0" encoding="UTF-8"?>
+// <rss version="2.0"
+//   xmlns:g="http://base.google.com/ns/1.0">
+
+//   <channel>
+//     <title>AHM Mart</title>
+//     <link>https://ahmmart.store</link>
+//     <description>Products available from AHM Mart</description>
+//     ${items}
+//   </channel>
+
+// </rss>`;
+
+//     res
+//       .status(StatusCodes.OK)
+//       .type('application/xml')
+//       .send(xml);
+
+//   } catch (err) {
+//     console.error('Google product feed error:', err);
+
+//     return res
+//       .status(StatusCodes.INTERNAL_SERVER_ERROR)
+//       .type('application/xml')
+//       .send(`
+//         <?xml version="1.0" encoding="UTF-8"?>
+//         <error>${escapeXml(
+//         err.message || 'Failed to generate product feed'
+//       )}</error>
+//       `);
+//   }
+// };
+
+const googleProductFeed = async (req, res) => {
+  try {
+    // =========================================================
+    // Helper: Identify tobacco products
+    // These products should NOT be submitted to Google Merchant
+    // but will remain available on AHM Mart.
+    // =========================================================
+    const isTobaccoProduct = (name = '') => {
+      const tobaccoKeywords = [
+        'cigarette',
+        'cigarettes',
+        'cigar',
+        'cigars',
+        'tobacco',
+        'snus',
+        'hookah tobacco',
+        'rolling tobacco',
+        'pipe tobacco',
+        'dunhill'
+      ];
+
+      const normalizedName = String(name).toLowerCase().trim();
+
+      return tobaccoKeywords.some((keyword) =>
+        normalizedName.includes(keyword)
+      );
+    };
+
+    // =========================================================
+    // Get all active products
+    // =========================================================
+    const products = await db('products')
+      .where('isActive', true)
+      .select('*')
+      .orderBy('createdOn', 'desc');
+
+    // =========================================================
+    // Generate Google Merchant products
+    // =========================================================
+    const items = products
+      .map((product) => {
+        // -----------------------------------------------------
+        // Exclude tobacco products from Google feed
+        // -----------------------------------------------------
+        if (isTobaccoProduct(product.name)) {
+          console.log(
+            `Google Feed: Skipping tobacco product: ${product.name}`
+          );
+
+          return '';
+        }
+
+        const id = product.productID;
+        const title = product.name;
+        const description = product.description || product.name;
+
+        // -----------------------------------------------------
+        // Use discounted price when available
+        // -----------------------------------------------------
+        const finalPrice =
+          product.discountPrice != null
+            ? Number(product.discountPrice)
+            : Number(product.price);
+
+        // -----------------------------------------------------
+        // Validate price
+        // -----------------------------------------------------
+        if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
+          console.log(
+            `Google Feed: Skipping product with invalid price: ${product.name}`
+          );
+
+          return '';
+        }
+
+        // -----------------------------------------------------
+        // Product availability
+        // -----------------------------------------------------
+        const availability =
+          Number(product.stockQuantity || 0) > 0
+            ? 'in_stock'
+            : 'out_of_stock';
+
+        // -----------------------------------------------------
+        // Product page URL
+        // -----------------------------------------------------
+        const productUrl =
+          `https://ahmmart.store/products/${slugify(product.name)}`;
+
+        // -----------------------------------------------------
+        // Get images from PostgreSQL JSON column
+        // -----------------------------------------------------
+        let productImages = [];
+
+        if (Array.isArray(product.images)) {
+          productImages = product.images;
+        } else if (typeof product.images === 'string') {
+          try {
+            const parsedImages = JSON.parse(product.images);
+
+            if (Array.isArray(parsedImages)) {
+              productImages = parsedImages;
+            }
+          } catch (error) {
+            console.log(
+              `Google Feed: Invalid images JSON for: ${product.name}`
+            );
+
+            productImages = [];
+          }
+        }
+
+        // -----------------------------------------------------
+        // Convert image paths to absolute URLs
+        // -----------------------------------------------------
+        const imageUrls = productImages
+          .filter(Boolean)
+          .map((image) => getAbsoluteUrl(image))
+          .filter(Boolean);
+
+        // -----------------------------------------------------
+        // First image = main image
+        // -----------------------------------------------------
+        const imageUrl = imageUrls[0];
+
+        // Skip products without an image
+        if (!imageUrl) {
+          console.log(
+            `Google Feed: Skipping product without image: ${product.name}`
+          );
+
+          return '';
+        }
+
+        // -----------------------------------------------------
+        // Remaining images = additional images
+        // -----------------------------------------------------
+        const additionalImages = imageUrls
+          .slice(1)
+          .map(
+            (url) =>
+              `<g:additional_image_link>${escapeXml(
+                url
+              )}</g:additional_image_link>`
+          )
+          .join('');
+
+        // -----------------------------------------------------
+        // Build Google Merchant item
+        // -----------------------------------------------------
+        return `
+    <item>
+      <g:id>${escapeXml(id)}</g:id>
+      <g:title>${escapeXml(title)}</g:title>
+      <g:description>${escapeXml(description)}</g:description>
+      <g:link>${escapeXml(productUrl)}</g:link>
+      <g:image_link>${escapeXml(imageUrl)}</g:image_link>
+      ${additionalImages}
+      <g:availability>${availability}</g:availability>
+      <g:condition>new</g:condition>
+      <g:price>${finalPrice.toFixed(2)} PKR</g:price>
+      ${product.sku
+            ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>`
+            : ''
+          }
+    </item>`;
+      })
+      .filter(Boolean)
+      .join('');
+
+    // =========================================================
+    // Generate RSS XML
+    // =========================================================
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:g="http://base.google.com/ns/1.0">
+
+  <channel>
+    <title>AHM Mart</title>
+    <link>https://ahmmart.store</link>
+    <description>Products available from AHM Mart</description>
+    ${items}
+  </channel>
+
+</rss>`;
+
+    // =========================================================
+    // Send XML response
+    // =========================================================
+    return res
+      .status(StatusCodes.OK)
+      .type('application/xml')
+      .send(xml);
+
+  } catch (err) {
+    console.error('Google product feed error:', err);
+
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .type('application/xml')
+      .send(`
+        <?xml version="1.0" encoding="UTF-8"?>
+        <error>${escapeXml(
+        err.message || 'Failed to generate product feed'
+      )}</error>
+      `);
+  }
+};
+
 module.exports = {
   listProducts,
   getProductById,
@@ -705,4 +1059,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   uploadProductImages,
+  googleProductFeed
 };
