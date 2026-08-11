@@ -364,8 +364,7 @@ async function createOrder(req, res) {
         });
         await trx('products')
           .where({ productID: line.product_id })
-          .decrement('stockQuantity', line.quantity)
-          .increment('soldQuantity', line.quantity);
+          .decrement('stockQuantity', line.quantity);
       }));
 
       await trx('payments').insert({
