@@ -169,24 +169,24 @@ export const INFO_PAGES = {
       },
     ],
   },
-  affiliate: {
-    title: 'Affiliate Program',
-    subtitle: 'Earn commissions by promoting AHM Mart',
-    sections: [
-      {
-        heading: 'How It Works',
-        body: 'Join our affiliate program, share unique referral links, and earn a commission on every qualifying sale made through your link.',
-      },
-      {
-        heading: 'Commission Rates',
-        body: 'Earn up to 8% commission on referred sales. Payouts are processed monthly for balances over Rs. 5,000.',
-      },
-      {
-        heading: 'Join the Program',
-        body: 'Contact support@ahmmart.store to apply. Include your website, social media handles, and estimated monthly traffic.',
-      },
-    ],
-  },
+  // affiliate: {
+  //   title: 'Affiliate Program',
+  //   subtitle: 'Earn commissions by promoting AHM Mart',
+  //   sections: [
+  //     {
+  //       heading: 'How It Works',
+  //       body: 'Join our affiliate program, share unique referral links, and earn a commission on every qualifying sale made through your link.',
+  //     },
+  //     {
+  //       heading: 'Commission Rates',
+  //       body: 'Earn up to 8% commission on referred sales. Payouts are processed monthly for balances over Rs. 5,000.',
+  //     },
+  //     {
+  //       heading: 'Join the Program',
+  //       body: 'Contact support@ahmmart.store to apply. Include your website, social media handles, and estimated monthly traffic.',
+  //     },
+  //   ],
+  // },
   advertise: {
     title: 'Advertise on AHM Mart',
     subtitle: 'Promote your brand to our audience',
@@ -215,7 +215,7 @@ export const INFO_PAGES = {
       },
       {
         heading: 'COD Availability',
-        body: 'COD is available in major cities across Pakistan. A small handling fee may apply on orders under Rs. 500.',
+        body: 'COD is available in Lahore. A small handling fee may apply on orders under Rs. 2000.',
       },
       {
         heading: 'Order Limits',
@@ -223,24 +223,24 @@ export const INFO_PAGES = {
       },
     ],
   },
-  installments: {
-    title: 'Easy Monthly Installments',
-    subtitle: 'Buy now, pay in easy monthly installments',
-    sections: [
-      {
-        heading: 'EMI Plans',
-        body: 'Split your purchase into 3, 6, or 12 monthly installments with participating banks. Available on orders over Rs. 10,000.',
-      },
-      {
-        heading: 'Partner Banks',
-        body: 'We partner with HBL, Meezan Bank, Bank Alfalah, and others. Select EMI at checkout and choose your preferred plan.',
-      },
-      {
-        heading: 'Terms',
-        body: 'EMI is subject to bank approval. Interest rates and processing fees vary by bank and tenure. See checkout for exact terms.',
-      },
-    ],
-  },
+  // installments: {
+  //   title: 'Easy Monthly Installments',
+  //   subtitle: 'Buy now, pay in easy monthly installments',
+  //   sections: [
+  //     {
+  //       heading: 'EMI Plans',
+  //       body: 'Split your purchase into 3, 6, or 12 monthly installments with participating banks. Available on orders over Rs. 10,000.',
+  //     },
+  //     {
+  //       heading: 'Partner Banks',
+  //       body: 'We partner with HBL, Meezan Bank, Bank Alfalah, and others. Select EMI at checkout and choose your preferred plan.',
+  //     },
+  //     {
+  //       heading: 'Terms',
+  //       body: 'EMI is subject to bank approval. Interest rates and processing fees vary by bank and tenure. See checkout for exact terms.',
+  //     },
+  //   ],
+  // },
   'digital-payments': {
     title: 'Digital Payments',
     subtitle: 'Fast, secure online payment options',
@@ -275,7 +275,7 @@ export const HELP_FAQ = [
       },
       {
         q: 'How long does delivery take?',
-        a: 'Major cities: 2–4 business days. Other areas: 4–7 business days. Delivery times may vary during sale events.',
+        a: 'Maximum: 2–4 business days. Delivery times may vary during sale events.',
       },
     ],
   },
@@ -301,7 +301,7 @@ export const HELP_FAQ = [
       },
       {
         q: 'Is Cash on Delivery available?',
-        a: 'Yes, COD is available in most cities. Select it at checkout and pay when your order is delivered.',
+        a: 'Yes, COD is available in Lahore. Select it at checkout and pay when your order is delivered.',
       },
       {
         q: 'Are my payment details secure?',
