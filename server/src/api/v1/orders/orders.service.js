@@ -12,7 +12,7 @@ const orderEvents = require('../../../libs/orderEvents');
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_METHODS = ['cod', 'online'];
 const PAYMENT_STATUSES = ['unpaid', 'paid', 'refunded'];
-const MINIMUM_ORDER_SUBTOTAL = 500;
+// const MINIMUM_ORDER_SUBTOTAL = 500;
 
 const paymentProofDir = path.join(__dirname, '..', '..', '..', '..', 'uploads', 'payments');
 if (!fs.existsSync(paymentProofDir)) {
@@ -329,9 +329,9 @@ async function createOrder(req, res) {
         });
       }
 
-      if (subtotal < MINIMUM_ORDER_SUBTOTAL) {
-        throw new Error(`Minimum order amount is Rs. ${MINIMUM_ORDER_SUBTOTAL}. Please add more items to your cart.`);
-      }
+      // if (subtotal < MINIMUM_ORDER_SUBTOTAL) {
+      //   throw new Error(`Minimum order amount is Rs. ${MINIMUM_ORDER_SUBTOTAL}. Please add more items to your cart.`);
+      // }
 
       const shipping = Number(shipping_cost) || 0;
       const totalPrice = subtotal + shipping;
