@@ -548,6 +548,7 @@ async function createProduct(req, res) {
       name: req.body.name,
       description: req.body.description,
       price: req.body.price,
+      purchasePrice: req.body.purchase_price ?? req.body.purchasePrice,
       discountPrice: req.body.discount_price ?? req.body.discountPrice,
       discountPercentage: req.body.discount_percentage ?? req.body.discountPercentage,
       stockQuantity: req.body.stock_quantity ?? req.body.stockQuantity ?? 0,
@@ -588,6 +589,9 @@ async function updateProduct(req, res) {
     if (req.body.name != null) payload.name = req.body.name;
     if (req.body.description != null) payload.description = req.body.description;
     if (req.body.price != null) payload.price = req.body.price;
+    if (req.body.purchase_price != null || req.body.purchasePrice != null) {
+      payload.purchasePrice = req.body.purchase_price ?? req.body.purchasePrice;
+    }
     if (req.body.discount_price != null || req.body.discountPrice != null) {
       payload.discountPrice = req.body.discount_price ?? req.body.discountPrice;
     }

@@ -37,6 +37,7 @@ const mapProduct = (product) => {
     name: product.name,
     description: product.description,
     price: Number(product.price),
+      purchase_price: product.purchasePrice != null ? Number(product.purchasePrice) : null,
     discount_price: product.discountPrice != null ? Number(product.discountPrice) : null,
     discount_percentage: product.discountPercentage,
     stock_quantity: product.stockQuantity,

@@ -130,7 +130,7 @@ async function listOrders(req, res) {
 
     const orderItems = orderIds.length
       ? await db('order_items')
-        .select('order_items.*', 'products.name as product_name', 'products.images')
+        .select('order_items.*', 'order_items.purchasePrice as purchasePrice', 'products.name as product_name', 'products.images')
         .leftJoin('products', 'products.productID', 'order_items.product_id')
         .whereIn('order_items.order_id', orderIds)
       : [];
@@ -147,7 +147,11 @@ async function listOrders(req, res) {
         variant_label: item.variant_label || item.variant_name || null,
         variant_sku: item.variant_sku || null,
         unit_price: Number(item.unitPrice),
+        purchase_price: item.purchasePrice != null ? Number(item.purchasePrice) : null,
+        profit_per_unit: item.purchasePrice != null ? Number(item.unitPrice) - Number(item.purchasePrice) : null,
         total_price: Number(item.totalPrice),
+        profit_total: item.purchasePrice != null ? (Number(item.unitPrice) - Number(item.purchasePrice)) * Number(item.quantity) : null,
+        profit_percent: item.purchasePrice != null && Number(item.unitPrice) !== 0 ? ((Number(item.unitPrice) - Number(item.purchasePrice)) / Number(item.unitPrice)) * 100 : null,
       });
       return acc;
     }, {});
@@ -157,10 +161,19 @@ async function listOrders(req, res) {
     return res.status(StatusCodes.OK).json({
       message: 'Orders retrieved successfully',
       success: true,
-      data: orders.map((order) => ({
-        ...mapOrder({ ...order, items: itemsByOrder[order.orderID] || [] }, paymentByOrder[order.orderID]),
-        userName: order.userName,
-      })),
+      data: orders.map((order) => {
+        const mapped = mapOrder({ ...order, items: itemsByOrder[order.orderID] || [] }, paymentByOrder[order.orderID]);
+        const items = itemsByOrder[order.orderID] || [];
+        const profit_total = items.reduce((s, it) => s + (it.profit_total != null ? Number(it.profit_total) : 0), 0);
+        const revenue = items.reduce((s, it) => s + (it.total_price != null ? Number(it.total_price) : 0), 0);
+        const profit_percent = revenue ? (profit_total / revenue) * 100 : null;
+        return {
+          ...mapped,
+          userName: order.userName,
+          profit_total: Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total),
+          profit_percent: profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null,
+        };
+      }),
       pagination: {
         page,
         limit,
@@ -196,7 +209,7 @@ async function getOrderById(req, res) {
     }
 
     let items = await db('order_items')
-      .select('order_items.*', 'products.name as product_name', 'products.images')
+      .select('order_items.*', 'order_items.purchasePrice as purchasePrice', 'products.name as product_name', 'products.images')
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', order.orderID);
 
@@ -228,8 +241,19 @@ async function getOrderById(req, res) {
       variant_label: item.variant_label || item.variant_name || null,
       variant_sku: item.variant_sku || null,
       unit_price: Number(item.unitPrice),
+      purchase_price: item.purchasePrice != null ? Number(item.purchasePrice) : null,
+      profit_per_unit: item.purchasePrice != null ? Number(item.unitPrice) - Number(item.purchasePrice) : null,
       total_price: Number(item.totalPrice),
+      profit_total: item.purchasePrice != null ? (Number(item.unitPrice) - Number(item.purchasePrice)) * Number(item.quantity) : null,
+      profit_percent: item.purchasePrice != null && Number(item.unitPrice) !== 0 ? ((Number(item.unitPrice) - Number(item.purchasePrice)) / Number(item.unitPrice)) * 100 : null,
     }));
+
+    // Compute order-level profit summary
+    const profit_total = mappedOrder.items.reduce((s, it) => s + (it.profit_total != null ? Number(it.profit_total) : 0), 0);
+    const revenue = mappedOrder.items.reduce((s, it) => s + (it.total_price != null ? Number(it.total_price) : 0), 0);
+    const profit_percent = revenue ? (profit_total / revenue) * 100 : null;
+    mappedOrder.profit_total = Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total);
+    mappedOrder.profit_percent = profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null;
 
     return res.status(StatusCodes.OK).json({ success: true, data: mappedOrder });
   } catch (err) {
@@ -314,6 +338,7 @@ async function createOrder(req, res) {
           selectedVariant?.discount_price ?? selectedVariant?.price
             ?? product.discountPrice ?? product.price
         );
+        const purchasePriceSnapshot = product.purchasePrice != null ? Number(product.purchasePrice) : null;
         const lineTotal = unitPrice * item.quantity;
         subtotal += lineTotal;
 
@@ -322,6 +347,7 @@ async function createOrder(req, res) {
           seller_id: product.seller_id,
           quantity: item.quantity,
           unitPrice,
+          purchasePrice: purchasePriceSnapshot,
           totalPrice: lineTotal,
           variant_name: selectedVariant?.name || item.variant_name || null,
           variant_label: selectedVariant?.label || item.variant_label || selectedVariant?.name || item.variant_name || null,
@@ -357,6 +383,7 @@ async function createOrder(req, res) {
           seller_id: line.seller_id,
           quantity: line.quantity,
           unitPrice: line.unitPrice,
+          purchasePrice: line.purchasePrice,
           totalPrice: line.totalPrice,
           variant_name: line.variant_name,
           variant_label: line.variant_label,

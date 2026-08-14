@@ -11,6 +11,7 @@ const category = require('./categories/categories.routes');
 const seller = require('./sellers/sellers.routes');
 const cart = require('./cart/cart.routes');
 const contact = require('./contact/contact.routes');
+const reports = require('./reports/reports.routes');
 
 // Mount routes
 router.use('/auth', auth);
@@ -21,5 +22,6 @@ router.use('/categories', category);
 router.use('/sellers', seller);
 router.use('/cart', cart);
 router.use('/contact', contact);
+router.use('/reports', reports);
 
 module.exports = router;
