@@ -117,6 +117,7 @@ const AdminProducts = () => {
       name: form.name,
       description: form.description,
       price: Number(form.price),
+      purchase_price: form.purchase_price ? Number(form.purchase_price) : null,
       discount_price: form.discount_price ? Number(form.discount_price) : null,
       stock_quantity: Number(form.stock_quantity),
       category_id: selectedCategory?.id || form.category_id,

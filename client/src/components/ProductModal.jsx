@@ -19,6 +19,7 @@ const initialForm = {
     name: "",
     sku: "",
     price: "",
+    purchase_price: "",
     discount_price: "",
     stock_quantity: "",
     category_id: "",
@@ -62,6 +63,7 @@ const ProductModal = ({
                 name: product.name || "",
                 sku: product.sku || "",
                 price: product.price || "",
+                purchase_price: product.purchase_price ?? product.purchasePrice ?? "",
                 discount_price: product.discount_price || "",
                 stock_quantity: product.stock_quantity || "",
                 category_id: product.category_id || "",
@@ -249,6 +251,22 @@ const ProductModal = ({
                                 className="input-field w-full"
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Purchase Price (Rs.)
+                            </label>
+                            <input
+                                type="number"
+                                name="purchase_price"
+                                value={form.purchase_price}
+                                onChange={handleChange}
+                                placeholder="0.00"
+                                className="input-field w-full"
+                            />
+                        </div>
+
+                        
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

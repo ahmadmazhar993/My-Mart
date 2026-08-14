@@ -50,6 +50,8 @@ import AdminOrders from './pages/admin/AdminOrders';
 
 import AdminUsers from './pages/admin/AdminUsers';
 
+import AdminSales from './pages/admin/AdminSales';
+
 import './styles/index.css';
 
 import { Routes, Route } from 'react-router-dom';
@@ -62,6 +64,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="categories" element={<AdminCategories />} />
+          <Route path="sales" element={<AdminSales />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
         </Route>

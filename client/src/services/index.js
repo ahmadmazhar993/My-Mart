@@ -50,6 +50,10 @@ export const orderService = {
   }),
 };
 
+export const reportsService = {
+  getSalesSummary: (params = {}) => api.get('/reports/sales', { params }),
+};
+
 export const cartService = {
   getCart: () => api.get('/cart'),
   addToCart: (data) => api.post('/cart/add', data),

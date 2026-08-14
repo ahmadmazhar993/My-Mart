@@ -6,6 +6,7 @@ const navItems = [
   { to: '/admin', label: 'Dashboard', end: true, icon: '📊' },
   { to: '/admin/products', label: 'Products', icon: '📦' },
   { to: '/admin/categories', label: 'Categories', icon: '🏷️' },
+  { to: '/admin/sales', label: 'Sales', icon: '💰' },
   { to: '/admin/orders', label: 'Orders', icon: '🛒' },
   { to: '/admin/users', label: 'Users', icon: '👥' },
 ];
