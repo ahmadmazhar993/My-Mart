@@ -19,7 +19,11 @@ app.set('trust proxy', 1);
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(cors());
+const { CLIENT_URL } = process.env;
+app.use(cors({
+  origin: CLIENT_URL || true,
+  credentials: true,
+}));
 app.use(cookieParser());
 
 app.use(session({

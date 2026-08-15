@@ -362,8 +362,17 @@ const updateNewPassword = async (req, res, next) => {
 };
 
 const sendAuthResponse = (req, res) => {
+  // include token from cookie or authorization header when available
+  const tokenFromCookie = req.cookies?.token || null;
+  let tokenFromHeader = null;
+  if (req.headers.authorization) {
+    const parts = req.headers.authorization.split(' ');
+    if (parts.length === 2) tokenFromHeader = parts[1];
+  }
+  const token = tokenFromCookie || tokenFromHeader || null;
+
   if (req.path === '/' && req.method === 'GET') {
-    return res.status(StatusCodes.OK).json({
+    const resp = {
       success: true,
       data: {
         user: {
@@ -375,7 +384,9 @@ const sendAuthResponse = (req, res) => {
           role: req.user.role,
         }
       }
-    });
+    };
+    if (token) resp.token = token;
+    return res.status(StatusCodes.OK).json(resp);
   } if (req.path === '/access-request' && req.method === 'POST') {
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -397,7 +408,125 @@ const sendAuthResponse = (req, res) => {
       message: 'Your password is updated successfully'
     });
   }
-  return res.status(StatusCodes.OK).json({});
+    const baseResponse = {};
+    if (token) baseResponse.token = token;
+    return res.status(StatusCodes.OK).json(baseResponse);
+};
+
+// --- Google OAuth handlers ---
+const googleRedirect = (req, res) => {
+  const { GOOGLE_CLIENT_ID, HOST_PATH = 'http://localhost:5000', CLIENT_URL = 'http://localhost:5173' } = process.env;
+  if (!GOOGLE_CLIENT_ID) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Google client ID not configured' });
+
+  const redirectUri = `${HOST_PATH.replace(/\/+$/, '')}/api/v1/auth/google/callback`;
+  const state = req.query.redirect ? encodeURIComponent(req.query.redirect) : '';
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'consent',
+    state,
+  });
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  return res.redirect(url);
+};
+
+const googleCallback = async (req, res) => {
+  try {
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, HOST_PATH = 'http://localhost:5000', CLIENT_URL = 'http://localhost:5173', TOKEN_SECRET_KEY = 'TokenSecretKey' } = process.env;
+    const { code, state } = req.query;
+    if (!code) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Missing code' });
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Google OAuth not configured' });
+
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const redirectUri = `${HOST_PATH.replace(/\/+$/, '')}/api/v1/auth/google/callback`;
+
+    const tokenRes = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+
+    if (!tokenRes.ok) {
+      const txt = await tokenRes.text();
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: `Failed to exchange code: ${txt}` });
+    }
+
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    // Fetch userinfo
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!userInfoRes.ok) {
+      const txt = await userInfoRes.text();
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: `Failed to fetch user info: ${txt}` });
+    }
+
+    const profile = await userInfoRes.json();
+    const email = profile.email && String(profile.email).toLowerCase();
+    if (!email) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Google account has no email' });
+
+    // Find or create user
+    let user = await db('user').first().whereRaw('lower(email) = ?', email.toLowerCase());
+    if (!user) {
+      // assign Customer role
+      const roleRow = await db('accessTemplate').first('accessTemplateID').where('name', 'Customer');
+      const createObj = {
+        firstName: profile.given_name || profile.name || 'Customer',
+        lastName: profile.family_name || '',
+        email,
+        accessTemplateID: roleRow ? roleRow.accessTemplateID : null,
+        password: null,
+        isActive: true,
+        status: 'Active',
+      };
+      const rows = await db('user').insert(createObj, '*');
+      user = rows && rows[0] ? rows[0] : null;
+    } else {
+      // ensure active
+      if (!user.isActive) {
+        await db('user').where({ userID: user.userID }).update({ isActive: true, status: 'Active', updatedOn: db.fn.now() });
+      }
+    }
+
+    if (!user) return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Unable to create or find user' });
+
+    const tokenPayload = {
+      email: user.email.toLowerCase(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: `${user.firstName} ${user.lastName}`,
+      role: (await db('accessTemplate').first('type').where('accessTemplateID', user.accessTemplateID))?.type || 'Customer',
+    };
+
+    const token = jwt.sign(tokenPayload, TOKEN_SECRET_KEY, { expiresIn: '1d' });
+
+    // set cookie and either return a backend JSON response (when state==='backend')
+    // or redirect to client (optionally include state as redirect path)
+    const decodedState = state ? decodeURIComponent(state) : '';
+    // set token cookie
+    res.cookie('token', token, getTokenCookieOptions());
+
+    if (decodedState === 'backend') {
+      return res.status(StatusCodes.OK).json({ message: 'Welcome to AHM-Mart API Server' });
+    }
+
+    const redirectTo = decodedState || CLIENT_URL;
+    return res.redirect(redirectTo || CLIENT_URL);
+  } catch (err) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message || 'Google OAuth failed' });
+  }
 };
 
 module.exports = {
@@ -410,4 +539,7 @@ module.exports = {
   validateRecoverPasswordToken,
   updateNewPassword,
   sendAuthResponse
+  ,
+  googleRedirect,
+  googleCallback
 };

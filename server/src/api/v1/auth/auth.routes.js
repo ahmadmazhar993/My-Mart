@@ -7,6 +7,8 @@ const {
   validateRecoverPasswordToken,
   updateNewPassword,
   sendAuthResponse,
+  googleRedirect,
+  googleCallback,
 } = require('./auth.service');
 const {
   validateRegisterForm,
@@ -22,6 +24,10 @@ router
 router
   .route('/login')
   .post(validateLoginForm, login);
+
+// Google OAuth
+router.get('/google', googleRedirect);
+router.get('/google/callback', googleCallback);
 
 router
   .route('/register')
