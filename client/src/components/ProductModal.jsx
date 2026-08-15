@@ -8,6 +8,7 @@ const createEmptyVariant = () => ({
     name: "",
     label: "",
     price: "",
+    purchase_price: "",
     discount_price: "",
     discount_percentage: "",
     stock_quantity: "",
@@ -51,6 +52,7 @@ const ProductModal = ({
                     name: variant?.name || "",
                     label: variant?.label || variant?.name || "",
                     price: variant?.price ?? "",
+                    purchase_price: variant?.purchase_price ?? variant?.purchasePrice ?? "",
                     discount_price: variant?.discount_price ?? "",
                     discount_percentage: variant?.discount_percentage ?? "",
                     stock_quantity: variant?.stock_quantity ?? "",
@@ -96,6 +98,7 @@ const ProductModal = ({
                 name: String(variant.name || variant.label || "").trim(),
                 label: String(variant.label || variant.name || "").trim(),
                 price: variant.price === "" ? null : Number(variant.price),
+                purchase_price: variant.purchase_price === "" ? null : Number(variant.purchase_price),
                 discount_price: variant.discount_price === "" ? null : Number(variant.discount_price),
                 discount_percentage: variant.discount_percentage === "" ? null : Number(variant.discount_percentage),
                 stock_quantity: variant.stock_quantity === "" ? null : Number(variant.stock_quantity),
@@ -103,6 +106,14 @@ const ProductModal = ({
                 image: String(variant.image || "").trim(),
             }))
             .filter((variant) => variant.name || variant.label || variant.sku || variant.price != null || variant.discount_price != null || variant.discount_percentage != null || variant.stock_quantity != null);
+
+        // client validation: purchase_price must be non-negative when provided
+        for (const v of normalizedVariants) {
+            if (v.purchase_price != null && Number(v.purchase_price) < 0) {
+                alert('Variant purchase price must be a non-negative number');
+                return;
+            }
+        }
 
         onSubmit({ ...form, variants: normalizedVariants }, product?.id);
     };
@@ -372,6 +383,17 @@ const ProductModal = ({
                                                     value={variant.price}
                                                     onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
                                                     placeholder="Price"
+                                                    className="input-field w-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Purchase Price</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={variant.purchase_price}
+                                                    onChange={(e) => handleVariantChange(index, 'purchase_price', e.target.value)}
+                                                    placeholder="Purchase price"
                                                     className="input-field w-full"
                                                 />
                                             </div>

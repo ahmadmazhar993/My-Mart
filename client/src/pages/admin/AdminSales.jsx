@@ -44,15 +44,18 @@ const AdminSales = () => {
 
   const csvExport = () => {
     if (!data || !data.length) return;
-    const headers = groupBy === 'product'
-      ? ['product_id', 'product_name', 'quantity_sold', 'revenue', 'cost', 'profit']
-      : ['date', 'quantity_sold', 'revenue', 'cost', 'profit'];
-
-    const rows = data.map((r) => (
-      groupBy === 'product'
-        ? [r.product_id, r.product_name, r.quantity_sold, r.revenue, r.cost, r.profit]
-        : [r.date, r.quantity_sold, r.revenue, r.cost, r.profit]
-    ));
+    let headers = [];
+    let rows = [];
+    if (groupBy === 'product') {
+      headers = ['product_id', 'product_name', 'quantity_sold', 'revenue', 'cost', 'profit'];
+      rows = data.map((r) => [r.product_id, r.product_name, r.quantity_sold, r.revenue, r.cost, r.profit]);
+    } else if (groupBy === 'variant') {
+      headers = ['product_id', 'product_name', 'variant_sku', 'variant_name', 'quantity_sold', 'revenue', 'cost', 'profit'];
+      rows = data.map((r) => [r.product_id, r.product_name, r.variant_sku || '', r.variant_name || '', r.quantity_sold, r.revenue, r.cost, r.profit]);
+    } else {
+      headers = ['date', 'quantity_sold', 'revenue', 'cost', 'profit'];
+      rows = data.map((r) => [r.date, r.quantity_sold, r.revenue, r.cost, r.profit]);
+    }
     // build CSV with metadata header, column headers, rows, and totals
     const meta = [
       [`Report: Sales Summary (${groupBy})`],
@@ -95,6 +98,25 @@ const AdminSales = () => {
       const top = data.slice(0, 10);
       return {
         labels: top.map((r) => r.product_name),
+        datasets: [
+          {
+            label: 'Revenue',
+            data: top.map((r) => Number(r.revenue || 0)),
+            backgroundColor: 'rgba(59,130,246,0.8)',
+          },
+          {
+            label: 'Profit',
+            data: top.map((r) => Number(r.profit || 0)),
+            backgroundColor: 'rgba(16,185,129,0.8)',
+          },
+        ],
+      };
+    }
+
+    if (groupBy === 'variant') {
+      const top = data.slice(0, 10);
+      return {
+        labels: top.map((r) => `${r.product_name} / ${r.variant_name || r.variant_sku || ''}`),
         datasets: [
           {
             label: 'Revenue',
@@ -172,6 +194,7 @@ const AdminSales = () => {
                 <label className="text-sm text-gray-600">Group</label>
                 <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className="input-field w-full sm:w-40">
                   <option value="product">Product</option>
+                  <option value="variant">Variant</option>
                   <option value="date">Date</option>
                 </select>
               </div>
@@ -256,7 +279,7 @@ const AdminSales = () => {
             <table className="min-w-full table-auto text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-left text-gray-500">
-                  <th className="pb-2 font-medium max-w-[220px] sm:max-w-none">{groupBy === 'product' ? 'Product' : 'Date'}</th>
+                  <th className="pb-2 font-medium max-w-[220px] sm:max-w-none">{groupBy === 'product' ? 'Product' : groupBy === 'variant' ? 'Product / Variant' : 'Date'}</th>
                   <th className="pb-2 font-medium text-right sm:text-left">Qty</th>
                   <th className="pb-2 font-medium text-right sm:text-left">Revenue</th>
                   <th className="pb-2 font-medium text-right sm:text-left">Cost</th>
@@ -266,7 +289,7 @@ const AdminSales = () => {
               <tbody>
                 {data.map((row, idx) => (
                   <tr key={idx} className="border-b border-gray-50">
-                    <td className="py-2.5 font-medium max-w-[220px] break-words whitespace-normal">{groupBy === 'product' ? row.product_name : row.date}</td>
+                    <td className="py-2.5 font-medium max-w-[220px] break-words whitespace-normal">{groupBy === 'product' ? row.product_name : groupBy === 'variant' ? `${row.product_name} / ${row.variant_name || row.variant_sku || ''}` : row.date}</td>
                     <td className="py-2.5 text-right sm:text-left">{row.quantity_sold}</td>
                     <td className="py-2.5 text-right sm:text-left">{formatPrice(row.revenue)}</td>
                     <td className="py-2.5 text-right sm:text-left">{formatPrice(row.cost)}</td>
