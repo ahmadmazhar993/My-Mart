@@ -45,11 +45,17 @@ async function addToCart(req, res) {
       [cart] = await db('carts').insert({ user_id: userId }).returning('*');
     }
 
-    const { product_id, quantity, price } = req.body;
+    const { product_id, quantity, price, variant_sku } = req.body;
     const product = await db('products').where({ productID: product_id }).first();
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
+    }
+
+    // If the product defines variants, require the caller to provide a variant SKU.
+    const hasVariants = product.variants && ((Array.isArray(product.variants) && product.variants.length > 0) || (typeof product.variants === 'string' && product.variants.trim() !== ''));
+    if (hasVariants && !variant_sku) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Product has variants; include variant_sku when adding to cart' });
     }
 
     const unitPrice = price ?? Number(product.discountPrice ?? product.price);
