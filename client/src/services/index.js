@@ -7,9 +7,15 @@ export const authService = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   validateResetToken: (token) => api.post('/auth/validate-token', { token }),
   resetPassword: (data) => api.post('/auth/update-password', data),
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  logout: async () => {
+    try {
+      // call backend logout to clear httpOnly cookie
+      const resp = await api.get('/auth/logout');
+      return resp;
+    } catch (err) {
+      // still proceed to clear local state on error
+      return Promise.reject(err);
+    }
   },
 };
 

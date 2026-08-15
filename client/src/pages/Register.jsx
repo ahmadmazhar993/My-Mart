@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services';
+import { API_BASE, API_VERSION } from '../services/api';
 import { useAuthStore } from '../store';
 
 const Register = () => {
@@ -226,6 +227,32 @@ const Register = () => {
             <button type="submit" disabled={loading} className="btn-primary w-full py-3">
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
+
+            <div className="mt-4">
+              {/* OR Divider */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="text-sm text-gray-400">OR</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+
+              {/* Google Sign In */}
+              <button
+                type="button"
+                onClick={() => {
+                  const target = `${window.location.origin}/login`;
+                  window.location.href =
+                    `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
+                }}
+                className="flex justify-center w-full"
+              >
+                <img
+                  src="/google-icon.svg"
+                  alt="Sign in with Google"
+                  className="h-10"
+                />
+              </button>
+            </div>
           </form>
 
           <p className="text-center mt-6 text-sm text-gray-500">

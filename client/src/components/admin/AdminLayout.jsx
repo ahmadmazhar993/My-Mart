@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
+import { authService } from '../../services';
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', end: true, icon: '📊' },
@@ -17,8 +18,15 @@ const AdminLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    (async () => {
+      try {
+        await authService.logout();
+      } catch (err) {
+        // ignore
+      }
+      logout();
+      navigate('/login');
+    })();
   };
 
   const closeMobileMenu = () => setMobileMenuOpen(false);

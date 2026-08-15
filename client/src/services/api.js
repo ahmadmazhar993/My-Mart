@@ -12,6 +12,7 @@ export const API_VERSION = '/api/v1';
 const axiosClient = axios.create({
   baseURL: `${API_BASE}${API_VERSION}`,
   timeout: 25000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true',

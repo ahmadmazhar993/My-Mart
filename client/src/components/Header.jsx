@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useCartStore } from '../store';
+import { authService } from '../services';
 
 const SearchIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,8 +199,13 @@ const Header = () => {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
-                        logout();
+                      onClick={async () => {
+                        try {
+                          await authService.logout();
+                        } catch (err) {
+                          // ignore errors from server logout
+                        }
+                        useAuthStore.getState().logout();
                         setAccountMenuOpen(false);
                       }}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"

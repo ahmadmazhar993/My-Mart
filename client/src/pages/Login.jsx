@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services';
+import { setAuthToken } from '../services/api';
+import { API_BASE, API_VERSION } from '../services/api';
 import { useAuthStore } from '../store';
 import { useToast } from '../components/ToastProvider';
 
@@ -99,6 +101,7 @@ const Login = () => {
       const token = payload.token || response.data?.token;
 
       login(authUser, token);
+      if (token) setAuthToken(token);
       addToast('Login successful.');
       const destination = authUser?.role === 'Admin' && redirect === '/'
         ? '/admin'
@@ -154,12 +157,63 @@ const Login = () => {
             <div className="text-right">
               <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+            {/* <button type="submit" disabled={loading} className="btn-primary w-full py-3">
               {loading ? 'Logging in...' : 'Login'}
             </button>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const target = `${window.location.origin}${redirect || '/'}`;
+                  window.location.href =
+                    `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
+                }}
+                className="flex justify-center w-full"
+              >
+                <img
+                  src="/google-icon.svg"
+                  alt="Sign in with Google"
+                  className="h-10"
+                />
+              </button>
+            </div> */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 border-t border-gray-200" />
+              <span className="text-xs text-gray-400 font-medium">OR</span>
+              <div className="flex-1 border-t border-gray-200" />
+            </div>
+
+            {/* Google Login */}
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = `${window.location.origin}${redirect || '/'}`;
+
+                  window.location.href =
+                    `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
+                }}
+                className="flex justify-center w-full"
+              >
+                <img
+                  src="/google-icon.svg"
+                  alt="Sign in with Google"
+                  className="h-10"
+                />
+              </button>
+            </div>
           </form>
 
-          <p className="text-center mt-6 text-sm text-gray-500">
+          <p className="text-center mt-5 text-sm text-gray-500">
             Don&apos;t have an account?{' '}
             <Link to="/register" className="text-primary font-semibold hover:underline">
               Register here

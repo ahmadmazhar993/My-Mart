@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { setAuthToken } from '../services/api';
 import { buildCartItemKey } from '../utils/product';
 
 const normalizeUser = (user) => {
@@ -28,6 +29,7 @@ export const useAuthStore = create((set) => ({
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    setAuthToken(null);
     set({ user: null, token: null, isAuthenticated: false });
   },
 
