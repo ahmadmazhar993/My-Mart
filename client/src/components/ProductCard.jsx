@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ProductImage from './ProductImage';
 import { useCartStore, useWishlistStore } from '../store';
 import { useToast } from './ToastProvider';
@@ -28,9 +28,18 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
         ? Math.round(((product.price - product.discount_price) / product.price) * 100)
         : null)));
 
+  const navigate = useNavigate();
+
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // If the product has variants, require the user to select one on the product page
+    if (variants.length > 0) {
+      addToast('Please select a variant before adding to cart.', 'info');
+      navigate(buildProductPath(product));
+      return;
+    }
 
     const currentCartQuantity = cart.find((entry) => String(entry.id) === String(product.id))?.quantity || 0;
     const availableStock = Number(product.stock_quantity ?? 0);
