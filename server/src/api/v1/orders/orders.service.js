@@ -338,7 +338,10 @@ async function createOrder(req, res) {
           selectedVariant?.discount_price ?? selectedVariant?.price
             ?? product.discountPrice ?? product.price
         );
-        const purchasePriceSnapshot = product.purchasePrice != null ? Number(product.purchasePrice) : null;
+        // Prefer variant-level purchase price if available, otherwise fallback to product.purchasePrice
+        const purchasePriceSnapshot = (selectedVariant && (selectedVariant.purchase_price != null))
+          ? Number(selectedVariant.purchase_price)
+          : (product.purchasePrice != null ? Number(product.purchasePrice) : null);
         const lineTotal = unitPrice * item.quantity;
         subtotal += lineTotal;
 

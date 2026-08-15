@@ -62,11 +62,12 @@ const normalizeVariantsPayload = (variants) => {
       if (!variant || typeof variant !== 'object') return null;
       const name = String(variant.name || variant.label || '').trim();
       if (!name) return null;
-      return {
+        return {
         name,
         label: String(variant.label || variant.name || '').trim() || name,
         price: variant.price == null || variant.price === '' ? null : Number(variant.price),
         discount_price: variant.discount_price == null || variant.discount_price === '' ? null : Number(variant.discount_price),
+          purchase_price: variant.purchase_price == null || variant.purchase_price === '' ? (variant.purchasePrice == null || variant.purchasePrice === '' ? null : Number(variant.purchasePrice)) : Number(variant.purchase_price),
         discount_percentage: variant.discount_percentage == null || variant.discount_percentage === '' ? null : Number(variant.discount_percentage),
         stock_quantity: variant.stock_quantity == null || variant.stock_quantity === '' ? null : Number(variant.stock_quantity),
         sku: String(variant.sku || '').trim(),
