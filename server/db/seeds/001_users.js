@@ -5,7 +5,7 @@ exports.seed = function addUser(knex) {
     {
       firstName: 'Admin',
       lastName: 'user',
-      email: 'admin@ahmmart.com',
+      email: 'admin@ahmmart.store',
       phoneNumber: '0313-4591721',
       password: 'Admin@123',
       isActive: true,
@@ -52,7 +52,7 @@ exports.seed = function addUser(knex) {
       let role = '';
 
       switch (email) {
-        case 'admin@ahmmart.com':
+        case 'admin@ahmmart.store':
           role = 'Admin';
           break;
         case 'customer@ahmmart.com':

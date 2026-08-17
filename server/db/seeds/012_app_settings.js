@@ -1,5 +1,5 @@
 exports.seed = async function addAppSettings(knex) {
-    const admin = await knex('user').select('userID').where('email', 'admin@ahmmart.com').first();
+    const admin = await knex('user').select('userID').where('email', 'admin@ahmmart.store').first();
 
     if (!admin) {
         return;
