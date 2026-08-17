@@ -624,7 +624,7 @@ const updateUserStatusWithAdmin = async (req, res) => {
       });
     }
 
-    if (user.email === 'admin@ahmmart.com') {
+    if (user.email === 'admin@ahmmart.store') {
       return res.status(403).json({
         success: false,
         message: 'You cannot update AHM MART User',
@@ -675,7 +675,7 @@ const removeUserById = async (req, res, next) => {
       });
     }
 
-    if (userById.email === 'admin@ahmmart.com') {
+    if (userById.email === 'admin@ahmmart.store') {
       return res.status(HttpStatus.StatusCodes.UNAUTHORIZED).json({
         error: true,
         message: 'You cannot delete AHM MART User'

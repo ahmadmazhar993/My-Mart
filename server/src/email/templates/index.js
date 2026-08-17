@@ -8,6 +8,7 @@ const buildOrderStatusUpdateBody = require('./builders/orderStatusUpdate');
 const buildPaymentSuccessBody = require('./builders/paymentSuccess');
 const buildPaymentFailureBody = require('./builders/paymentFailure');
 const buildPasswordResetBody = require('./builders/passwordReset');
+const buildNewOrderAdminBody = require('./builders/newOrderAdmin');
 
 async function sendContactEmails({ name, email, message }) {
   const adminResult = await sendEmail({
@@ -131,6 +132,37 @@ async function sendPasswordResetEmail({ email, firstName, resetUrl }) {
   });
 }
 
+async function sendAdminNewOrderEmail({
+  customerName,
+  customerEmail,
+  orderId,
+  status,
+  paymentMethod,
+  shippingAddress,
+  items,
+  subtotal,
+  shippingCost,
+  totalPrice,
+}) {
+  const site = require('./siteConstants');
+  return sendEmail({
+    to: site.contactToEmail,
+    subject: `New order received — #${orderId}`,
+    body: buildNewOrderAdminBody({
+      customerName,
+      customerEmail,
+      orderId,
+      status,
+      paymentMethod,
+      shippingAddress,
+      items,
+      subtotal,
+      shippingCost,
+      totalPrice,
+    }),
+  });
+}
+
 module.exports = {
   sendContactEmails,
   sendWelcomeEmail,
@@ -139,4 +171,5 @@ module.exports = {
   sendPaymentSuccessEmail,
   sendPaymentFailureEmail,
   sendPasswordResetEmail,
+  sendAdminNewOrderEmail,
 };

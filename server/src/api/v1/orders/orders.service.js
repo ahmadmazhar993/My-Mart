@@ -6,7 +6,7 @@ const db = require('../../../db');
 const { mapOrder } = require('../../../libs/serializers');
 const logger = require('../../../config/winston');
 const { createUniqueOrderReferenceCode } = require('../../../libs/orderCode');
-const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require('../../../email/templates');
+const { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNewOrderEmail } = require('../../../email/templates');
 const orderEvents = require('../../../libs/orderEvents');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -436,6 +436,31 @@ async function createOrder(req, res) {
       }).catch((err) => {
         logger.error('[ORDERS][createOrder]::Failed to send confirmation email', err);
       });
+    }
+
+    // Notify admin clients (SSE/Web UI) that orders have been updated/created
+    try {
+      orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: result.orderID });
+    } catch (evErr) {
+      logger.error('[ORDERS][createOrder]::Failed to emit order event', evErr);
+    }
+
+    // Send notification email to admin
+    try {
+      await sendAdminNewOrderEmail({
+        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        customerEmail: user.email,
+        orderId: result.orderCode || result.orderID,
+        status: result.status,
+        paymentMethod: normalizedPaymentMethod,
+        shippingAddress: shipping_address,
+        items: orderItems,
+        subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
+        shippingCost: Number(result.shippingCost || 0),
+        totalPrice: Number(result.totalPrice),
+      });
+    } catch (mailErr) {
+      logger.error('[ORDERS][createOrder]::Failed to send admin notification email', mailErr);
     }
 
     return res.status(StatusCodes.CREATED).json({
