@@ -68,14 +68,14 @@ const Cart = () => {
                 {/* <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20">
                   <ProductImage product={item} className="w-full h-full rounded-md object-cover border border-gray-100" />
                 </Link> */}
-                <Link to={buildProductPath({ id: item.id, name: item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20 block rounded-md border border-gray-100 overflow-hidden">
-                  <ProductImage product={item} className="w-full h-full object-cover" />
+                  <Link to={buildProductPath({ id: item.id, name: item.product_name || item.name })} className="flex-shrink-0 w-16 sm:w-20 h-16 sm:h-20 block rounded-md border border-gray-100 overflow-hidden">
+                  <ProductImage product={item} variant={item.variant || null} className="w-full h-full object-cover" />
                 </Link>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <Link
-                      to={buildProductPath({ id: item.id, name: item.name })}
+                      to={buildProductPath({ id: item.id, name: item.product_name || item.name })}
                       className="font-medium text-sm sm:text-base text-dark hover:text-primary line-clamp-2"
                     >
                       {item.name}

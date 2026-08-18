@@ -52,6 +52,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
     addItem({
       id: product.id,
       product_id: product.id,
+      product_name: product.name,
       name: product.name,
       price: effectivePrice,
       image: product.image_url,

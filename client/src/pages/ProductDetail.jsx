@@ -178,6 +178,7 @@ const ProductDetail = () => {
     setBuyNowItems([{
       id: product.id,
       product_id: product.id,
+      product_name: product.name,
       name: displayName,
       price: displayPrice,
       image: primaryImage,
@@ -188,6 +189,8 @@ const ProductDetail = () => {
       variant_label: selectedVariant?.label || selectedVariant?.name || null,
       variant_sku: selectedVariant?.sku || null,
       variant_price: displayPrice,
+      variant: selectedVariant || null,
+      variants: variantOptions,
     }]);
     navigate('/checkout?mode=buynow');
   };
@@ -216,6 +219,7 @@ const ProductDetail = () => {
     addItem({
       id: product.id,
       product_id: product.id,
+      product_name: product.name,
       name: displayName,
       price: displayPrice,
       image: primaryImage,
@@ -226,6 +230,8 @@ const ProductDetail = () => {
       variant_label: selectedVariant?.label || selectedVariant?.name || null,
       variant_sku: selectedVariant?.sku || null,
       variant_price: displayPrice,
+      variant: selectedVariant || null,
+      variants: variantOptions,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
