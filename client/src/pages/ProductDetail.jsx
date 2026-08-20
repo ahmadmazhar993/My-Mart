@@ -7,6 +7,7 @@ import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl } from '../utils/product';
+import SoldOutBanner from '../components/SoldOutBanner';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -281,7 +282,12 @@ const ProductDetail = () => {
       <div className="bg-white rounded-sm shadow-card overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           <div className="bg-gray-50 p-6 flex items-center justify-center min-h-[400px]">
-            <ProductImage product={product} variant={selectedVariant} className="max-h-[400px] w-full rounded-sm" />
+            <div className="relative w-full max-w-[560px]">
+              <ProductImage product={product} variant={selectedVariant} className="max-h-[400px] w-full rounded-sm" />
+              {availableStock <= 0 && (
+                <SoldOutBanner />
+              )}
+            </div>
           </div>
 
           <div className="p-6 md:p-8">
@@ -342,12 +348,12 @@ const ProductDetail = () => {
                 <span className="text-gray-500 w-24">SKU:</span>
                 <span className="font-medium">{product.sku || 'N/A'}</span>
               </div>
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-24">Availability:</span>
-                <span className={`font-medium ${availableStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {availableStock > 0 ? `In Stock (${availableStock})` : 'Out of Stock'}
-                </span>
-              </div>
+              {availableStock > 0 && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-24">Availability:</span>
+                  <span className={`font-medium text-green-600`}>{`In Stock (${availableStock})`}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4 mb-6">
@@ -386,14 +392,14 @@ const ProductDetail = () => {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={product.stock_quantity <= 0}
+                disabled={availableStock <= 0}
                 className={`flex-1 py-3 font-bold rounded-sm transition-all ${
                   added
                     ? 'bg-green-500 text-white'
-                    : 'btn-primary py-3'
+                    : (availableStock <= 0 ? 'bg-red-500 text-white cursor-not-allowed' : 'btn-primary py-3')
                 }`}
               >
-                {added ? '✓ Added to Cart' : 'Add to Cart'}
+                {availableStock <= 0 ? 'Out of Stock' : (added ? '✓ Added to Cart' : 'Add to Cart')}
               </button>
               <button
                 type="button"
@@ -418,7 +424,7 @@ const ProductDetail = () => {
               <button
                 type="button"
                 onClick={handleBuyNow}
-                disabled={product.stock_quantity <= 0}
+                disabled={availableStock <= 0}
                 className="flex-1 btn-outline text-center py-3"
               >
                 Buy Now
