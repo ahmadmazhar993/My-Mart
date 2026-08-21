@@ -537,13 +537,13 @@ async function submitPaymentProof(req, res) {
       });
 
     // Mark the order as paid and move it into processing
-    await db('orders')
-      .where({ orderID: id })
-      .update({
-        paymentStatus: 'paid',
-        status: 'processing',
-        updatedOn: db.fn.now(),
-      });
+    // await db('orders')
+    //   .where({ orderID: id })
+    //   .update({
+    //     paymentStatus: 'paid',
+    //     status: 'processing',
+    //     updatedOn: db.fn.now(),
+    //   });
 
     const updatedPayment = await db('payments').where({ order_id: id }).first();
     const updatedOrder = await db('orders').where({ orderID: id }).first();
