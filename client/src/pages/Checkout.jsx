@@ -9,7 +9,7 @@ import { orderService, userService } from '../services';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
-import { validatePaymentReceiptFile, validateSenderAccount, validateTransactionReference } from '../utils/paymentValidation';
+import { validatePaymentReceiptFile, validateSenderAccount } from '../utils/paymentValidation';
 
 const CITY_OPTIONS = [
   // 'Karachi',
@@ -114,7 +114,6 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
-  const [transactionId, setTransactionId] = useState('');
   const [senderAccount, setSenderAccount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [copiedAccount, setCopiedAccount] = useState('');
@@ -237,11 +236,11 @@ const Checkout = () => {
     }
 
     if (name === 'phone') {
-      const normalizedValue = value.trim();
-      if (!normalizedValue) {
+      const digitsOnly = (value || '').toString().replace(/\D/g, '');
+      if (!digitsOnly) {
         nextErrors.phone = 'Phone number is required.';
-      } else if (!/^((\+92|92|0)?3\d{2,3}[- ]?\d{7,8})$/.test(normalizedValue)) {
-        nextErrors.phone = 'Please enter a valid phone number.';
+      } else if (!/^\d{11}$/.test(digitsOnly)) {
+        nextErrors.phone = 'Phone number must be exactly 11 digits.';
       } else {
         delete nextErrors.phone;
       }
@@ -275,7 +274,7 @@ const Checkout = () => {
   const validateForm = () => {
     const nextErrors = {};
     const fullName = form.fullName.trim();
-    const phone = form.phone.trim();
+    const phone = (form.phone || '').toString();
     const address = form.address.trim();
     const city = form.city.trim();
 
@@ -283,10 +282,11 @@ const Checkout = () => {
       nextErrors.fullName = 'Full name is required.';
     }
 
-    if (!phone) {
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phoneDigits) {
       nextErrors.phone = 'Phone number is required.';
-    } else if (!/^((\+92|92|0)?3\d{2,3}[- ]?\d{7,8})$/.test(phone)) {
-      nextErrors.phone = 'Please enter a valid phone number.';
+    } else if (!/^\d{11}$/.test(phoneDigits)) {
+      nextErrors.phone = 'Phone number must be exactly 11 digits.';
     }
 
     if (!address) {
@@ -307,12 +307,6 @@ const Checkout = () => {
     if (receiptError) {
       nextErrors.receiptFile = receiptError;
     }
-
-    const transactionError = validateTransactionReference(transactionId);
-    if (transactionError) {
-      nextErrors.transactionId = transactionError;
-    }
-
     const senderError = validateSenderAccount(senderAccount);
     if (senderError) {
       nextErrors.senderAccount = senderError;
@@ -353,8 +347,7 @@ const Checkout = () => {
           variant_sku: item.variant_sku || null,
         })),
         payment_details: {
-          transaction_id: transactionId || null,
-          sender_account_number: senderAccount || null,
+            sender_account_number: senderAccount || null,
         },
       };
 
@@ -364,7 +357,6 @@ const Checkout = () => {
       if (paymentMethod === 'online' && receiptFile && createdOrder?.id) {
         const formData = new FormData();
         formData.append('receipt', receiptFile);
-        formData.append('transaction_id', transactionId || '');
         formData.append('sender_account_number', senderAccount || '');
         await orderService.submitPaymentProof(createdOrder.id, formData);
       }
@@ -453,9 +445,16 @@ const Checkout = () => {
                       type="tel"
                       name="phone"
                       value={form.phone}
-                      onChange={handleChange}
+                      inputMode="numeric"
+                      pattern="[0-9]{11}"
+                      onChange={(e) => {
+                        const raw = e.target.value || '';
+                        const digits = raw.replace(/\D/g, '');
+                        setForm((prev) => ({ ...prev, phone: digits }));
+                        setErrors(() => validateField('phone', digits));
+                      }}
                       className={`input-field pl-9 ${errors.phone ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
-                      placeholder="03XX XXXXXXX"
+                      placeholder="03XXXXXXXXX"
                     />
                   </div>
                   {errors.phone && <p className="mt-1.5 text-xs text-red-600">{errors.phone}</p>}
@@ -463,6 +462,7 @@ const Checkout = () => {
               </div>
 
               <div className="mt-4">
+                
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
                   Address <span className="text-red-500">*</span>
                 </label>
@@ -632,6 +632,9 @@ const Checkout = () => {
                                     type="file"
                                     accept="image/*,.pdf"
                                     className="sr-only"
+                                    required={paymentMethod === 'online'}
+                                    aria-required={paymentMethod === 'online'}
+                                    aria-invalid={!!errors.receiptFile}
                                     onChange={(e) => {
                                       const file = e.target.files?.[0] || null;
                                       setReceiptFile(file);
@@ -651,47 +654,26 @@ const Checkout = () => {
                                 {errors.receiptFile && <p className="mt-1 text-xs text-red-600">{errors.receiptFile}</p>}
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
-                                    Transaction ID <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={transactionId}
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                                  Sender Account <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  name="senderAccount"
+                                  value={senderAccount}
+                                  required={paymentMethod === 'online'}
+                                  aria-required={paymentMethod === 'online'}
+                                    aria-invalid={!!errors.senderAccount}
+                                    inputMode="numeric"
+                                    pattern="[0-9]{11}|[0-9]{14}"
                                     onChange={(e) => {
-                                      const value = e.target.value;
-                                      setTransactionId(value);
+                                      const raw = e.target.value || '';
+                                      const digits = raw.replace(/\D/g, '');
+                                      setSenderAccount(digits);
                                       setErrors((prev) => {
                                         const next = { ...prev };
-                                        const transactionError = validateTransactionReference(value);
-                                        if (transactionError) {
-                                          next.transactionId = transactionError;
-                                        } else {
-                                          delete next.transactionId;
-                                        }
-                                        return next;
-                                      });
-                                    }}
-                                    className={`input-field ${errors.transactionId ? 'border-red-300' : ''}`}
-                                    placeholder="ABC123456"
-                                  />
-                                  {errors.transactionId && <p className="mt-1 text-xs text-red-600">{errors.transactionId}</p>}
-                                </div>
-
-                                <div>
-                                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
-                                    Sender Account <span className="text-red-500">*</span>
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={senderAccount}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      setSenderAccount(value);
-                                      setErrors((prev) => {
-                                        const next = { ...prev };
-                                        const senderError = validateSenderAccount(value);
+                                        const senderError = validateSenderAccount(digits);
                                         if (senderError) {
                                           next.senderAccount = senderError;
                                         } else {
@@ -701,10 +683,9 @@ const Checkout = () => {
                                       });
                                     }}
                                     className={`input-field ${errors.senderAccount ? 'border-red-300' : ''}`}
-                                    placeholder="03XX XXXXXXX"
-                                  />
-                                  {errors.senderAccount && <p className="mt-1 text-xs text-red-600">{errors.senderAccount}</p>}
-                                </div>
+                                    placeholder="03XXXXXXXXX or 11XXXXXXXXXXXX"
+                                />
+                                {errors.senderAccount && <p className="mt-1 text-xs text-red-600">{errors.senderAccount}</p>}
                               </div>
                             </div>
                           </div>
