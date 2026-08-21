@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store';
 import { authService } from '../services';
 import { setAuthToken } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const AuthInitializer = ({ children }) => {
   const { login, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
 
   useEffect(() => {
     // prevent duplicate initialization (React StrictMode mounts twice in dev)
@@ -36,15 +39,39 @@ const AuthInitializer = ({ children }) => {
         logout();
       });
 
-    const onUnauthorized = () => {
-      logout();
-    };
+  }, [login, logout]); // run once
 
+  useEffect(() => {
+    const onUnauthorized = () => setSessionExpiredOpen(true);
     window.addEventListener('api:unauthorized', onUnauthorized);
     return () => window.removeEventListener('api:unauthorized', onUnauthorized);
-  }, []); // run once
+  }, []);
 
-  return <>{children}</>;
+  const handleRelogin = () => {
+    // clear local auth state and redirect to login page
+    logout();
+    setSessionExpiredOpen(false);
+    navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+  };
+
+  return (
+    <>
+      {children}
+
+      {sessionExpiredOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md">
+          <div className="max-w-md w-full bg-white rounded-lg p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Session expired</h3>
+            <p className="text-sm text-gray-600 mb-4">Your session has expired. Please log in again to continue.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => { setSessionExpiredOpen(false); }} className="px-3 py-2 rounded-md border">Close</button>
+              <button type="button" onClick={handleRelogin} className="px-3 py-2 rounded-md bg-primary text-white">Login again</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default AuthInitializer;
