@@ -28,8 +28,13 @@ export const validateSenderAccount = (value) => {
     return null;
   }
 
-  if (!/^[0-9 -]{4,20}$/.test(normalized)) {
-    return 'Sender Account Number must be 4-20 characters and may only contain digits, spaces, or hyphens.';
+  // Require digits only (no spaces or hyphens)
+  if (!/^[0-9]+$/.test(normalized)) {
+    return 'Sender Account Number must contain digits only.';
+  }
+
+  if (!(normalized.length === 11 || normalized.length === 14)) {
+    return 'Sender Account Number must be 11 or 14 digits long.';
   }
 
   return null;
