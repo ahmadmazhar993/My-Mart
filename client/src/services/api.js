@@ -19,6 +19,24 @@ const axiosClient = axios.create({
   },
 });
 
+export const isTokenExpired = (token) => {
+  if (!token || typeof token !== 'string') return true;
+
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return true;
+
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
+    );
+
+    if (!payload || typeof payload.exp !== 'number') return false;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+};
+
 export const setAuthToken = (token) => {
   if (token) {
     axiosClient.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -29,9 +47,21 @@ export const setAuthToken = (token) => {
 
 axiosClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+
+  if (!token) {
+    delete config.headers.Authorization;
+    return config;
   }
+
+  if (isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setAuthToken(null);
+    window.dispatchEvent(new CustomEvent('api:unauthorized'));
+    return Promise.reject(new Error('Token expired'));
+  }
+
+  config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
