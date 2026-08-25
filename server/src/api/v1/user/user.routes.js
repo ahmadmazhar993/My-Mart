@@ -78,10 +78,12 @@ router
   .route('/:userID')
   .get(isAuthenticated, getUserById, sendUserResponse)
   .put(
+    isAuthenticated,
     getUserById,
     validateUpdateUserWithAdminForm,
     getUserByEmail,
-    updateUserWithAdmin
+    updateUserWithAdmin,
+    sendUserResponse
   )
   .patch(
     getUserById,
