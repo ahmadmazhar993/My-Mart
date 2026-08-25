@@ -415,7 +415,7 @@ const updateUserWithAdmin = async (req, res, next) => {
       });
     }
 
-    if (userByEmail && userByEmail.userID !== userById.userID) {
+    if (userByEmail && userByEmail.userID !== userById.userID && !req.isStatusUpdateRequest) {
       return res.status(HttpStatus.StatusCodes.CONFLICT).json({
         error: true,
         message: 'Email address already in use by another user'
@@ -748,6 +748,9 @@ const sendUserResponse = (req, res) => {
   }
   if (req.path === `/${req.params.userID}` && req.method === 'GET') {
     return res.status(HttpStatus.StatusCodes.OK).json(req.userById || null);
+  }
+  if (req.path === `/${req.params.userID}` && req.method === 'PUT') {
+    return res.status(HttpStatus.StatusCodes.OK).json({ success: true, message: 'User updated successfully' });
   }
   if (req.path === `/${req.params.userID}` && req.method === 'DELETE') {
     return res.status(HttpStatus.StatusCodes.OK).json({ success: true, message: 'User deleted successfully' });
