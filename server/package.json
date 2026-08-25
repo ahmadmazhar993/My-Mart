@@ -1,7 +1,7 @@
 {
-  "name": "daraz-backend",
-  "version": "1.0.0",
-  "description": "Daraz e-commerce backend API",
+  "name": "Ahm-Mart-backend",
+  "version": "1.5.0",
+  "description": "Ahm Mart e-commerce backend API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -14,10 +14,10 @@
   },
   "keywords": [
     "ecommerce",
-    "daraz",
+    "ahm-mart",
     "api"
   ],
-  "author": "",
+  "author": "Syed Software & Technology",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
