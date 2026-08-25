@@ -44,11 +44,12 @@ const AuthInitializer = ({ children }) => {
       })
       .catch((error) => {
         const message = error?.response?.data?.message || error?.message || '';
-        const isExpiredSession = error?.response?.status === 401 || /token expired|invalid token|no token provided/i.test(message);
+        const isExpiredSession = /token expired|invalid token|no token provided/i.test(message);
 
         logout();
 
-        if (isExpiredSession) {
+        // Only show the session-expired modal if we had a token (user was previously authenticated)
+        if (isExpiredSession && token) {
           setSessionExpiredOpen(true);
         }
       });
@@ -56,7 +57,11 @@ const AuthInitializer = ({ children }) => {
   }, [login, logout]); // run once
 
   useEffect(() => {
-    const onUnauthorized = () => setSessionExpiredOpen(true);
+    const onUnauthorized = () => {
+      // If an API call returned 401 but the user never had a token, don't show the modal
+      const hadToken = localStorage.getItem('token');
+      if (hadToken) setSessionExpiredOpen(true);
+    };
     window.addEventListener('api:unauthorized', onUnauthorized);
     return () => window.removeEventListener('api:unauthorized', onUnauthorized);
   }, []);
