@@ -19,8 +19,10 @@ const getTokenCookieOptions = () => ({
 const clearTokenCookie = (res) => res.clearCookie('token', getTokenCookieOptions());
 const isSseRequest = (req) => req.headers.accept?.includes('text/event-stream') || req.path.includes('/events');
 
+const isApiRequest = (req) => req.path?.startsWith('/api/') || req.headers.accept?.includes('application/json') || req.headers['x-requested-with'] === 'XMLHttpRequest';
+
 const sendAuthFailure = (req, res, message = 'Authentication failed') => {
-  if (isSseRequest(req)) {
+  if (isSseRequest(req) || isApiRequest(req)) {
     return res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message });
   }
 
@@ -49,11 +51,11 @@ const isAuthenticated = (req, res, next) => {
           logger.log('info', `[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Error::Token verification failed. You are not authorized to perform this operation!`, err);
           clearTokenCookie(res);
           if (err.name === 'TokenExpiredError') {
-            return isSseRequest(req)
+            return isSseRequest(req) || isApiRequest(req)
               ? res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Token expired' })
               : res.redirect('/?error=Token expired');
           }
-          return isSseRequest(req)
+          return isSseRequest(req) || isApiRequest(req)
             ? res.status(StatusCodes.UNAUTHORIZED).json({ error: true, message: 'Invalid token' })
             : res.redirect('/?error=Invalid token');
         }
