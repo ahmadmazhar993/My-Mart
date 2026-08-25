@@ -179,11 +179,43 @@ const validateCreateUserForm = (req, res, next) => {
   }
 };
 
+const normalizeUserStatus = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === 'active') {
+    return 'active';
+  }
+
+  if (normalized === 'inactive' || normalized === 'deactivated' || normalized === 'deactivate') {
+    return 'inactive';
+  }
+
+  if (normalized === 'banned') {
+    return 'banned';
+  }
+
+  return null;
+};
+
 const validateUserStatusWithAdminForm = (req, res, next) => {
   try {
-    const { is_active } = req.body;
+    const { is_active, status } = req.body;
+    const providedStatus = normalizeUserStatus(status);
 
-    if (typeof is_active === 'undefined' || is_active === null || typeof is_active !== 'boolean') {
+    if (typeof status !== 'undefined' && providedStatus === null) {
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
+        error: true,
+        message: 'Invalid status value'
+      });
+    }
+
+    const finalStatus = providedStatus || (typeof is_active === 'boolean' ? (is_active ? 'active' : 'inactive') : null);
+
+    if (!finalStatus) {
       return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
         error: true,
         message: 'Required fields are missing'
@@ -191,8 +223,8 @@ const validateUserStatusWithAdminForm = (req, res, next) => {
     }
 
     req.updateUserStatusRequest = {
-      isActive: is_active,
-      status: is_active ? 'Active' : 'Deactivated'
+      isActive: finalStatus === 'active',
+      status: finalStatus,
     };
 
     return next();
@@ -234,8 +266,27 @@ const validateUpdateUserWithAdminForm = (req, res, next) => {
   try {
     const {
       first_name, last_name, email, phone_number,
-      access_template, role
+      access_template, role, status, is_active
     } = req.body;
+
+    const normalizedStatus = normalizeUserStatus(status);
+    if (typeof status !== 'undefined' || typeof is_active !== 'undefined') {
+      const finalStatus = normalizedStatus || (typeof is_active === 'boolean' ? (is_active ? 'active' : 'inactive') : null);
+
+      if (!finalStatus) {
+        return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
+          error: true,
+          message: 'Invalid status value'
+        });
+      }
+
+      req.updateUserRequest = {
+        status: finalStatus,
+        isActive: finalStatus === 'active',
+      };
+      req.isStatusUpdateRequest = true;
+      return next();
+    }
 
     let { userRolesLookup } = req;
     const { userById } = req;
