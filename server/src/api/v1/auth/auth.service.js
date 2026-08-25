@@ -204,7 +204,7 @@ const login = async (req, res) => {
 
     logger.log('info', `[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Error::Invalid username or password.`);
 
-    return res.status(StatusCodes.UNAUTHORIZED).json({
+    return res.status(StatusCodes.BAD_REQUEST).json({
       error: true, message: 'Invalid username or password'
     });
   } catch (e) {
