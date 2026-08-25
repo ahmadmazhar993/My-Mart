@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store';
 import { authService } from '../services';
-import { setAuthToken } from '../services/api';
+import { setAuthToken, isTokenExpired } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const AuthInitializer = ({ children }) => {
@@ -16,7 +16,15 @@ const AuthInitializer = ({ children }) => {
     window.__AHM_AUTH_INIT_STARTED = true;
     // Always attempt to fetch current user — the server may authenticate via httpOnly cookie set by OAuth
     const token = localStorage.getItem('token');
-    if (token) setAuthToken(token);
+    if (token) {
+      if (isTokenExpired(token)) {
+        logout();
+        setSessionExpiredOpen(true);
+        window.__AHM_AUTH_INIT_DONE = true;
+        return;
+      }
+      setAuthToken(token);
+    }
 
     authService.getCurrentUser()
       .then((res) => {
@@ -34,9 +42,15 @@ const AuthInitializer = ({ children }) => {
         // mark init done to avoid duplicate calls
         window.__AHM_AUTH_INIT_DONE = true;
       })
-      .catch(() => {
-        // not authenticated
+      .catch((error) => {
+        const message = error?.response?.data?.message || error?.message || '';
+        const isExpiredSession = error?.response?.status === 401 || /token expired|invalid token|no token provided/i.test(message);
+
         logout();
+
+        if (isExpiredSession) {
+          setSessionExpiredOpen(true);
+        }
       });
 
   }, [login, logout]); // run once
