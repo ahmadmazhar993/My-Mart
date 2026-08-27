@@ -92,7 +92,7 @@ const StepBadge = ({ n }) => (
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { cart, clearCart, buyNowItems, clearBuyNowItems, updateQuantity, removeItem } = useCartStore();
   const { addToast } = useToast();
 
@@ -117,31 +117,33 @@ const Checkout = () => {
   const [senderAccount, setSenderAccount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [copiedAccount, setCopiedAccount] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [saveAddress, setSaveAddress] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    userService.getProfile()
-      .then((res) => {
-        const profile = res.data?.data || res.data;
-        setForm({
-          fullName: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
-          phone: profile.phone || '',
-          address: profile.address || '',
-          city: profile.city || '',
-        });
-      })
-      .catch(() => {
-        if (user) {
+    userService.getAddresses()
+      .then((addressesRes) => {
+        const addresses = (addressesRes.data?.data || [])
+          .slice(0, 2)
+          .map((address, index) => ({ ...address, label: index === 0 ? 'Home' : 'Office' }));
+        setSavedAddresses(addresses);
+        if (addresses.length > 0) {
+          const firstAddress = addresses[0];
+          setSelectedAddressId(firstAddress.id);
+          setSaveAddress(false);
           setForm({
-            fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            phone: user.phone || '',
-            address: user.address || '',
-            city: user.city || '',
+            fullName: firstAddress.full_name,
+            phone: firstAddress.phone,
+            address: firstAddress.address,
+            city: firstAddress.city,
           });
         }
-      });
-  }, [isAuthenticated, user]);
+      })
+      .catch(() => setSavedAddresses([]));
+  }, [isAuthenticated]);
 
   const subtotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingInfo = getShippingInfo(subtotal);
@@ -203,6 +205,25 @@ const Checkout = () => {
     const nextQty = Math.max(1, (item.quantity || 1) + delta);
     if (nextQty === item.quantity) return;
     updateQuantity(item, nextQty);
+  };
+
+  const selectAddress = (address) => {
+    setSelectedAddressId(address.id);
+    setSaveAddress(false);
+    setForm({
+      fullName: address.full_name,
+      phone: address.phone,
+      address: address.address,
+      city: address.city,
+    });
+    setErrors({});
+  };
+
+  const startNewAddress = () => {
+    setSelectedAddressId('');
+    setSaveAddress(true);
+    setForm({ fullName: '', phone: '', address: '', city: '' });
+    setErrors({});
   };
 
   // ADD THIS — right after handleQuantityChange
@@ -361,6 +382,23 @@ const Checkout = () => {
         await orderService.submitPaymentProof(createdOrder.id, formData);
       }
 
+      if (saveAddress && !selectedAddressId) {
+        try {
+          const savedResponse = await userService.createAddress({
+            label: 'Home',
+            full_name: form.fullName.trim(),
+            phone: form.phone.trim(),
+            address: form.address.trim(),
+            city: form.city.trim(),
+          });
+          setSavedAddresses((prev) => [savedResponse.data?.data, ...prev]
+            .slice(0, 2)
+            .map((address, index) => ({ ...address, label: index === 0 ? 'Home' : 'Office' })));
+        } catch {
+          addToast('Order placed, but the address could not be saved.', 'error');
+        }
+      }
+
       if (isBuyNow) {
         clearBuyNowItems();
       } else {
@@ -411,6 +449,31 @@ const Checkout = () => {
                 <StepBadge n={1} />
                 <h2 className="font-bold text-base sm:text-lg text-dark">Shipping Information</h2>
               </div>
+
+              {savedAddresses.length > 0 && (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Saved addresses</p>
+                    <button type="button" onClick={startNewAddress} className="text-xs font-semibold text-primary hover:underline">
+                      Add new address
+                    </button>
+                  </div>
+                  <div className="grid gap-2">
+                    {savedAddresses.map((savedAddress) => (
+                      <button
+                        type="button"
+                        key={savedAddress.id}
+                        onClick={() => selectAddress(savedAddress)}
+                        className={`text-left rounded-lg border p-3 transition ${selectedAddressId === savedAddress.id ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}
+                      >
+                        <span className="block text-sm font-semibold text-dark">{savedAddress.label}</span>
+                        <span className="block text-xs text-gray-500 mt-0.5">{savedAddress.full_name} · {savedAddress.phone}</span>
+                        <span className="block text-xs text-gray-500">{savedAddress.address}, {savedAddress.city}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -507,6 +570,16 @@ const Checkout = () => {
                 </div>
                 {errors.city && <p className="mt-1.5 text-xs text-red-600">{errors.city}</p>}
               </div>
+
+              <label className="mt-4 flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveAddress}
+                  onChange={(e) => setSaveAddress(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                Save this address for faster checkout next time
+              </label>
             </div>
 
             {/* Payment card */}
