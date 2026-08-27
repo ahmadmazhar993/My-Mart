@@ -162,6 +162,66 @@ const getActiveUser = async (req, res, next) => {
   }
 };
 
+const mapAddress = (address) => ({
+  id: address.addressID,
+  label: address.label,
+  full_name: address.fullName,
+  phone: address.phone,
+  address: address.address,
+  city: address.city,
+  postal_code: address.postalCode || '',
+});
+
+const getUserAddresses = async (req, res) => {
+  try {
+    const addresses = await db('user_addresses')
+      .where('user_id', req.activeUser.userID)
+      .orderBy('createdOn', 'desc');
+    return res.status(HttpStatus.StatusCodes.OK).json({ success: true, data: addresses.map(mapAddress) });
+  } catch (e) {
+    logger.error('[USER][Function::getUserAddresses]::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
+const createUserAddress = async (req, res) => {
+  try {
+    const { label, full_name, phone, address, city, postal_code } = req.body;
+    if (!full_name?.trim() || !phone?.trim() || !address?.trim() || !city?.trim()) {
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({ error: true, message: 'Name, phone, address, and city are required' });
+    }
+
+    const [savedAddress] = await db('user_addresses').insert({
+      user_id: req.activeUser.userID,
+      label: label?.trim() || 'Home',
+      fullName: full_name.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      postalCode: postal_code?.trim() || null,
+    }, '*');
+    return res.status(HttpStatus.StatusCodes.CREATED).json({ success: true, data: mapAddress(savedAddress) });
+  } catch (e) {
+    logger.error('[USER][Function::createUserAddress]::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
+const deleteUserAddress = async (req, res) => {
+  try {
+    const deleted = await db('user_addresses')
+      .where({ addressID: req.params.addressID, user_id: req.activeUser.userID })
+      .del();
+    if (!deleted) {
+      return res.status(HttpStatus.StatusCodes.NOT_FOUND).json({ error: true, message: 'Address not found' });
+    }
+    return res.status(HttpStatus.StatusCodes.OK).json({ success: true, message: 'Address deleted successfully' });
+  } catch (e) {
+    logger.error('[USER][Function::deleteUserAddress]::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
 const getUserByEmail = async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -782,6 +842,9 @@ const sendUserResponse = (req, res) => {
 module.exports = {
   getAllUsers,
   getActiveUser,
+  getUserAddresses,
+  createUserAddress,
+  deleteUserAddress,
   getUserByEmail,
   getUserById,
   getUserProfilePicture,
