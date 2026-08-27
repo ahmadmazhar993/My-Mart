@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { ProductSkeleton, Breadcrumb, EmptyState } from '../components/ui';
@@ -24,6 +24,7 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     setPage(1);
@@ -53,6 +54,37 @@ const Products = () => {
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   }, [page, search, categoryId, saleOnly, priceRange]);
+
+  // When a search is present on small screens, scroll results into view
+  useEffect(() => {
+    if (!search) return undefined;
+
+    // only run after loading completes
+    if (loading) return undefined;
+
+    let timer = null;
+    const doScroll = () => {
+      try {
+        if (!resultsRef.current) return;
+        // small screens only
+        if (window.innerWidth > 640) return;
+
+        const rect = resultsRef.current.getBoundingClientRect();
+        const top = rect.top + window.pageYOffset;
+        const offset = 120; // account for header/filters height
+        window.scrollTo({ top: Math.max(top - offset, 0), behavior: 'smooth' });
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    // delay slightly to allow mobile keyboard/layout changes
+    timer = setTimeout(doScroll, 300);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading, search]);
 
   const filtered = products
     .filter((p) => {
@@ -181,7 +213,7 @@ const Products = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div ref={resultsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filtered.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
