@@ -26,6 +26,16 @@ export const useAuthStore = create((set) => ({
     set({ user: normalized, token, isAuthenticated: true });
   },
 
+  restoreSession: (user, token) => {
+    const normalized = normalizeUser(user);
+    if (token) {
+      localStorage.setItem('token', token);
+      setAuthToken(token);
+    }
+    localStorage.setItem('user', JSON.stringify(normalized));
+    set({ user: normalized, token: token || null, isAuthenticated: true });
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

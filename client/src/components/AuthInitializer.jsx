@@ -5,7 +5,7 @@ import { setAuthToken, isTokenExpired } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const AuthInitializer = ({ children }) => {
-  const { login, logout } = useAuthStore();
+  const { restoreSession, logout } = useAuthStore();
   const navigate = useNavigate();
   const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
 
@@ -32,7 +32,7 @@ const AuthInitializer = ({ children }) => {
         const currentUser = payload.user || payload;
         const returnedToken = payload.token || res.data?.token || token || null;
         if (returnedToken) {
-          login(currentUser, returnedToken);
+          restoreSession(currentUser, returnedToken);
         } else {
           // no token returned (server only uses cookie) — set user in store without persisting token
           useAuthStore.getState().setUser(currentUser);
@@ -54,7 +54,7 @@ const AuthInitializer = ({ children }) => {
         }
       });
 
-  }, [login, logout]); // run once
+  }, [restoreSession, logout]); // run once
 
   useEffect(() => {
     const onUnauthorized = () => {
