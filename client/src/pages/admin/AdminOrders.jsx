@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { orderService } from '../../services';
 import { PAYMENT_METHOD_LABELS } from '../../config/paymentAccounts';
 
@@ -27,11 +28,31 @@ const AdminOrders = () => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Filter panel UI state (draft values until Apply)
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState('');
+  const [draftPayment, setDraftPayment] = useState('');
+  const [draftStart, setDraftStart] = useState('');
+  const [draftEnd, setDraftEnd] = useState('');
+  const filterButtonRef = useRef(null);
+  const panelRef = useRef(null);
 
   const loadOrders = (nextPage = page) => {
     setLoading(true);
     setError('');
-    orderService.getAllOrders({ page: nextPage, limit: 10 })
+    orderService.getAllOrders({
+      page: nextPage,
+      limit: 10,
+      status: statusFilter || undefined,
+      paymentStatus: paymentFilter || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    })
       .then((res) => {
         setOrders(res.data?.data || []);
         setPagination(res.data?.pagination || null);
@@ -40,7 +61,54 @@ const AdminOrders = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadOrders(page); }, [page]);
+  useEffect(() => { loadOrders(page); }, [page, statusFilter, paymentFilter, startDate, endDate]);
+
+  // Focus management + simple focus trap for filter panel
+  useEffect(() => {
+    if (!filterOpen) return undefined;
+
+    const panel = panelRef.current;
+    if (!panel) return undefined;
+
+    const focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+    const getFocusable = () => Array.from(panel.querySelectorAll(focusableSelector)).filter((el) => el.offsetParent !== null);
+
+    // focus first control
+    const focusable = getFocusable();
+    const first = focusable[0];
+    if (first) first.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setFilterOpen(false);
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const list = getFocusable();
+        if (list.length === 0) return;
+        const firstEl = list[0];
+        const lastEl = list[list.length - 1];
+        const active = document.activeElement;
+        if (!e.shiftKey && active === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        } else if (e.shiftKey && active === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      // return focus to filter button
+      try { filterButtonRef.current?.focus(); } catch (err) { /* ignore */ }
+    };
+  }, [filterOpen]);
 
   const getProductNames = (order) => {
     const fromProductName = order?.product_name;
@@ -144,10 +212,34 @@ const AdminOrders = () => {
 
   return (
     <div className="animate-fade-in space-y-5">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-dark">Orders</h2>
           <p className="text-sm text-gray-500">Manage customer orders</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftStatus(statusFilter);
+              setDraftPayment(paymentFilter);
+              setDraftStart(startDate);
+              setDraftEnd(endDate);
+              setFilterOpen(true);
+            }}
+            ref={filterButtonRef}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-.553.894l-3 1.5A1 1 0 0010 20.5V14.414L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            Filter
+            {(() => {
+              const count = (statusFilter ? 1 : 0) + (paymentFilter ? 1 : 0) + ((startDate || endDate) ? 1 : 0);
+              return count > 0 ? <span className="ml-1 inline-flex h-5 min-w-[18px] items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-white">{count}</span> : null;
+            })()}
+          </button>
         </div>
       </div>
 
@@ -155,6 +247,90 @@ const AdminOrders = () => {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
+      )}
+
+      {/* Filter panel overlay & panel (rendered only when open to avoid aria-hidden on focusable elements) */}
+      {filterOpen && (
+        <>
+          <div className="fixed inset-0 z-40">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setFilterOpen(false)} />
+          </div>
+
+          <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="orders-filter-title" className="fixed z-50 flex flex-col bg-white shadow-lg bottom-0 w-full md:top-0 md:right-0 md:h-full md:w-96 rounded-t-lg md:rounded-none">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between" id="orders-filter-title">
+          <h3 className="text-lg font-semibold">Filters</h3>
+          <button type="button" onClick={() => setFilterOpen(false)} className="text-sm text-gray-600 hover:underline">Close</button>
+        </div>
+
+        <div className="p-4 space-y-4 overflow-auto">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select value={draftStatus} onChange={(e) => setDraftStatus(e.target.value)} className="input-field w-full" aria-label="Filter by status">
+              <option value="">All</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+            <select value={draftPayment} onChange={(e) => setDraftPayment(e.target.value)} className="input-field w-full" aria-label="Filter by payment status">
+              <option value="">All</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="paid">Paid</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+            <div className="flex items-center gap-2">
+              <input type="date" value={draftStart} onChange={(e) => setDraftStart(e.target.value)} className="input-field w-full" />
+              <span className="text-sm text-gray-400">to</span>
+              <input type="date" value={draftEnd} onChange={(e) => setDraftEnd(e.target.value)} className="input-field w-full" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-gray-100 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              // Apply drafts to active filters
+              setStatusFilter(draftStatus);
+              setPaymentFilter(draftPayment);
+              setStartDate(draftStart);
+              setEndDate(draftEnd);
+              setPage(1);
+              setFilterOpen(false);
+            }}
+            className="btn-primary"
+          >
+            Apply Filters
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDraftStatus('');
+              setDraftPayment('');
+              setDraftStart('');
+              setDraftEnd('');
+              setStatusFilter('');
+              setPaymentFilter('');
+              setStartDate('');
+              setEndDate('');
+              setPage(1);
+              setFilterOpen(false);
+            }}
+            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Clear All
+          </button>
+        </div>
+          </div>
+        </>
       )}
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -185,7 +361,9 @@ const AdminOrders = () => {
 
                     return (
                       <tr key={order.id} className="align-top transition-colors hover:bg-gray-50/80">
-                        <td className="px-4 py-3 font-semibold text-gray-900">#{order.display_order_id || order.id}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">
+                          <Link to={`/orders/${order.id}`} state={{ from: '/admin/orders' }} className="text-primary hover:underline">#{order.display_order_id || order.id}</Link>
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
                             <span className="font-medium text-gray-900">{String(order.userName || '—')}</span>
@@ -246,7 +424,9 @@ const AdminOrders = () => {
                   <div key={order.id} className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">#{order.display_order_id || order.id}</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          <Link to={`/orders/${order.id}`} state={{ from: '/admin/orders' }} className="text-primary hover:underline">#{order.display_order_id || order.id}</Link>
+                        </p>
                         <p className="text-sm text-gray-700">{String(order.userName || '—')}</p>
                       </div>
                       <div className="text-right">
