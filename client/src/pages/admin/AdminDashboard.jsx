@@ -22,6 +22,16 @@ const AdminDashboard = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const STATUS_BADGE_CLASSES = {
+    pending: 'px-2 py-0.5 rounded-sm bg-amber-100 text-amber-700 text-xs font-semibold capitalize',
+    confirmed: 'px-2 py-0.5 rounded-sm bg-blue-100 text-blue-700 text-xs font-semibold capitalize',
+    processing: 'px-2 py-0.5 rounded-sm bg-indigo-100 text-indigo-700 text-xs font-semibold capitalize',
+    shipped: 'px-2 py-0.5 rounded-sm bg-purple-100 text-purple-700 text-xs font-semibold capitalize',
+    delivered: 'px-2 py-0.5 rounded-sm bg-emerald-100 text-emerald-700 text-xs font-semibold capitalize',
+    cancelled: 'px-2 py-0.5 rounded-sm bg-rose-100 text-rose-700 text-xs font-semibold capitalize',
+    default: 'px-2 py-0.5 rounded-sm bg-gray-100 text-gray-700 text-xs font-semibold capitalize',
+  };
+
   useEffect(() => {
     Promise.all([
       productService.getAllProducts(),
@@ -41,7 +51,7 @@ const AdminDashboard = () => {
           orders: ordersTotal,
           users: usersTotal,
         });
-        setRecentOrders(orders.slice(0, 5));
+        setRecentOrders(orders.slice(0, 10));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -90,7 +100,7 @@ const AdminDashboard = () => {
                   <tr key={order.id} className="border-b border-gray-50">
                     <td className="py-2.5 font-medium">#{order.display_order_id || order.id}</td>
                     <td className="py-2.5">
-                      <span className="px-2 py-0.5 rounded-sm bg-primary-50 text-primary text-xs font-semibold capitalize">
+                      <span className={STATUS_BADGE_CLASSES[order.status?.toLowerCase?.()] || STATUS_BADGE_CLASSES.default}>
                         {order.status}
                       </span>
                     </td>
