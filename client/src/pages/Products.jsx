@@ -21,10 +21,37 @@ const Products = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState('popular');
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortButtonRef = useRef(null);
+  const sortMenuRef = useRef(null);
   const [priceRange, setPriceRange] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const resultsRef = useRef(null);
+
+  useEffect(() => {
+    if (!sortOpen) return undefined;
+
+    const handleOutside = (e) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target) && !sortButtonRef.current.contains(e.target)) {
+        setSortOpen(false);
+      }
+    };
+
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setSortOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    document.addEventListener('keydown', handleKey);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [sortOpen]);
 
   useEffect(() => {
     setPage(1);
@@ -189,15 +216,37 @@ const Products = () => {
               <h1 className="text-xl font-bold text-dark">{pageTitle}</h1>
               <p className="text-sm text-gray-500">{filtered.length === 1 ? `${filtered.length} product found` : `${filtered.length} products found`}</p>
             </div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="input-field w-auto text-sm py-2"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                ref={sortButtonRef}
+                onClick={() => setSortOpen((s) => !s)}
+                aria-haspopup="listbox"
+                aria-expanded={sortOpen}
+                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                {SORT_OPTIONS.find((o) => o.value === sort)?.label || 'Sort'}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {sortOpen && (
+                <ul ref={sortMenuRef} role="listbox" aria-label="Sort options" className="absolute right-0 mt-2 w-44 rounded-md bg-white shadow-lg z-50">
+                  {SORT_OPTIONS.map((opt) => (
+                    <li key={opt.value} role="option">
+                      <button
+                        type="button"
+                        onClick={() => { setSort(opt.value); setSortOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm ${opt.value === sort ? 'bg-gray-100 font-semibold' : 'hover:bg-gray-50'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           {loading ? (
