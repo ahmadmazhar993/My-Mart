@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Breadcrumb, EmptyState, ProductSkeleton } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
@@ -27,6 +27,7 @@ const PAYMENT_STYLES = {
 const OrderDetail = () => {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const { addToast } = useToast();
   const [order, setOrder] = useState(null);
@@ -150,6 +151,19 @@ const OrderDetail = () => {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
+          <div className="mb-2">
+            <button
+              type="button"
+              onClick={() => {
+                const from = location?.state?.from;
+                if (from) navigate(from);
+                else navigate(-1);
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              ← Back
+            </button>
+          </div>
           <h1 className="text-xl font-bold text-dark">Order #{order.display_order_id || order.id}</h1>
           <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString('en-PK')}</p>
         </div>
