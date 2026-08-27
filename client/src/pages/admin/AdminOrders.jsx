@@ -256,7 +256,8 @@ const AdminOrders = () => {
             <div className="absolute inset-0 bg-black/30" onClick={() => setFilterOpen(false)} />
           </div>
 
-          <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="orders-filter-title" className="fixed z-50 flex flex-col bg-white shadow-lg bottom-0 w-full md:top-0 md:right-0 md:h-full md:w-96 rounded-t-lg md:rounded-none">
+          <div className="fixed inset-0 z-50 flex items-end justify-center md:items-start md:justify-end">
+            <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="orders-filter-title" className="w-full max-w-md md:w-96 bg-white shadow-lg rounded-t-lg md:rounded-none md:h-full">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between" id="orders-filter-title">
           <h3 className="text-lg font-semibold">Filters</h3>
           <button type="button" onClick={() => setFilterOpen(false)} className="text-sm text-gray-600 hover:underline">Close</button>
@@ -329,6 +330,7 @@ const AdminOrders = () => {
             Clear All
           </button>
         </div>
+          </div>
           </div>
         </>
       )}
