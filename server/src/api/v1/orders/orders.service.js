@@ -109,6 +109,34 @@ async function listOrders(req, res) {
       query = query.where('orders.user_id', req.activeUser.userID);
     }
 
+    // Apply status filter when provided (e.g., ?status=pending)
+    const requestedStatus = req.query.status;
+    if (requestedStatus) {
+      const normalized = String(requestedStatus).toLowerCase();
+      if (ORDER_STATUSES.includes(normalized)) {
+        query = query.where('orders.status', normalized);
+      }
+    }
+
+    // Apply payment status filter when provided (e.g., ?paymentStatus=paid)
+    const requestedPaymentStatus = req.query.paymentStatus || req.query.payment_status;
+    if (requestedPaymentStatus) {
+      const normalizedPayment = String(requestedPaymentStatus).toLowerCase();
+      if (PAYMENT_STATUSES.includes(normalizedPayment)) {
+        query = query.where('orders.paymentStatus', normalizedPayment);
+      }
+    }
+
+    // Apply date range filters (createdOn)
+    const startDate = req.query.startDate || req.query.start_date;
+    const endDate = req.query.endDate || req.query.end_date;
+    if (startDate) {
+      query = query.where('orders.createdOn', '>=', startDate);
+    }
+    if (endDate) {
+      query = query.where('orders.createdOn', '<=', endDate);
+    }
+
     const countQuery = query.clone()
       .clear('select')
       .clear('order')
