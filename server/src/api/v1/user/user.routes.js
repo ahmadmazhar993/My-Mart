@@ -7,6 +7,9 @@ const { isAuthenticated } = require('../auth/auth.service');
 const {
   getAllUsers,
   getActiveUser,
+  getUserAddresses,
+  createUserAddress,
+  deleteUserAddress,
   getUserByEmail,
   getUserById,
   getUserProfilePicture,
@@ -36,6 +39,15 @@ router
 router
   .route('/profile')
   .get(isAuthenticated, getActiveUser, sendUserResponse);
+
+router
+  .route('/addresses')
+  .get(isAuthenticated, getUserAddresses)
+  .post(isAuthenticated, createUserAddress);
+
+router
+  .route('/addresses/:addressID')
+  .delete(isAuthenticated, deleteUserAddress);
 
 router
   .route('/update-preferences')
