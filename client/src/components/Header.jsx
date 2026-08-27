@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useCartStore } from '../store';
 import { authService } from '../services';
@@ -29,12 +29,30 @@ const Header = () => {
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const { isAuthenticated, user, logout } = useAuthStore();
   const { cart } = useCartStore();
 
   useEffect(() => {
     setAccountMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (!accountMenuRef.current?.contains(event.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [accountMenuOpen]);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const getProductsPath = (query) => {
@@ -178,7 +196,7 @@ const Header = () => {
 
           <div className="flex items-center gap-1 sm:gap-4 ml-auto">
             {isAuthenticated ? (
-              <div className="relative">
+              <div ref={accountMenuRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setAccountMenuOpen((open) => !open)}
