@@ -382,7 +382,8 @@ async function createOrder(req, res) {
           totalPrice: lineTotal,
           variant_name: selectedVariant?.name || item.variant_name || null,
           variant_label: selectedVariant?.label || item.variant_label || selectedVariant?.name || item.variant_name || null,
-          variant_sku: selectedVariant?.sku || item.variant_sku || null,
+          // Prefer variant SKU, then product SKU, then any provided SKU
+          variant_sku: selectedVariant?.sku || product.sku || item.variant_sku || null,
         });
       }
 
@@ -438,6 +439,21 @@ async function createOrder(req, res) {
         processedOn: initialPaymentState === 'completed' ? db.fn.now() : null,
       });
 
+      // Create a receipt record for this order (generates unique invoice_number via DB default)
+      const receiptPayload = {
+        order_id: newOrder.orderID,
+        cashier_name: req.activeUser ? `${req.activeUser.firstName || ''} ${req.activeUser.lastName || ''}`.trim() : null,
+        data: JSON.stringify({
+          subtotal,
+          shipping: shipping,
+          totalPrice,
+          items: lineItems,
+          paymentMethod: normalizedPaymentMethod,
+        }),
+      };
+
+      await trx('receipts').insert(receiptPayload);
+
       return newOrder;
     });
 
@@ -449,22 +465,22 @@ async function createOrder(req, res) {
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', result.orderID);
 
-    if (user?.email) {
-      sendOrderConfirmationEmail({
-        email: user.email,
-        firstName: user.firstName || 'Customer',
-        orderId: result.orderCode || result.orderID,
-        status: result.status,
-        paymentMethod: normalizedPaymentMethod,
-        shippingAddress: shipping_address,
-        items: orderItems,
-        subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
-        shippingCost: Number(result.shippingCost || 0),
-        totalPrice: Number(result.totalPrice),
-      }).catch((err) => {
-        logger.error('[ORDERS][createOrder]::Failed to send confirmation email', err);
-      });
-    }
+    // if (user?.email) {
+    //   sendOrderConfirmationEmail({
+    //     email: user.email,
+    //     firstName: user.firstName || 'Customer',
+    //     orderId: result.orderCode || result.orderID,
+    //     status: result.status,
+    //     paymentMethod: normalizedPaymentMethod,
+    //     shippingAddress: shipping_address,
+    //     items: orderItems,
+    //     subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
+    //     shippingCost: Number(result.shippingCost || 0),
+    //     totalPrice: Number(result.totalPrice),
+    //   }).catch((err) => {
+    //     logger.error('[ORDERS][createOrder]::Failed to send confirmation email', err);
+    //   });
+    // }
 
     // Notify admin clients (SSE/Web UI) that orders have been updated/created
     try {
@@ -474,22 +490,22 @@ async function createOrder(req, res) {
     }
 
     // Send notification email to admin
-    try {
-      await sendAdminNewOrderEmail({
-        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-        customerEmail: user.email,
-        orderId: result.orderCode || result.orderID,
-        status: result.status,
-        paymentMethod: normalizedPaymentMethod,
-        shippingAddress: shipping_address,
-        items: orderItems,
-        subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
-        shippingCost: Number(result.shippingCost || 0),
-        totalPrice: Number(result.totalPrice),
-      });
-    } catch (mailErr) {
-      logger.error('[ORDERS][createOrder]::Failed to send admin notification email', mailErr);
-    }
+    // try {
+    //   await sendAdminNewOrderEmail({
+    //     customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+    //     customerEmail: user.email,
+    //     orderId: result.orderCode || result.orderID,
+    //     status: result.status,
+    //     paymentMethod: normalizedPaymentMethod,
+    //     shippingAddress: shipping_address,
+    //     items: orderItems,
+    //     subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
+    //     shippingCost: Number(result.shippingCost || 0),
+    //     totalPrice: Number(result.totalPrice),
+    //   });
+    // } catch (mailErr) {
+    //   logger.error('[ORDERS][createOrder]::Failed to send admin notification email', mailErr);
+    // }
 
     return res.status(StatusCodes.CREATED).json({
       success: true,
