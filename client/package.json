@@ -1,6 +1,6 @@
 {
   "name": "ahm-mart-website",
-  "version": "1.5.5",
+  "version": "1.2.0",
   "description": "Ahm Mart e-commerce website built with React and Vite",
   "type": "module",
   "scripts": {
@@ -12,10 +12,13 @@
   },
   "dependencies": {
     "axios": "^1.6.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "chart.js": "^4.4.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
+    "react-qr-code": "^2.0.0",
     "react-easy-crop": "^6.0.2",
     "react-icons": "^5.7.0",
     "react-router-dom": "^6.20.0",
