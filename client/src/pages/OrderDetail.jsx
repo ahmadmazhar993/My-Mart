@@ -8,6 +8,9 @@ import { useAuthStore } from '../store';
 import { useToast } from '../components/ToastProvider';
 import { formatPrice } from '../utils/format';
 import { validatePaymentReceiptFile } from '../utils/paymentValidation';
+import ReceiptButtons from '../components/ReceiptButtons';
+import { MART_INFO } from '../data/siteContent';
+import { receiptService } from '../services';
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -31,6 +34,7 @@ const OrderDetail = () => {
   const { isAuthenticated } = useAuthStore();
   const { addToast } = useToast();
   const [order, setOrder] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -50,6 +54,13 @@ const OrderDetail = () => {
         return nextOrder;
       });
       setError('');
+      // load receipt for this order (if exists)
+      try {
+        const r = await receiptService.getReceiptByOrderId(id);
+        setReceipt(r.data?.data?.receipt || null);
+      } catch (e) {
+        setReceipt(null);
+      }
     } catch {
       setError('Failed to load order details');
     } finally {
@@ -167,11 +178,20 @@ const OrderDetail = () => {
           <h1 className="text-xl font-bold text-dark">Order #{order.display_order_id || order.id}</h1>
           <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString('en-PK')}</p>
         </div>
-        <span className={`inline-flex w-fit rounded-sm px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-700'}`}>
-          {order.status}
-        </span>
+        <div className="flex flex-col items-end gap-3">
+          <div className="text-right text-xs">
+            <div className="text-gray-600 text-xs">Invoice</div>
+            <div className="font-semibold whitespace-nowrap">{receipt?.invoice_number || '—'}</div>
+            <div className="text-gray-600 text-xs mt-1">Order</div>
+            <div className="font-semibold whitespace-nowrap">{order.orderCode || order.display_order_id || order.id}</div>
+          </div>
+          <ReceiptButtons order={order} martInfo={MART_INFO} receipt={receipt} />
+          <span className={`inline-flex w-fit rounded-sm px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-700'}`}>
+            {order.status}
+          </span>
+        </div>
       </div>
-
+ 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm text-sm mb-4">{error}</div>
       )}
