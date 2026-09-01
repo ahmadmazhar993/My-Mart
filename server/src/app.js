@@ -50,6 +50,11 @@ app.get('/favicon.ico', (req, res) => {
   res.type('image/svg+xml').sendFile(path.join(__dirname, '../../client/public/favicon.svg'));
 });
 
+// Serve common client public assets (logo) so server-rendered receipts can reference them
+app.get('/logo.png', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../client/public/logo.png'));
+});
+
 app.get('/api/v1/orders/events', isAuthenticated, (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
