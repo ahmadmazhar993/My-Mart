@@ -63,6 +63,10 @@ export const reportsService = {
   getSalesSummary: (params = {}) => api.get('/reports/sales', { params }),
 };
 
+export const receiptService = {
+  getReceiptByOrderId: (orderId) => api.get(`/receipts/order/${orderId}`),
+};
+
 export const cartService = {
   getCart: () => api.get('/cart'),
   addToCart: (data) => api.post('/cart/add', data),
