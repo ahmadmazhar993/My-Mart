@@ -332,3 +332,13 @@ export const HELP_TOPICS = [
   { label: 'Contact Us', to: '/pages/contact', icon: '📞' },
   { label: 'Become a Seller', to: '/pages/become-seller', icon: '🏪' },
 ];
+
+export const MART_INFO = {
+  name: 'AHM Mart',
+  logoUrl: '/logo.png',
+  address: 'AHM Mart (Pvt.) Ltd., Near Lahore General Hospital, Ismail Nagar, Lahore, Pakistan',
+  phone: '+92 323 881 8508',
+  email: 'support@ahmmart.store',
+  website: 'https://www.ahmmart.store',
+  support: 'support@ahmmart.store',
+};
