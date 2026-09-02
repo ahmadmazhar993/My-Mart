@@ -465,22 +465,22 @@ async function createOrder(req, res) {
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', result.orderID);
 
-    // if (user?.email) {
-    //   sendOrderConfirmationEmail({
-    //     email: user.email,
-    //     firstName: user.firstName || 'Customer',
-    //     orderId: result.orderCode || result.orderID,
-    //     status: result.status,
-    //     paymentMethod: normalizedPaymentMethod,
-    //     shippingAddress: shipping_address,
-    //     items: orderItems,
-    //     subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
-    //     shippingCost: Number(result.shippingCost || 0),
-    //     totalPrice: Number(result.totalPrice),
-    //   }).catch((err) => {
-    //     logger.error('[ORDERS][createOrder]::Failed to send confirmation email', err);
-    //   });
-    // }
+    if (user?.email) {
+      sendOrderConfirmationEmail({
+        email: user.email,
+        firstName: user.firstName || 'Customer',
+        orderId: result.orderCode || result.orderID,
+        status: result.status,
+        paymentMethod: normalizedPaymentMethod,
+        shippingAddress: shipping_address,
+        items: orderItems,
+        subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
+        shippingCost: Number(result.shippingCost || 0),
+        totalPrice: Number(result.totalPrice),
+      }).catch((err) => {
+        logger.error('[ORDERS][createOrder]::Failed to send confirmation email', err);
+      });
+    }
 
     // Notify admin clients (SSE/Web UI) that orders have been updated/created
     try {
@@ -490,22 +490,22 @@ async function createOrder(req, res) {
     }
 
     // Send notification email to admin
-    // try {
-    //   await sendAdminNewOrderEmail({
-    //     customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-    //     customerEmail: user.email,
-    //     orderId: result.orderCode || result.orderID,
-    //     status: result.status,
-    //     paymentMethod: normalizedPaymentMethod,
-    //     shippingAddress: shipping_address,
-    //     items: orderItems,
-    //     subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
-    //     shippingCost: Number(result.shippingCost || 0),
-    //     totalPrice: Number(result.totalPrice),
-    //   });
-    // } catch (mailErr) {
-    //   logger.error('[ORDERS][createOrder]::Failed to send admin notification email', mailErr);
-    // }
+    try {
+      await sendAdminNewOrderEmail({
+        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        customerEmail: user.email,
+        orderId: result.orderCode || result.orderID,
+        status: result.status,
+        paymentMethod: normalizedPaymentMethod,
+        shippingAddress: shipping_address,
+        items: orderItems,
+        subtotal: Number(result.totalPrice) - Number(result.shippingCost || 0),
+        shippingCost: Number(result.shippingCost || 0),
+        totalPrice: Number(result.totalPrice),
+      });
+    } catch (mailErr) {
+      logger.error('[ORDERS][createOrder]::Failed to send admin notification email', mailErr);
+    }
 
     return res.status(StatusCodes.CREATED).json({
       success: true,
