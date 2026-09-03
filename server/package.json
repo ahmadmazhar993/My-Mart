@@ -1,6 +1,6 @@
 {
   "name": "Ahm-Mart-backend",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Ahm Mart e-commerce backend API",
   "main": "src/index.js",
   "scripts": {
