@@ -8,6 +8,7 @@ const buildOrderStatusUpdateBody = require('./builders/orderStatusUpdate');
 const buildPaymentSuccessBody = require('./builders/paymentSuccess');
 const buildPaymentFailureBody = require('./builders/paymentFailure');
 const buildPasswordResetBody = require('./builders/passwordReset');
+const buildEmailVerificationBody = require('./builders/emailVerification');
 const buildNewOrderAdminBody = require('./builders/newOrderAdmin');
 
 async function sendContactEmails({ name, email, message }) {
@@ -132,6 +133,14 @@ async function sendPasswordResetEmail({ email, firstName, resetUrl }) {
   });
 }
 
+async function sendVerificationEmail({ email, firstName, verifyUrl }) {
+  return sendEmail({
+    to: email,
+    subject: 'Verify your AHM Mart email address',
+    body: buildEmailVerificationBody({ firstName, verifyUrl }),
+  });
+}
+
 async function sendAdminNewOrderEmail({
   customerName,
   customerEmail,
@@ -172,4 +181,5 @@ module.exports = {
   sendPaymentFailureEmail,
   sendPasswordResetEmail,
   sendAdminNewOrderEmail,
+  sendVerificationEmail,
 };
