@@ -89,9 +89,9 @@ const validateRegisterForm = (req, res, next) => {
       email: resolvedEmail,
       password,
       accessTemplateID: 'Customer',
-      status: 'Active',
-      isActive: true,
-      isEnabled: true,
+      status: 'Pending',
+      isActive: false,
+      isEnabled: false,
     };
 
     return next();
@@ -157,6 +157,22 @@ const validateRecoverPasswordForm = (req, res, next) => {
   }
 };
 
+const validateResendVerificationForm = (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !isEmailValid(email)) {
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({ error: true, message: 'Enter a valid email address' });
+    }
+
+    req.resendVerificationRequest = { email: email.trim().toLowerCase() };
+    return next();
+  } catch (e) {
+    logger.error('AuthValidation::validateResendVerificationForm::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e });
+  }
+};
+
 const validateResetPasswordTokenValidationForm = (req, res, next) => {
   try {
     const { token } = req.body;
@@ -180,10 +196,29 @@ const validateResetPasswordTokenValidationForm = (req, res, next) => {
   }
 };
 
+const validateEmailVerificationForm = (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({ error: true, message: 'Please provide a valid token' });
+    }
+
+    req.verifyEmailRequest = { token };
+    return next();
+  } catch (e) {
+    logger.error('AuthValidation::validateEmailVerificationForm::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e });
+  }
+};
+
 module.exports = {
   validateLoginForm,
   validateRegisterForm,
   validateResetPasswordForm,
   validateRecoverPasswordForm,
   validateResetPasswordTokenValidationForm,
+  validateEmailVerificationForm,
+  validateResendVerificationForm,
 };
+

@@ -1,10 +1,11 @@
 const { StatusCodes } = require('http-status-codes');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
 const db = require('../../../db');
 const logger = require('../../../config/winston');
 const activityLogger = require('../../../libs/activityLogger');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../../../email/templates');
+const { sendWelcomeEmail, sendPasswordResetEmail, sendVerificationEmail } = require('../../../email/templates');
 const { mapUser } = require('../../../libs/serializers');
 
 const { NODE_ENV = 'development', TOKEN_SECRET_KEY = 'TokenSecretKey', CLIENT_URL = 'http://localhost:5173' } = process.env;
@@ -27,6 +28,93 @@ const sendAuthFailure = (req, res, message = 'Authentication failed') => {
   }
 
   return res.status(StatusCodes.FORBIDDEN).json({ error: true, message });
+};
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // fetch user by email so we can provide clear message for unverified accounts
+    const fetchedUser = await db('user')
+      .first('userID', 'email', 'firstName', 'lastName', 'password', 'isActive', 'isEmailVerified', db.raw('(select type from "accessTemplate" at where at."accessTemplateID" = ??) as "role"', ['user.accessTemplateID']))
+      .where('isDeleted', false)
+      .whereRaw('lower("email") = ?', email.toLowerCase());
+
+    if (!fetchedUser) {
+      logger.log('info', `[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Error::Invalid username or password.`);
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Invalid username or password' });
+    }
+
+    if (!fetchedUser.isActive || !fetchedUser.isEmailVerified) {
+      return res.status(StatusCodes.FORBIDDEN).json({ error: true, message: 'Email not verified. Please check your inbox and verify your account.' });
+    }
+
+    // validate password
+    const user = await db('user')
+      .first(
+        'userID',
+        'email',
+        'firstName',
+        'lastName',
+        db.raw("CONCAT(initcap(\"user\".\"firstName\"),' ', initcap(\"user\".\"lastName\")) as \"fullName\""),
+        db.raw('(select type from "accessTemplate" at where at."accessTemplateID" = ??) as "role"', ['user.accessTemplateID'])
+      )
+      .where('isActive', true)
+      .where('isDeleted', false)
+      .whereRaw('lower("email") = ?', email.toLowerCase())
+      .whereRaw('crypt(?, "password")="password"', password);
+
+    if (user) {
+      const tokenPayload = {
+        email: user.email.toLowerCase(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        role: user.role,
+      };
+
+      const token = jwt.sign(tokenPayload, TOKEN_SECRET_KEY, { expiresIn: '1d' });
+
+      activityLogger({
+        targetEntity: 'Auth',
+        action: 'Login',
+        targetID: user.userID,
+        description: 'Login successfully',
+        data: { email: user.email },
+        userID: user.userID
+      });
+
+      return res
+        .cookie('token', token, getTokenCookieOptions())
+        .status(StatusCodes.OK)
+        .json({
+          success: true,
+          token,
+          data: {
+            user: {
+              userID: user.userID,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              fullName: user.fullName,
+              role: user.role,
+            }
+          },
+        });
+    }
+
+    logger.log('info', `[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Error::Invalid username or password.`);
+
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      error: true, message: 'Invalid username or password'
+    });
+  } catch (e) {
+    logger.error(`[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Exception::`, e);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      error: true,
+      message: e
+    });
+  }
 };
 
 const isAuthenticated = (req, res, next) => {
@@ -113,19 +201,25 @@ const register = async (req, res) => {
     }
 
     createUserRequest.accessTemplateID = roleRow.accessTemplateID;
+    // generate an email verification token and keep user inactive until verified
+    createUserRequest.emailVerificationToken = uuidv4();
+    createUserRequest.isEmailVerified = false;
+    createUserRequest.lastVerificationSentAt = db.fn.now();
 
     const [newUser] = await db('user').insert(createUserRequest, '*');
     const user = newUser;
 
-    if (user && user.email) {
-      sendWelcomeEmail({
+    // send verification email (user must verify to become active)
+    if (user && user.email && user.emailVerificationToken) {
+      sendVerificationEmail({
         email: user.email,
         firstName: user.firstName || 'Customer',
+        verifyUrl: `${CLIENT_URL}/verify-email?token=${user.emailVerificationToken}`,
       }).catch((err) => {
-        logger.error('[AUTH][register]::Failed to send welcome email', err);
+        logger.error('[AUTH][register]::Failed to send verification email', err);
       });
     } else {
-      logger.error('[AUTH][register]::Cannot send welcome email, no recipient email provided', { user });
+      logger.error('[AUTH][register]::Cannot send verification email, no token or recipient', { user });
     }
 
     return res
@@ -141,77 +235,6 @@ const register = async (req, res) => {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       error: true,
       message: e.message || e,
-    });
-  }
-};
-
-const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await db('user')
-      .first(
-        'userID',
-        'email',
-        'firstName',
-        'lastName',
-        db.raw('CONCAT(initcap("user"."firstName"),\' \', initcap("user"."lastName")) as "fullName"'),
-        db.raw('(select type from "accessTemplate" at where at."accessTemplateID" = ??) as "role"', ['user.accessTemplateID'])
-      )
-      .where('isActive', true)
-      .where('isDeleted', false)
-      .whereRaw('lower("email") = ?', email.toLowerCase())
-      .whereRaw('crypt(?, "password")="password"', password);
-
-    if (user) {
-      const tokenPayload = {
-        email: user.email.toLowerCase(),
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: user.fullName,
-        role: user.role,
-      };
-
-      const token = jwt.sign(tokenPayload, TOKEN_SECRET_KEY, { expiresIn: '1d' });
-
-      activityLogger({
-        targetEntity: 'Auth',
-        action: 'Login',
-        targetID: user.userID,
-        description: 'Login successfully',
-        data: { email: user.email },
-        userID: user.userID
-      });
-
-      return res
-        .cookie('token', token, getTokenCookieOptions())
-        .status(StatusCodes.OK)
-        .json({
-          success: true,
-          token,
-          data: {
-            user: {
-              userID: user.userID,
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              fullName: user.fullName,
-              role: user.role,
-            }
-          },
-        });
-    }
-
-    logger.log('info', `[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Error::Invalid username or password.`);
-
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      error: true, message: 'Invalid username or password'
-    });
-  } catch (e) {
-    logger.error(`[AUTH][Function::login][Path::${req.path}][Method::${req.method}]::Exception::`, e);
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      error: true,
-      message: e
     });
   }
 };
@@ -295,6 +318,114 @@ const createRecoverUserPasswordToken = async (req, res, next) => {
       error: true,
       message: e
     });
+  }
+};
+
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.verifyEmailRequest;
+
+    const user = await db('user').first()
+      .where('emailVerificationToken', token)
+      .where('isDeleted', false);
+
+    if (!user) {
+      logger.log('info', `[AUTH][Function::verifyEmail][Path::${req.path}][Method::${req.method}]::Error::No such user`, user);
+      return res.status(StatusCodes.NOT_FOUND).json({ error: true, message: 'Verification token is not valid' });
+    }
+
+    const updated = await db('user').update({
+      isActive: true,
+      isEmailVerified: true,
+      status: 'Active',
+      emailVerificationToken: null,
+      updatedOn: db.fn.now()
+    }, '*').where('userID', user.userID);
+
+    if (updated && updated[0] && updated[0].email) {
+      // send welcome email after successful verification
+      sendWelcomeEmail({ email: updated[0].email, firstName: updated[0].firstName || 'Customer' }).catch((err) => {
+        logger.error('[AUTH][verifyEmail]::Failed to send welcome email', err);
+      });
+      return next();
+    }
+
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: 'Unable to verify email' });
+  } catch (e) {
+    logger.error(`[AUTH][Function::verifyEmail][Path::${req.path}][Method::${req.method}]::Exception::`, e);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
+const verifyEmailCheck = async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Please provide a valid token' });
+    }
+
+    // try to find a user with this token
+    const user = await db('user').first().where('emailVerificationToken', token).where('isDeleted', false);
+    if (user) {
+      return res.status(StatusCodes.OK).json({ verified: false, message: 'Token exists but not applied' });
+    }
+
+    // if token not found, check for any user recently marked verified (possible race)
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const recentVerified = await db('user').first().where('isEmailVerified', true).where('updatedOn', '>=', twoMinutesAgo);
+    if (recentVerified) {
+      return res.status(StatusCodes.OK).json({ verified: true, message: 'Account already verified' });
+    }
+
+    return res.status(StatusCodes.NOT_FOUND).json({ verified: false, message: 'Verification token is not valid' });
+  } catch (e) {
+    logger.error('[AUTH][verifyEmailCheck]::Exception::', e);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.resendVerificationRequest;
+
+    const user = await db('user').first().whereRaw('lower(email) = ?', email.toLowerCase()).where('isDeleted', false);
+
+    if (!user) {
+      return res.status(StatusCodes.NOT_FOUND).json({ error: true, message: 'No such user found' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Email is already verified' });
+    }
+
+    // enforce cooldown before sending another verification
+    const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+    const lastSent = user.lastVerificationSentAt ? new Date(user.lastVerificationSentAt).getTime() : 0;
+    if (Date.now() - lastSent < COOLDOWN_MS) {
+      const waitSecs = Math.ceil((COOLDOWN_MS - (Date.now() - lastSent)) / 1000);
+      return res.status(StatusCodes.TOO_MANY_REQUESTS).json({ error: true, message: `Please wait ${waitSecs} seconds before requesting another verification email.` });
+    }
+
+    const newToken = uuidv4();
+    const updateRes = await db('user').update({ emailVerificationToken: newToken, lastVerificationSentAt: db.fn.now(), updatedOn: db.fn.now() }, '*').where('userID', user.userID);
+    const updated = updateRes && updateRes[0] ? updateRes[0] : null;
+
+    if (!updated) {
+      return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: 'Unable to generate verification token' });
+    }
+
+    await sendVerificationEmail({
+      email: updated.email,
+      firstName: updated.firstName || 'Customer',
+      verifyUrl: `${CLIENT_URL}/verify-email?token=${updated.emailVerificationToken}`,
+    }).catch((err) => {
+      logger.error('[AUTH][resendVerification]::Failed to send verification email', err);
+    });
+
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Verification email sent' });
+  } catch (e) {
+    logger.error('[AUTH][resendVerification]::Exception::', e);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
   }
 };
 
@@ -540,8 +671,10 @@ module.exports = {
   createRecoverUserPasswordToken,
   validateRecoverPasswordToken,
   updateNewPassword,
-  sendAuthResponse
-  ,
+  verifyEmail,
+  verifyEmailCheck,
+  resendVerification,
+  sendAuthResponse,
   googleRedirect,
   googleCallback
 };

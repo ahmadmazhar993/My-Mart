@@ -9,11 +9,16 @@ const {
   sendAuthResponse,
   googleRedirect,
   googleCallback,
+  verifyEmail,
+  verifyEmailCheck,
+  resendVerification,
 } = require('./auth.service');
 const {
   validateRegisterForm,
   validateLoginForm, validateRecoverPasswordForm,
-  validateResetPasswordForm, validateResetPasswordTokenValidationForm
+  validateResetPasswordForm, validateResetPasswordTokenValidationForm,
+  validateEmailVerificationForm,
+  validateResendVerificationForm,
 } = require('./auth.validation');
 const { getActiveUser, getUserByEmail } = require('../user/user.service');
 
@@ -32,6 +37,18 @@ router.get('/google/callback', googleCallback);
 router
   .route('/register')
   .post(validateRegisterForm, getUserByEmail, register);
+
+router
+  .route('/verify-email')
+  .post(validateEmailVerificationForm, verifyEmail, sendAuthResponse);
+
+router
+  .route('/verify-email/check')
+  .get(verifyEmailCheck);
+
+router
+  .route('/resend-verification')
+  .post(validateResendVerificationForm, resendVerification);
 
 router
   .route('/logout')
