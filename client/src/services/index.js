@@ -3,6 +3,9 @@ import api from './api';
 export const authService = {
   register: (data) => api.post('/auth/register', data),
   login: (email, password) => api.post('/auth/login', { email, password }),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+  checkEmailVerification: (token) => api.get(`/auth/verify-email/check`, { params: { token } }),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
   getCurrentUser: () => api.get('/auth'),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   validateResetToken: (token) => api.post('/auth/validate-token', { token }),
