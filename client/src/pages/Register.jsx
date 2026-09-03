@@ -15,6 +15,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  // removed successMessage – we now show success on the Login page
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
@@ -137,14 +138,18 @@ const Register = () => {
       });
 
       const data = response.data?.data || response.data;
-      // After registration, redirect user to login page instead of auto-login
-      navigate('/login');
+      // After registration, navigate to login and show success message there
+      setError('');
+      setErrors({});
+      navigate('/login', { state: { message: 'Registration successful. Please check your email to verify your account.' } });
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  // no timers to cleanup
 
   return (
     <div className="container-main py-10 animate-fade-in">
@@ -154,13 +159,12 @@ const Register = () => {
           <p className="text-gray-500 text-sm">Join AHM Mart for the best shopping experience</p>
         </div>
 
-        <div className="bg-white rounded-sm shadow-card p-6 sm:p-8">
+              <div className="bg-white rounded-sm shadow-card p-6 sm:p-8">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm mb-4 text-sm">
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -253,14 +257,14 @@ const Register = () => {
                 />
               </button>
             </div>
-          </form>
+                  </form>
 
-          <p className="text-center mt-6 text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary font-semibold hover:underline">
-              Login
-            </Link>
-          </p>
+                  <p className="text-center mt-6 text-sm text-gray-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-primary font-semibold hover:underline">
+                      Login
+                    </Link>
+                  </p>
         </div>
       </div>
     </div>
