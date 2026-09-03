@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { authService } from '../services';
 import { setAuthToken } from '../services/api';
 import { API_BASE, API_VERSION } from '../services/api';
@@ -12,11 +12,14 @@ const Login = () => {
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { login, isAuthenticated, user } = useAuthStore();
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
+  const location = useLocation();
+  const successMessage = location.state?.message || null;
 
   if (isAuthenticated) {
     const destination = redirect && redirect !== '/login'
@@ -115,6 +118,24 @@ const Login = () => {
     }
   };
 
+  const handleResendVerification = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !/\S+@\S+\.\S+/.test(trimmedEmail)) {
+      addToast('Please enter a valid email to resend verification.', 'error');
+      return;
+    }
+    setResendLoading(true);
+    try {
+      const resp = await authService.resendVerification(trimmedEmail);
+      addToast(resp.data?.message || 'Verification email sent.');
+      setError('Verification email sent. Please check your inbox.');
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Unable to resend verification email.', 'error');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <div className="container-main py-10 animate-fade-in">
       <div className="max-w-md mx-auto">
@@ -124,9 +145,26 @@ const Login = () => {
         </div>
 
         <div className="bg-white rounded-sm shadow-card p-6 sm:p-8">
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-sm mb-4 text-sm">
+              {successMessage}
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm mb-4 text-sm">
-              {error}
+              <div className="flex items-center justify-between">
+                <div className="flex-1 mr-4">{error}</div>
+                {error.toLowerCase().includes('email not verified') && (
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendLoading}
+                    className="text-primary font-semibold text-sm hover:underline"
+                  >
+                    {resendLoading ? 'Sending...' : 'Resend'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
