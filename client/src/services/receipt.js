@@ -1,12 +1,15 @@
 import api from './api';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 export const receiptService = {
   getReceiptByOrderId: (orderId) => api.get(`/receipts/order/${orderId}`),
   // Generate PDF from a DOM element (receipt container)
 async downloadPdfFromElement(el, filename = 'receipt.pdf', format = 'a4') {
   if (!el) throw new Error('Element is required');
+
+  const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ]);
 
   const SCALE = 2;
 
