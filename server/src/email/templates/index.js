@@ -10,6 +10,7 @@ const buildPaymentFailureBody = require('./builders/paymentFailure');
 const buildPasswordResetBody = require('./builders/passwordReset');
 const buildEmailVerificationBody = require('./builders/emailVerification');
 const buildNewOrderAdminBody = require('./builders/newOrderAdmin');
+const buildAdminCreatedOrderBody = require('./builders/adminCreatedOrder');
 
 async function sendContactEmails({ name, email, message }) {
   const adminResult = await sendEmail({
@@ -60,6 +61,18 @@ async function sendOrderConfirmationEmail({
       subtotal,
       shippingCost,
       totalPrice,
+    }),
+  });
+}
+
+async function sendAdminCreatedOrderEmail({
+  email, firstName, orderId, status, paymentMethod, shippingAddress, items, subtotal, shippingCost, totalPrice,
+}) {
+  return sendEmail({
+    to: email,
+    subject: `Order #${orderId} created for your account - AHM Mart`,
+    body: buildAdminCreatedOrderBody({
+      firstName, orderId, status, paymentMethod, shippingAddress, items, subtotal, shippingCost, totalPrice,
     }),
   });
 }
@@ -176,6 +189,7 @@ module.exports = {
   sendContactEmails,
   sendWelcomeEmail,
   sendOrderConfirmationEmail,
+  sendAdminCreatedOrderEmail,
   sendOrderStatusEmail,
   sendPaymentSuccessEmail,
   sendPaymentFailureEmail,
