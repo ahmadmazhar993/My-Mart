@@ -648,8 +648,18 @@ const Checkout = () => {
                                         )}
                                       </div>
                                     </div>
-                                    <p className="mt-2 font-mono text-sm font-semibold text-gray-900">{account.account}</p>
-                                    <p className="text-[11px] text-gray-500">{account.accountHolder}</p>
+                                    <div className="mt-3 flex items-center gap-3">
+                                      {account.qrImage ? (
+                                        <div className="flex h-[104px] w-[104px] flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1.5 ring-1 ring-gray-200" aria-label={`QR code for ${account.provider} account`}>
+                                          <img src={account.qrImage} alt={`${account.provider} bank account QR code`} className="h-full w-full object-contain" />
+                                        </div>
+                                      ) : null}
+                                      <div className="min-w-0">
+                                        <p className="font-mono text-sm font-semibold text-gray-900">{account.account}</p>
+                                        <p className="text-[11px] text-gray-500">{account.accountHolder}</p>
+                                        {account.qrImage && <p className="mt-1 text-[10px] font-medium text-primary">Scan to pay with your banking app</p>}
+                                      </div>
+                                    </div>
 
                                     <span
                                       className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${copiedAccount === account.account

@@ -9,6 +9,7 @@ export const ONLINE_PAYMENT_ACCOUNTS = [
     provider: 'Meezan Bank Limited',
     account: '1142 0114141787',
     accountHolder: 'Syed Muhammad Ahmad Bukhari',
+    qrImage: '/payment-qr/meezan-bank.png',
   },
   {
     type: 'Easypaisa',
