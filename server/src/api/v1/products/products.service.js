@@ -83,6 +83,7 @@ async function listProducts(req, res) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
     const offset = (page - 1) * limit;
     const search = String(req.query.search || '').trim().toLowerCase();
+    const forOrder = req.query.forOrder === 'true';
     const categoryId = req.query.category_id;
     const saleOnly = req.query.sale === 'true';
     const priceRange = req.query.priceRange || 'all';
@@ -125,20 +126,22 @@ async function listProducts(req, res) {
     const totalResult = await countQuery.count({ total: '*' }).first();
     const products = await orderedQuery.clone().limit(limit).offset(offset);
 
-    const data = await Promise.all(
-      products.map(async (product) => {
-        const [cartItem, orderItem, review] = await Promise.all([
-          db('cart_items').where({ product_id: product.productID }).first(),
-          db('order_items').where({ product_id: product.productID }).first(),
-          db('reviews').where({ product_id: product.productID }).first(),
-        ]);
+    const data = forOrder
+      ? products.map(mapProduct)
+      : await Promise.all(
+        products.map(async (product) => {
+          const [cartItem, orderItem, review] = await Promise.all([
+            db('cart_items').where({ product_id: product.productID }).first(),
+            db('order_items').where({ product_id: product.productID }).first(),
+            db('reviews').where({ product_id: product.productID }).first(),
+          ]);
 
-        return {
-          ...mapProduct(product),
-          can_delete: !(cartItem || orderItem || review),
-        };
-      })
-    );
+          return {
+            ...mapProduct(product),
+            can_delete: !(cartItem || orderItem || review),
+          };
+        })
+      );
 
     const total = Number(totalResult?.total || 0);
     const totalPages = Math.max(1, Math.ceil(total / limit));

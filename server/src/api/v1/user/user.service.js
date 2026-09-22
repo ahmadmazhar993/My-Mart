@@ -184,6 +184,18 @@ const getUserAddresses = async (req, res) => {
   }
 };
 
+const getAddressesForUser = async (req, res) => {
+  try {
+    const addresses = await db('user_addresses')
+      .where({ user_id: req.params.userID })
+      .orderBy('createdOn', 'desc');
+    return res.status(HttpStatus.StatusCodes.OK).json({ success: true, data: addresses.map(mapAddress) });
+  } catch (e) {
+    logger.error('[USER][Function::getAddressesForUser]::Exception::', e);
+    return res.status(HttpStatus.StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: e.message || e });
+  }
+};
+
 const createUserAddress = async (req, res) => {
   try {
     const { label, full_name, phone, address, city, postal_code } = req.body;
@@ -843,6 +855,7 @@ module.exports = {
   getAllUsers,
   getActiveUser,
   getUserAddresses,
+  getAddressesForUser,
   createUserAddress,
   deleteUserAddress,
   getUserByEmail,

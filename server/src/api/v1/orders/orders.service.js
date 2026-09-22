@@ -6,7 +6,9 @@ const db = require('../../../db');
 const { mapOrder } = require('../../../libs/serializers');
 const logger = require('../../../config/winston');
 const { createUniqueOrderReferenceCode } = require('../../../libs/orderCode');
-const { sendOrderConfirmationEmail, sendOrderStatusEmail, sendAdminNewOrderEmail } = require('../../../email/templates');
+const {
+  sendOrderConfirmationEmail, sendAdminCreatedOrderEmail, sendOrderStatusEmail, sendAdminNewOrderEmail,
+} = require('../../../email/templates');
 const orderEvents = require('../../../libs/orderEvents');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -97,7 +99,8 @@ async function listOrders(req, res) {
       .leftJoin('user as u', 'orders.user_id', 'u.userID')
       .select(
         'orders.*',
-        db.raw('u."firstName" || \' \' || u."lastName" as "userName"')
+        db.raw('u."firstName" || \' \' || u."lastName" as "userName"'),
+        'u.email as userEmail'
       )
       .orderBy('orders.createdOn', 'desc');
 
@@ -198,6 +201,7 @@ async function listOrders(req, res) {
         return {
           ...mapped,
           userName: order.userName,
+          userEmail: order.userEmail,
           profit_total: Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total),
           profit_percent: profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null,
         };
@@ -294,6 +298,7 @@ async function getOrderById(req, res) {
 
 async function createOrder(req, res) {
   const {
+    user_id,
     shipping_address,
     shipping_cost = 0,
     payment_method = 'cod',
@@ -321,7 +326,6 @@ async function createOrder(req, res) {
     });
   }
 
-  const userId = req.activeUser.userID;
   const normalizedPaymentMethod = PAYMENT_METHODS.includes(payment_method) ? payment_method : 'cod';
   const initialPaymentStatus = 'unpaid';
   const initialPaymentState = 'pending';
@@ -334,6 +338,25 @@ async function createOrder(req, res) {
   }
 
   try {
+    const requestingRole = await db('accessTemplate')
+      .first('type')
+      .where('accessTemplateID', req.activeUser.accessTemplateID);
+    const isAdminRequest = requestingRole?.type === 'Admin';
+    if (user_id && !isAdminRequest) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Only admins can create an order for another user',
+      });
+    }
+
+    const userId = user_id || req.activeUser.userID;
+    const selectedUser = await db('user')
+      .where({ userID: userId, isDeleted: false })
+      .first('userID', 'email', 'firstName', 'lastName');
+    if (!selectedUser) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Selected user not found' });
+    }
+
     const result = await db.transaction(async (trx) => {
       let subtotal = 0;
       const lineItems = [];
@@ -459,14 +482,15 @@ async function createOrder(req, res) {
 
     const payment = await db('payments').where({ order_id: result.orderID }).first();
 
-    const user = await db('user').where({ userID: userId }).first();
+    const user = selectedUser;
     const orderItems = await db('order_items')
       .select('order_items.*', 'products.name as product_name')
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', result.orderID);
 
     if (user?.email) {
-      sendOrderConfirmationEmail({
+      const emailSender = user_id ? sendAdminCreatedOrderEmail : sendOrderConfirmationEmail;
+      emailSender({
         email: user.email,
         firstName: user.firstName || 'Customer',
         orderId: result.orderCode || result.orderID,

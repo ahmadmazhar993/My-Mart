@@ -2,12 +2,13 @@ const express = require('express');
 
 const router = express.Router();
 
-const { isAuthenticated } = require('../auth/auth.service');
+const { isAuthenticated, isAdmin } = require('../auth/auth.service');
 
 const {
   getAllUsers,
   getActiveUser,
   getUserAddresses,
+  getAddressesForUser,
   createUserAddress,
   deleteUserAddress,
   getUserByEmail,
@@ -48,6 +49,10 @@ router
 router
   .route('/addresses/:addressID')
   .delete(isAuthenticated, deleteUserAddress);
+
+router
+  .route('/:userID/addresses')
+  .get(isAuthenticated, isAdmin, getAddressesForUser);
 
 router
   .route('/update-preferences')

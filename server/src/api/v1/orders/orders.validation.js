@@ -4,7 +4,7 @@ const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delive
 const PAYMENT_METHODS = ['cod', 'online'];
 
 function validateCreateOrder(req, res, next) {
-  const { shipping_address, items, payment_method } = req.body;
+  const { shipping_address, items, payment_method, user_id } = req.body;
 
   if (!shipping_address) {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'shipping_address is required' });
@@ -17,6 +17,10 @@ function validateCreateOrder(req, res, next) {
       success: false,
       message: 'payment_method must be cod or online',
     });
+  }
+
+  if (user_id !== undefined && typeof user_id !== 'string') {
+    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'user_id must be a valid user ID' });
   }
 
   for (const item of items) {
