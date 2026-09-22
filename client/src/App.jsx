@@ -50,6 +50,8 @@ import AdminCategories from './pages/admin/AdminCategories';
 
 import AdminOrders from './pages/admin/AdminOrders';
 
+import AdminCreateOrder from './pages/admin/AdminCreateOrder';
+
 import AdminUsers from './pages/admin/AdminUsers';
 
 import AdminSales from './pages/admin/AdminSales';
@@ -68,6 +70,7 @@ function App() {
           <Route path="categories" element={<AdminCategories />} />
           <Route path="sales" element={<AdminSales />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="orders/create" element={<AdminCreateOrder />} />
           <Route path="users" element={<AdminUsers />} />
         </Route>
       </Route>

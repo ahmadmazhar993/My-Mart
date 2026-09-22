@@ -25,6 +25,7 @@ export const authService = {
 export const userService = {
   getProfile: () => api.get('/user/profile'),
   getAddresses: () => api.get('/user/addresses'),
+  getAddressesForUser: (userId) => api.get(`/user/${userId}/addresses`),
   createAddress: (data) => api.post('/user/addresses', data),
   deleteAddress: (id) => api.delete(`/user/addresses/${id}`),
   updateProfile: (data) => api.put('/user/update-preferences', data),
