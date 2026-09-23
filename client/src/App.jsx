@@ -6,6 +6,8 @@ import RequireAdmin from './components/RequireAdmin';
 
 import AdminLayout from './components/admin/AdminLayout';
 
+import PageLoader from './components/PageLoader';
+
 const Home = lazy(() => import('./pages/Home'));
 const Products = lazy(() => import('./pages/Products'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
@@ -38,7 +40,8 @@ import { Routes, Route } from 'react-router-dom';
 
 function App() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Loading...</div>}>
+    // <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-gray-500">Loading...</div>}>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route element={<RequireAdmin />}>
           <Route path="/admin" element={<AdminLayout />}>
