@@ -49,6 +49,23 @@
            placeholder:text-gray-400 transition;
   }
 
+  .select-field {
+    appearance: none;
+    padding-right: 3.5rem;
+  }
+
+  .select-chevron {
+    @apply pointer-events-none absolute right-6 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border-b-2 border-r-2 border-gray-600;
+  }
+
+  .search-clear-red::-webkit-search-cancel-button {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' stroke='%23dc2626' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
   .section-title {
     @apply text-xl font-bold text-dark mb-4;
   }
