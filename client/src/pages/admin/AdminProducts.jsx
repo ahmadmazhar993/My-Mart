@@ -7,8 +7,19 @@ import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useToast } from '../../components/ToastProvider';
 
 const SearchIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
   </svg>
 );
 
@@ -83,6 +94,7 @@ const AdminProducts = () => {
       navigate('/admin/products');
     }
   };
+
   const handleAdd = () => {
     setSelectedProduct(null);
     setIsModalOpen(true);
@@ -205,65 +217,61 @@ const AdminProducts = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex flex-col gap-3">
-        <form onSubmit={handleSearch} className="flex w-full sm:hidden">
-          <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search Products..."
-              className="flex-1 px-4 py-2 text-sm focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
-            >
-              <SearchIcon />
-            </button>
-          </div>
-        </form>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold text-dark">Products</h2>
-            <p className="text-gray-500 text-sm">Manage your store inventory</p>
-          </div>
-          <button type="button" onClick={handleAdd} className="btn-primary shrink-0">
-            + Add Product
-          </button>
+      {/* Header card */}
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-6 py-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-dark">Products</h2>
+          <p className="mt-0.5 text-sm text-gray-500">Manage your store inventory</p>
         </div>
 
-        <form onSubmit={handleSearch} className="flex-1 max-w-2xl hidden sm:flex">
-          <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search Products..."
-              className="flex-1 px-4 py-2 text-sm focus:outline-none"
-            />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <form onSubmit={handleSearch} className="flex items-center">
+            <div className="relative w-full sm:w-56">
+              <SearchIcon />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products"
+                className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
             <button
               type="submit"
-              className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
+              className="rounded-r-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-primary-700"
             >
-              <SearchIcon />
+              Search
             </button>
-          </div>
-        </form>
+          </form>
+
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
+          >
+            <PlusIcon />
+            Add Product
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-sm text-sm">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-sm shadow-card overflow-hidden">
+      {/* Table card */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <p className="p-5 text-gray-500">Loading...</p>
+          <div className="p-6 text-sm text-gray-500">Loading...</div>
         ) : products.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-gray-500 mb-4">No products found.</p>
-            <button type="button" onClick={handleAdd} className="btn-primary">
+          <div className="p-10 text-center">
+            <p className="mb-4 text-sm text-gray-500">No products found.</p>
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+            >
+              <PlusIcon />
               Add your first product
             </button>
           </div>
@@ -271,45 +279,79 @@ const AdminProducts = () => {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr className="text-left text-gray-500">
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Category</th>
-                    <th className="px-4 py-3 font-medium">Price</th>
-                    <th className="px-4 py-3 font-medium">Stock</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                <thead className="sticky top-0 z-10 bg-gray-50/95 text-left text-gray-500 backdrop-blur">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Name</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Category</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Price</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Stock</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
-                    <tr key={product.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">{product.name}</td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {categories.find((c) => c.id === product.category_id)?.name || product.category_id}
-                      </td>
-                      <td className="px-4 py-3">{formatPrice(product.discount_price || product.price)}</td>
-                      <td className="px-4 py-3">{product.stock_quantity}</td>
-                      <td className="px-4 py-3">
-                        <button type="button" onClick={() => handleEdit(product)} className="text-primary font-semibold mr-3 hover:underline">Edit</button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteClick(product)}
-                          disabled={product.can_delete === false}
-                          title={product.can_delete === false ? 'This product is in use and cannot be deleted.' : 'Delete product'}
-                          className="text-red-600 font-semibold hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {products.map((product, idx) => {
+                    const lowStock = Number(product.stock_quantity) <= 5;
+                    return (
+                      <tr
+                        key={product.id}
+                        className={`border-b border-gray-50 transition-colors hover:bg-primary-50/40 ${
+                          idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                        }`}
+                      >
+                        <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {categories.find((c) => c.id === product.category_id)?.name || product.category_id}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-gray-900">
+                          {formatPrice(product.discount_price || product.price)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                              lowStock
+                                ? 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200'
+                                : 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                            }`}
+                          >
+                            {product.stock_quantity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(product)}
+                              className="rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-primary-50"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteClick(product)}
+                              disabled={product.can_delete === false}
+                              title={
+                                product.can_delete === false
+                                  ? 'This product is in use and cannot be deleted.'
+                                  : 'Delete product'
+                              }
+                              className="rounded-md px-2 py-1 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             <div className="flex flex-col gap-3 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm text-gray-600">
-                {products.length ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No records'}
+                {products.length
+                  ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products`
+                  : 'No records'}
               </div>
               <div className="flex items-center gap-1.5">
                 <button
@@ -344,10 +386,11 @@ const AdminProducts = () => {
                         type="button"
                         onClick={() => setPage(p)}
                         aria-current={p === page ? 'page' : undefined}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${p === page
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
-                          }`}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${
+                          p === page
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
+                        }`}
                       >
                         {p}
                       </button>

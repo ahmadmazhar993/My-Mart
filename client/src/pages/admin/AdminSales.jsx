@@ -176,23 +176,37 @@ const AdminSales = () => {
         <p className="text-gray-500 text-sm">Sales and profit reports</p>
       </div>
 
-      <div className="bg-gray-50 rounded-md shadow-sm p-3 sm:p-4 border border-gray-100 max-w-full">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); load(); }}>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <label className="text-sm text-gray-600">From</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="input-field w-full sm:w-44" />
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); load(); }}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">From</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
+                />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <label className="text-sm text-gray-600">To</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="input-field w-full sm:w-44" />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">To</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
+                />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <label className="text-sm text-gray-600">Group</label>
-                <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className="input-field w-full sm:w-40">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Group By</label>
+                <select
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-40"
+                >
                   <option value="product">Product</option>
                   <option value="variant">Variant</option>
                   <option value="date">Date</option>
@@ -200,37 +214,62 @@ const AdminSales = () => {
               </div>
             </div>
 
-            <div className="sm:ml-auto flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-              <button type="submit" className="btn-primary w-full sm:w-auto px-4 h-9 text-sm flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 12a8 8 0 10-8 8" />
                   <path d="M20 4v6h-6" />
                 </svg>
-                <span>Apply</span>
+                Apply
               </button>
-              <button type="button" onClick={csvExport} className="btn-outline w-full sm:w-auto px-4 h-9 text-sm flex items-center gap-2 justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+
+              <button
+                type="button"
+                onClick={csvExport}
+                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                   <path d="M7 10l5 5 5-5" />
                   <path d="M12 15V3" />
                 </svg>
-                <span>Export CSV</span>
+                Export CSV
               </button>
-              <button type="button" onClick={() => { setStartDate(''); setEndDate(''); setData([]); setLoading(false); }} className="px-3 h-9 text-sm bg-red-50 text-red-700 border border-red-200 rounded-sm hover:bg-red-100 w-full sm:w-auto">
+
+              <button
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); setData([]); setLoading(false); }}
+                className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 6l12 12M6 18L18 6" />
+                </svg>
                 Clear
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="text-sm text-gray-500">Quick Ranges:</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button type="button" onClick={() => { const t=new Date(); setEndDate(t.toISOString().slice(0,10)); setStartDate(t.toISOString().slice(0,10)); }} className="w-full sm:w-auto px-2 py-1 bg-white border rounded text-xs sm:text-sm">Today</button>
-                <button type="button" onClick={() => { const t=new Date(); const s=new Date(); s.setDate(t.getDate()-6); setEndDate(t.toISOString().slice(0,10)); setStartDate(s.toISOString().slice(0,10)); }} className="w-full sm:w-auto px-2 py-1 bg-white border rounded text-xs sm:text-sm">7 days</button>
-                <button type="button" onClick={() => { const t=new Date(); const s=new Date(); s.setDate(t.getDate()-29); setEndDate(t.toISOString().slice(0,10)); setStartDate(s.toISOString().slice(0,10)); }} className="w-full sm:w-auto px-2 py-1 bg-white border rounded text-xs sm:text-sm">30 days</button>
-                <button type="button" onClick={() => { const t=new Date(); const s=new Date(t.getFullYear(), t.getMonth(), 1); setStartDate(s.toISOString().slice(0,10)); setEndDate(t.toISOString().slice(0,10)); }} className="w-full sm:w-auto px-2 py-1 bg-white border rounded text-xs sm:text-sm">This month</button>
-                <button type="button" onClick={() => { const t=new Date(); const s=new Date(t.getFullYear(), 0, 1); setStartDate(s.toISOString().slice(0,10)); setEndDate(t.toISOString().slice(0,10)); }} className="w-full sm:w-auto px-2 py-1 bg-white border rounded text-xs sm:text-sm">This year</button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Quick range</span>
+            {[
+              { label: 'Today', onClick: () => { const t = new Date(); setEndDate(t.toISOString().slice(0, 10)); setStartDate(t.toISOString().slice(0, 10)); } },
+              { label: '7 days', onClick: () => { const t = new Date(); const s = new Date(); s.setDate(t.getDate() - 6); setEndDate(t.toISOString().slice(0, 10)); setStartDate(s.toISOString().slice(0, 10)); } },
+              { label: '30 days', onClick: () => { const t = new Date(); const s = new Date(); s.setDate(t.getDate() - 29); setEndDate(t.toISOString().slice(0, 10)); setStartDate(s.toISOString().slice(0, 10)); } },
+              { label: 'This month', onClick: () => { const t = new Date(); const s = new Date(t.getFullYear(), t.getMonth(), 1); setStartDate(s.toISOString().slice(0, 10)); setEndDate(t.toISOString().slice(0, 10)); } },
+              { label: 'This year', onClick: () => { const t = new Date(); const s = new Date(t.getFullYear(), 0, 1); setStartDate(s.toISOString().slice(0, 10)); setEndDate(t.toISOString().slice(0, 10)); } },
+            ].map((r) => (
+              <button
+                key={r.label}
+                type="button"
+                onClick={r.onClick}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+              >
+                {r.label}
+              </button>
+            ))}
           </div>
         </form>
       </div>

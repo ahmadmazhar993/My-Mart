@@ -140,6 +140,25 @@ async function listOrders(req, res) {
       query = query.where('orders.createdOn', '<=', endDate);
     }
 
+    const search = String(req.query.search || '').trim();
+    if (search) {
+      const pattern = `%${search}%`;
+      query = query.where(function applySearch() {
+        this.whereILike('orders.orderCode', pattern)
+          .orWhereRaw('CAST(orders."orderID" AS TEXT) ILIKE ?', [pattern])
+          .orWhereRaw('u."firstName" ILIKE ?', [pattern])
+          .orWhereRaw('u."lastName" ILIKE ?', [pattern])
+          .orWhereILike('u.email', pattern)
+          .orWhereExists(function matchProduct() {
+            this.select('*')
+              .from('order_items as oi')
+              .leftJoin('products as p', 'p.productID', 'oi.product_id')
+              .whereRaw('oi.order_id = orders."orderID"')
+              .whereILike('p.name', pattern);
+          });
+      });
+    }
+
     const countQuery = query.clone()
       .clear('select')
       .clear('order')

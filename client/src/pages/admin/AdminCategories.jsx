@@ -4,6 +4,12 @@ import CategoryModal from '../../components/CategoryModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useToast } from '../../components/ToastProvider';
 
+const PlusIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
+
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -96,61 +102,91 @@ const AdminCategories = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Header card */}
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-6 py-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-dark">Categories</h2>
-          <p className="text-gray-500 text-sm">Organize products into categories</p>
+          <h2 className="text-2xl font-bold tracking-tight text-dark">Categories</h2>
+          <p className="mt-0.5 text-sm text-gray-500">Organize products into categories</p>
         </div>
-        <button type="button" onClick={handleAdd} className="btn-primary shrink-0">
-          + Add Category
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
+        >
+          <PlusIcon />
+          Add Category
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-sm text-sm">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-sm shadow-card overflow-hidden">
+      {/* Table card */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <p className="p-5 text-gray-500">Loading...</p>
+          <div className="p-6 text-sm text-gray-500">Loading...</div>
         ) : categories.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-gray-500 mb-4">No categories found.</p>
-            <button type="button" onClick={handleAdd} className="btn-primary">
+          <div className="p-10 text-center">
+            <p className="mb-4 text-sm text-gray-500">No categories found.</p>
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+            >
+              <PlusIcon />
               Add your first category
             </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-left text-gray-500">
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Slug</th>
-                  <th className="px-4 py-3 font-medium">Description</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
+              <thead className="sticky top-0 z-10 bg-gray-50/95 text-left text-gray-500 backdrop-blur">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Name</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Slug</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Description</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((cat) => (
-                  <tr key={cat.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{cat.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{cat.slug}</td>
-                    <td className="px-4 py-3 text-gray-500">{cat.description || '—'}</td>
-                    <td className="px-4 py-3">
-                      <button type="button" onClick={() => handleEdit(cat)} className="text-primary font-semibold mr-3 hover:underline">Edit</button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(cat)}
-                        disabled={cat.can_delete === false || products.some((product) => product.category_id === cat.id)}
-                        title={cat.can_delete === false || products.some((product) => product.category_id === cat.id) ? 'This category is in use and cannot be deleted.' : 'Delete category'}
-                        className="text-red-600 font-semibold hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {categories.map((cat, idx) => {
+                  const inUse = cat.can_delete === false || products.some((product) => product.category_id === cat.id);
+                  return (
+                    <tr
+                      key={cat.id}
+                      className={`border-b border-gray-50 transition-colors hover:bg-primary-50/40 ${
+                        idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900">{cat.name}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <code className="rounded bg-gray-50 px-1.5 py-0.5 text-xs text-gray-500">{cat.slug}</code>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{cat.description || '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(cat)}
+                            className="rounded-md px-2 py-1 text-sm font-semibold text-primary transition hover:bg-primary-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClick(cat)}
+                            disabled={inUse}
+                            title={inUse ? 'This category is in use and cannot be deleted.' : 'Delete category'}
+                            className="rounded-md px-2 py-1 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
