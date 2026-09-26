@@ -43,7 +43,7 @@ const Login = () => {
   const successMessage = location.state?.message || null;
 
   if (isAuthenticated) {
-    const destination = redirect && redirect !== '/login'
+    const destination = redirect && redirect !== '/' && redirect !== '/login'
       ? redirect
       : user?.role === 'Admin'
         ? '/admin'
@@ -127,9 +127,11 @@ const Login = () => {
       login(authUser, token);
       if (token) setAuthToken(token);
       addToast('Login successful.');
-      const destination = authUser?.role === 'Admin' && redirect === '/'
-        ? '/admin'
-        : redirect;
+      const destination = redirect && redirect !== '/' && redirect !== '/login'
+        ? redirect
+        : authUser?.role === 'Admin'
+          ? '/admin'
+          : '/';
       navigate(destination);
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.');
