@@ -5,18 +5,18 @@ import { useToast } from '../../components/ToastProvider';
 
 const roleBadge = (role) => {
   const colors = {
-    admin: 'bg-purple-100 text-purple-700',
-    seller: 'bg-blue-100 text-blue-700',
-    customer: 'bg-gray-100 text-gray-700',
+    admin: 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-200',
+    seller: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
+    customer: 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200',
   };
   return colors[role] || colors.customer;
 };
 
 const statusBadge = (status) => {
   const colors = {
-    active: 'bg-green-100 text-green-700',
-    inactive: 'bg-gray-100 text-gray-500',
-    banned: 'bg-red-100 text-red-700',
+    active: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+    inactive: 'bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-200',
+    banned: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
   };
   return colors[status] || colors.inactive;
 };
@@ -95,48 +95,57 @@ const AdminUsers = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-dark">Users</h2>
-        <p className="text-gray-500 text-sm">Manage user accounts and access</p>
+      {/* Header card */}
+      <div className="rounded-xl border border-gray-100 bg-white px-6 py-5 shadow-card">
+        <h2 className="text-2xl font-bold tracking-tight text-dark">Users</h2>
+        <p className="mt-0.5 text-sm text-gray-500">Manage user accounts and access</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-sm text-sm">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-sm shadow-card overflow-hidden">
+      {/* Table card */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <p className="p-5 text-gray-500">Loading...</p>
+          <div className="p-6 text-sm text-gray-500">Loading...</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr className="text-left text-gray-500">
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Actions</th>
+                <thead className="sticky top-0 z-10 bg-gray-50/95 text-left text-gray-500 backdrop-blur">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Name</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Email</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Role</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium">
+                  {users.map((user, idx) => (
+                    <tr
+                      key={user.id}
+                      className={`border-b border-gray-50 transition-colors hover:bg-primary-50/40 ${
+                        idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-3 font-medium text-gray-900">
                         {[user.fullName].filter(Boolean).join(' ') || '—'}
                         {user.id === currentUser?.id && (
-                          <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500">
+                            You
+                          </span>
                         )}
                       </td>
-                      <td className="px-4 py-3">{user.email}</td>
+                      <td className="px-4 py-3 text-gray-600">{user.email}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${roleBadge(user.role)}`}>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${roleBadge(user.role)}`}>
                           {user.role}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-sm text-xs font-semibold capitalize ${statusBadge(user.status.toLowerCase())}`}>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${statusBadge(user.status.toLowerCase())}`}>
                           {user.status}
                         </span>
                       </td>
@@ -148,7 +157,7 @@ const AdminUsers = () => {
                             value={user.status}
                             disabled={updating === user.id}
                             onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                            className="input-field py-1.5 text-xs capitalize w-28"
+                            className="w-28 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium capitalize text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
