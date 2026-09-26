@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const MinimalHeader = () => (
+const Minimalheader = () => (
   <header className="border-b border-gray-100 bg-white">
     <div className="container-main flex items-center justify-center py-4">
       <Link to="/" className="flex items-center gap-2">
@@ -15,4 +15,4 @@ const MinimalHeader = () => (
   </header>
 );
 
-export default MinimalHeader;
+export default Minimalheader;

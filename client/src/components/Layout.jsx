@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
-import MinimalHeader from './MinimalHeader';
+import MinimalHeader from './Minimalheader';
 import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
 
