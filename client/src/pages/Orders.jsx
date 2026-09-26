@@ -48,6 +48,7 @@ const Orders = () => {
   const [showSuccess, setShowSuccess] = useState(location.state?.orderPlaced || false);
   const [uploadingId, setUploadingId] = useState(null);
   const [uploadMessage, setUploadMessage] = useState('');
+  const [replaceFormIds, setReplaceFormIds] = useState(() => new Set());
   const placedPaymentMethod = location.state?.paymentMethod;
 
   const loadOrders = useCallback(async (showToast = false) => {
@@ -99,6 +100,15 @@ const Orders = () => {
     };
   }, [isAuthenticated, loadOrders]);
 
+  const toggleReplaceForm = (orderId, show) => {
+    setReplaceFormIds((current) => {
+      const next = new Set(current);
+      if (show) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  };
+
   const handleReceiptUpload = async (orderId, file) => {
     if (!file) return;
 
@@ -116,6 +126,7 @@ const Orders = () => {
       await orderService.submitPaymentProof(orderId, formData);
       setUploadMessage('Payment proof uploaded successfully.');
       window.dispatchEvent(new Event('orders:updated'));
+      toggleReplaceForm(orderId, false);
       await loadOrders();
     } catch {
       setUploadMessage('Failed to upload payment proof. Please try again.');
@@ -285,40 +296,97 @@ const Orders = () => {
                       </span>
                     </div>
 
-                    {order.payment_status !== 'paid' && (
-                      <div className="mt-4 space-y-3">
-                        <p>
-                          Transfer {formatPrice(order.total_price)} using one of the accounts below and include order #{order.display_order_id || order.id} in the reference.
-                        </p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {ONLINE_PAYMENT_ACCOUNTS.map((account) => (
-                            <div key={`${account.type}-${account.account}`} className="rounded-lg border border-amber-200 bg-white/80 p-3">
-                              <p className="font-semibold">{account.type}</p>
-                              {account.provider && account.type === 'Bank' && <p>{account.provider}</p>}
-                              <p>{account.account}</p>
-                              <p>{account.accountHolder}</p>
+                    {(() => {
+                      const receiptUrl = order.payment_receipt_url
+                        ? `${API_BASE}/${order.payment_receipt_url.replace(/^\/+/, '')}`
+                        : null;
+                      const hasReceipt = Boolean(receiptUrl);
+                      const showReplaceForm = replaceFormIds.has(order.id);
+
+                      if (order.payment_status === 'paid') return null;
+
+                      if (hasReceipt && !showReplaceForm) {
+                        return (
+                          <div className="mt-4 space-y-2">
+                            <div className="flex items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                              <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <p className="text-blue-900">
+                                Receipt submitted — being reviewed. This usually takes a few hours.
+                              </p>
                             </div>
-                          ))}
-                        </div>
-                        <div className="rounded-lg border border-amber-200 bg-white/80 p-3">
-                          <label className="mb-2 block text-sm font-semibold">Upload payment receipt</label>
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={(e) => handleReceiptUpload(order.id, e.target.files?.[0])}
-                            className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600"
-                          />
-                          <p className="mt-2 text-xs text-gray-500">PNG, JPG, or PDF up to 5MB.</p>
-                          {uploadingId === order.id && (
-                            <p className="mt-2 flex items-center gap-2 text-sm text-amber-800">
-                              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" />
-                              Uploading...
-                            </p>
+                            <div className="flex flex-wrap items-center gap-4 px-1">
+                              <a
+                                href={receiptUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                              >
+                                View uploaded receipt
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => toggleReplaceForm(order.id, true)}
+                                className="text-sm font-medium text-gray-500 transition hover:text-gray-700 hover:underline"
+                              >
+                                Upload a different receipt
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="mt-4 space-y-3">
+                          {hasReceipt && (
+                            <button
+                              type="button"
+                              onClick={() => toggleReplaceForm(order.id, false)}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-amber-800 transition hover:text-amber-900"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                              Cancel
+                            </button>
                           )}
-                          {uploadMessage && <p className="mt-2 text-sm">{uploadMessage}</p>}
+                          <p>
+                            Transfer {formatPrice(order.total_price)} using one of the accounts below and include order #{order.display_order_id || order.id} in the reference.
+                          </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {ONLINE_PAYMENT_ACCOUNTS.map((account) => (
+                              <div key={`${account.type}-${account.account}`} className="rounded-lg border border-amber-200 bg-white/80 p-3">
+                                <p className="font-semibold">{account.type}</p>
+                                {account.provider && account.type === 'Bank' && <p>{account.provider}</p>}
+                                <p>{account.account}</p>
+                                <p>{account.accountHolder}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="rounded-lg border border-amber-200 bg-white/80 p-3">
+                            <label className="mb-2 block text-sm font-semibold">Upload payment receipt</label>
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => handleReceiptUpload(order.id, e.target.files?.[0])}
+                              className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600"
+                            />
+                            <p className="mt-2 text-xs text-gray-500">PNG, JPG, or PDF up to 5MB.</p>
+                            {uploadingId === order.id && (
+                              <p className="mt-2 flex items-center gap-2 text-sm text-amber-800">
+                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" />
+                                Uploading...
+                              </p>
+                            )}
+                            {uploadMessage && <p className="mt-2 text-sm">{uploadMessage}</p>}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               )}

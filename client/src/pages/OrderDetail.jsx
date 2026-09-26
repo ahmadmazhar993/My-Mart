@@ -39,6 +39,7 @@ const OrderDetail = () => {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
+  const [showReplaceForm, setShowReplaceForm] = useState(false);
 
   const loadOrder = useCallback(async (showToast = false) => {
     if (!isAuthenticated) return;
@@ -159,6 +160,7 @@ const OrderDetail = () => {
   }
 
   const receiptUrl = order.payment_receipt_url ? `${API_BASE}/${order.payment_receipt_url.replace(/^\/+/, '')}` : null;
+  const hasReceipt = Boolean(receiptUrl || receipt);
 
   return (
     <div className="container-main animate-fade-in py-6">
@@ -299,8 +301,56 @@ const OrderDetail = () => {
                 </p>
               </div>
 
-              {order.payment_status !== 'paid' && (
+              {order.payment_status !== 'paid' && hasReceipt && !showReplaceForm && (
                 <div className="mt-4 space-y-3">
+                  <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                    <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="font-semibold">Receipt submitted</p>
+                      <p className="mt-1">We've received your payment receipt and it's being reviewed. This usually takes a few hours.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {receiptUrl && (
+                      <a
+                        href={receiptUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                      >
+                        View uploaded receipt
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowReplaceForm(true)}
+                      className="text-sm font-medium text-gray-500 transition hover:text-gray-700 hover:underline"
+                    >
+                      Upload a different receipt
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {order.payment_status !== 'paid' && (!hasReceipt || showReplaceForm) && (
+                <div className="mt-4 space-y-3">
+                  {hasReceipt && (
+                    <button
+                      type="button"
+                      onClick={() => setShowReplaceForm(false)}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition hover:text-gray-700"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Cancel
+                    </button>
+                  )}
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     <p className="font-semibold">Transfer instructions</p>
                     <p className="mt-1">
@@ -322,7 +372,10 @@ const OrderDetail = () => {
                     <input
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={handleReceiptUpload}
+                      onChange={async (e) => {
+                        await handleReceiptUpload(e);
+                        setShowReplaceForm(false);
+                      }}
                       className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600"
                     />
                     {uploading && (
@@ -333,19 +386,6 @@ const OrderDetail = () => {
                     )}
                     {uploadMessage && <p className="mt-2 text-sm text-gray-600">{uploadMessage}</p>}
                   </div>
-                  {receiptUrl && (
-                    <a
-                      href={receiptUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
-                    >
-                      View uploaded receipt
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  )}
                 </div>
               )}
             </div>
