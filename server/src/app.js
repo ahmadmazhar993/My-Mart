@@ -12,7 +12,8 @@ const orderEvents = require('./libs/orderEvents');
 
 const app = express();
 
-const { EXPRESS_SESSION_SECRET = 'ExpressSessionSecret' } = process.env;
+const { EXPRESS_SESSION_SECRET = 'ExpressSessionSecret', APP_VERSION = '1.0.0' } = process.env;
+app.locals.appVersion = APP_VERSION;
 
 app.set('view engine', 'ejs');
 app.set('trust proxy', 1);
@@ -39,6 +40,14 @@ app.get('/', (req, res) => {
   const { error } = req.query;
   res.json({
     message: error || 'Welcome to AHM-Mart API Server'
+  });
+});
+
+app.get('/api/v1/app-version', (req, res) => {
+  res.json({
+    success: true,
+    version: app.locals.appVersion,
+    appVersion: app.locals.appVersion,
   });
 });
 

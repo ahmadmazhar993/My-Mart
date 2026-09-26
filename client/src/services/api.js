@@ -46,6 +46,14 @@ export const setAuthToken = (token) => {
 };
 
 axiosClient.interceptors.request.use((config) => {
+  const isUpdateBlocked = typeof window !== 'undefined' && (
+    window.__APP_UPDATE_BLOCKED__ || sessionStorage.getItem('app-update-blocked') === 'true'
+  );
+
+  if (isUpdateBlocked) {
+    return Promise.reject(new Error('Application update in progress. Please refresh to continue.'));
+  }
+
   const token = localStorage.getItem('token');
 
   if (!token) {
