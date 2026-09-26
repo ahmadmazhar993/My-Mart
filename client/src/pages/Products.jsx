@@ -173,49 +173,63 @@ const Products = () => {
     return rangeWithDots;
   };
 
+  const priceOptions = [
+    { value: 'all', label: 'All Prices' },
+    { value: 'under-500', label: 'Under Rs. 500' },
+    { value: '500-2000', label: 'Rs. 500 - 2,000' },
+    { value: 'over-2000', label: 'Over Rs. 2,000' },
+  ];
+
   return (
-    <div className="container-main py-6 animate-fade-in">
+    <div className="container-main animate-fade-in py-6">
       <Breadcrumb items={[
         { label: 'Home', to: '/' },
         { label: pageTitle },
       ]} />
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="lg:w-56 flex-shrink-0">
-          <div className="bg-white rounded-sm shadow-card p-4 sticky top-36">
-            <h3 className="font-bold text-sm mb-3">Filters</h3>
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Filters sidebar */}
+        <aside className="flex-shrink-0 lg:w-56">
+          <div className="sticky top-36 rounded-xl border border-gray-100 bg-white p-4 shadow-card">
+            <h3 className="mb-3 text-sm font-bold text-dark">Filters</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Price Range</p>
-                {[
-                  { value: 'all', label: 'All Prices' },
-                  { value: 'under-500', label: 'Under Rs. 500' },
-                  { value: '500-2000', label: 'Rs. 500 - 2,000' },
-                  { value: 'over-2000', label: 'Over Rs. 2,000' },
-                ].map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 py-1 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      name="price"
-                      value={opt.value}
-                      checked={priceRange === opt.value}
-                      onChange={(e) => setPriceRange(e.target.value)}
-                      className="accent-primary"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Price Range</p>
+                <div className="space-y-1">
+                  {priceOptions.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition ${
+                        priceRange === opt.value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="price"
+                        value={opt.value}
+                        checked={priceRange === opt.value}
+                        onChange={(e) => setPriceRange(e.target.value)}
+                        className="accent-primary"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </aside>
 
         <div className="flex-1">
-          <div className="bg-white rounded-sm shadow-card p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Results header card */}
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-xl font-bold text-dark">{pageTitle}</h1>
-              <p className="text-sm text-gray-500">{filtered.length === 1 ? `${filtered.length} product found` : `${filtered.length} products found`}</p>
+              <h1 className="text-xl font-bold tracking-tight text-dark">{pageTitle}</h1>
+              <p className="mt-0.5 text-sm text-gray-500">
+                {filtered.length === 1 ? `${filtered.length} product found` : `${filtered.length} products found`}
+              </p>
             </div>
+
             <div className="relative">
               <button
                 type="button"
@@ -223,22 +237,32 @@ const Products = () => {
                 onClick={() => setSortOpen((s) => !s)}
                 aria-haspopup="listbox"
                 aria-expanded={sortOpen}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
               >
                 {SORT_OPTIONS.find((o) => o.value === sort)?.label || 'Sort'}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className={`h-4 w-4 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {sortOpen && (
-                <ul ref={sortMenuRef} role="listbox" aria-label="Sort options" className="absolute right-0 mt-2 w-44 rounded-md bg-white shadow-lg z-50">
+                <ul
+                  ref={sortMenuRef}
+                  role="listbox"
+                  aria-label="Sort options"
+                  className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-gray-100 bg-white py-1 shadow-lg"
+                >
                   {SORT_OPTIONS.map((opt) => (
                     <li key={opt.value} role="option">
                       <button
                         type="button"
                         onClick={() => { setSort(opt.value); setSortOpen(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm ${opt.value === sort ? 'bg-gray-100 font-semibold' : 'hover:bg-gray-50'}`}
+                        className={`w-full px-3.5 py-2 text-left text-sm transition ${
+                          opt.value === sort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
                       >
                         {opt.label}
                       </button>
@@ -252,21 +276,29 @@ const Products = () => {
           {loading ? (
             <ProductSkeleton count={10} />
           ) : filtered.length === 0 ? (
-            <div className="bg-white rounded-sm shadow-card">
+            <div className="rounded-xl border border-gray-100 bg-white shadow-card">
               <EmptyState
                 icon="🔍"
                 title="No products found"
                 description="Try adjusting your filters or search terms."
-                action={<Link to="/products" className="btn-primary">Browse All Products</Link>}
+                action={
+                  <Link
+                    to="/products"
+                    className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+                  >
+                    Browse All Products
+                  </Link>
+                }
               />
             </div>
           ) : (
             <>
-              <div ref={resultsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div ref={resultsRef} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {filtered.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
+
               <div className="mt-6 flex flex-col gap-3 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-gray-600">
                   {products.length ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}

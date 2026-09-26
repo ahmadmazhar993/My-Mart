@@ -29,19 +29,28 @@ const CategoryGrid = () => {
 
   return (
     <section className="container-main py-4">
-      <div className="bg-white rounded-sm shadow-card p-4 sm:p-6">
-        <h2 className="section-title">Categories</h2>
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Shop by Category</h2>
+          <Link
+            to="/products"
+            className="text-sm font-semibold text-primary transition hover:underline"
+          >
+            View all
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
           {categories.map((category) => (
             <Link
               key={category.id || category.slug}
               to={`/products?category=${category.slug}`}
-              className="flex flex-col items-center gap-2 p-2 rounded-sm hover:bg-primary-50 transition-colors group"
+              className="group flex flex-col items-center gap-2 rounded-xl p-2 transition-colors hover:bg-primary-50"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary-50 rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 text-2xl shadow-sm ring-1 ring-primary-100 transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md group-hover:ring-primary-200 sm:h-16 sm:w-16">
                 {getCategoryIcon(category.slug)}
               </div>
-              <span className="text-xs text-center text-gray-700 font-medium line-clamp-2">
+              <span className="line-clamp-2 text-center text-xs font-medium text-gray-700 transition-colors group-hover:text-primary-700">
                 {category.name}
               </span>
             </Link>

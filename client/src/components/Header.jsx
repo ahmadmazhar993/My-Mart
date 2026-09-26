@@ -4,7 +4,13 @@ import { useAuthStore, useCartStore } from '../store';
 import { authService } from '../services';
 
 const SearchIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const SearchButtonIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
   </svg>
 );
@@ -133,39 +139,30 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 shadow-header">
-      <div className="bg-primary text-white text-xs">
+      {/* Announcement bar */}
+      <div className="bg-primary text-xs text-white">
         <div className="container-main flex items-center justify-between py-1.5">
           <span>Free shipping on orders over Rs. 2,000</span>
-          <div className="hidden sm:flex items-center gap-4">
-            {/* <Link to="/pages/sell" className="hover:underline">Sell on AHM Mart</Link> */}
-            {/* <span className="opacity-60">|</span> */}
+          <div className="hidden items-center gap-4 sm:flex">
             <Link to="/help" className="hover:underline">Help Center</Link>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border-b border-gray-100">
-        <div className="container-main flex items-center gap-2 lg:gap-5 py-3">
-          {/* <Link to="/" className="flex-shrink-0">
-            <div className="flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1 ">
-              <img src="logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                <span className="text-dark">A<span className="text-dark">H</span>M</span>
-                <span className="text-primary"> Mart</span>
-              </span>
-            </div>
-          </Link> */}
+      {/* Main header row */}
+      <div className="border-b border-gray-100 bg-white">
+        <div className="container-main flex items-center gap-2 py-3 lg:gap-5">
           <Link to="/" className="flex-shrink-0">
             {/* Mobile */}
             <div className="flex items-center sm:hidden">
-              <span className="text-2xl font-extrabold tracking-tight whitespace-nowrap">
+              <span className="whitespace-nowrap text-2xl font-extrabold tracking-tight">
                 <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
               </span>
             </div>
 
             {/* Tablet & Desktop */}
-            <div className="hidden sm:flex flex-col items-center justify-center border-2 border-primary-200 rounded-lg px-2 py-1">
+            <div className="hidden flex-col items-center justify-center rounded-lg border-2 border-primary-200 px-2 py-1 sm:flex">
               <img src="/logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
               <span className="text-3xl font-extrabold tracking-tight">
                 <span className="text-dark">AHM</span>
@@ -175,46 +172,48 @@ const Header = () => {
           </Link>
 
           {shouldShowSearchBar && (
-            <form onSubmit={handleSearch} className="flex-1 max-w-full hidden sm:flex">
-              <div className="flex w-full border-2 border-primary rounded-sm overflow-hidden">
+            <form onSubmit={handleSearch} className="hidden max-w-full flex-1 sm:flex">
+              <div className="relative flex-1">
+                <SearchIcon />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search in AHM Mart"
-                  className="flex-1 px-4 py-2 text-sm focus:outline-none"
+                  className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
-                <button
-                  type="submit"
-                  className="bg-primary text-white px-5 flex items-center hover:bg-primary-600 transition-colors"
-                >
-                  <SearchIcon />
-                </button>
               </div>
+              <button
+                type="submit"
+                className="flex items-center rounded-r-lg bg-primary px-5 text-white transition-colors hover:bg-primary-600"
+              >
+                <SearchButtonIcon />
+              </button>
             </form>
           )}
 
-          <div className="flex items-center gap-1 sm:gap-4 ml-auto">
+          <div className="ml-auto flex items-center gap-1 sm:gap-4">
             {isAuthenticated ? (
-              <div ref={accountMenuRef} className="relative">
+              <div ref={accountMenuRef} className="relative z-40">
                 <button
                   type="button"
                   onClick={() => setAccountMenuOpen((open) => !open)}
-                  className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors"
+                  className="flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary"
                 >
                   <UserIcon />
-                  <span className="text-xs mt-0.5 hidden md:block max-w-[80px] truncate">
+                  <span className="mt-0.5 hidden max-w-[80px] truncate text-xs md:block">
                     {(user?.firstName || user?.email?.split('@')[0] || 'Account').slice(0, 15)}
                   </span>
                 </button>
-                <div className={`absolute right-0 top-full pt-1 ${accountMenuOpen ? 'block' : 'hidden'}`}>
-                  <div className="bg-white border border-gray-200 rounded-sm shadow-lg py-1 min-w-[160px]">
-                    <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Profile</Link>
-                    <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">My Orders</Link>
-                    <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">Wishlist</Link>
+                <div className={`absolute right-0 top-full z-50 pt-2 ${accountMenuOpen ? 'block' : 'hidden'}`}>
+                  <div className="min-w-[180px] overflow-hidden rounded-xl border border-gray-100 bg-white py-1.5 shadow-lg">
+                    <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Profile</Link>
+                    <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Orders</Link>
+                    <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">Wishlist</Link>
                     {user?.role === 'Admin' && (
-                      <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 text-primary font-semibold">Admin Panel</Link>
+                      <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-50">Admin Panel</Link>
                     )}
+                    <div className="my-1 border-t border-gray-100" />
                     <button
                       type="button"
                       onClick={async () => {
@@ -227,7 +226,7 @@ const Header = () => {
                         setAccountMenuOpen(false);
                         navigate('/login');
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                      className="block w-full px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
                     >
                       Logout
                     </button>
@@ -235,20 +234,20 @@ const Header = () => {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors">
+              <Link to="/login" className="flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
                 <UserIcon />
-                <span className="text-xs mt-0.5 hidden md:block">Login</span>
+                <span className="mt-0.5 hidden text-xs md:block">Login</span>
               </Link>
             )}
 
-            <Link to="/cart" className="flex flex-col items-center px-2 py-1 text-dark hover:text-primary transition-colors relative">
+            <Link to="/cart" className="relative flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
               <CartIcon />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 right-0 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-0.5 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
-              <span className="text-xs mt-0.5 hidden md:block">Cart</span>
+              <span className="mt-0.5 hidden text-xs md:block">Cart</span>
             </Link>
           </div>
         </div>
@@ -256,30 +255,34 @@ const Header = () => {
         {!shouldShowSearchBar && <div className="container-main pb-3 sm:hidden" />}
         {shouldShowSearchBar && (
           <div className="container-main pb-3 sm:hidden">
-            <form onSubmit={handleSearch}>
-              <div className="flex border-2 border-primary rounded-sm overflow-hidden">
+            <form onSubmit={handleSearch} className="flex">
+              <div className="relative flex-1">
+                <SearchIcon />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search in AHM Mart"
-                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                  className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
-                <button type="submit" className="bg-primary text-white px-4">
-                  <SearchIcon />
-                </button>
               </div>
+              <button type="submit" className="rounded-r-lg bg-primary px-4 text-white transition-colors hover:bg-primary-600">
+                <SearchButtonIcon />
+              </button>
             </form>
           </div>
         )}
       </div>
 
-      <div className="bg-white border-b border-gray-100 hidden md:block">
+      {/* Category nav */}
+      <div className="hidden border-b border-gray-100 bg-white md:block">
         <div className="container-main">
-          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
+          <nav className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-2">
             <Link
               to="/products"
-              className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isAllCategoriesActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                isAllCategoriesActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+              }`}
             >
               All Categories
             </Link>
@@ -289,7 +292,9 @@ const Header = () => {
                 <Link
                   key={cat.slug}
                   to={`/products?category=${cat.slug}`}
-                  className={`flex-shrink-0 px-4 py-1.5 text-sm rounded-sm transition-colors ${isActive ? 'font-semibold text-primary bg-primary-50' : 'text-gray-600 hover:text-primary hover:bg-primary-50'}`}
+                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+                  }`}
                 >
                   {cat.name}
                 </Link>

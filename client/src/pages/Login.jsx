@@ -6,6 +6,27 @@ import { API_BASE, API_VERSION } from '../services/api';
 import { useAuthStore } from '../store';
 import { useToast } from '../components/ToastProvider';
 
+const EmailIcon = () => (
+  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  </svg>
+);
+
+const GoogleLogo = () => (
+  <svg className="h-5 w-5" viewBox="0 0 48 48">
+    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+  </svg>
+);
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -137,29 +158,37 @@ const Login = () => {
   };
 
   return (
-    <div className="container-main py-10 animate-fade-in">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-dark mb-2">Welcome Back</h1>
-          <p className="text-gray-500 text-sm">Login to your AHM Mart account</p>
+    <div className="container-main animate-fade-in py-10">
+      <div className="mx-auto max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-dark">Welcome Back</h1>
+          <p className="text-sm text-gray-500">Login to your AHM Mart account</p>
         </div>
 
-        <div className="bg-white rounded-sm shadow-card p-6 sm:p-8">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-card sm:p-8">
           {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-sm mb-4 text-sm">
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
               {successMessage}
             </div>
           )}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm mb-4 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 mr-4">{error}</div>
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-1 items-start gap-2">
+                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
                 {error.toLowerCase().includes('email not verified') && (
                   <button
                     type="button"
                     onClick={handleResendVerification}
                     disabled={resendLoading}
-                    className="text-primary font-semibold text-sm hover:underline"
+                    className="flex-shrink-0 text-sm font-semibold text-primary hover:underline"
                   >
                     {resendLoading ? 'Sending...' : 'Resend'}
                   </button>
@@ -170,90 +199,85 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className={`input-field ${errors.email ? 'border-red-300' : ''}`}
-                placeholder="Enter your email"
-              />
-              {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Email</label>
+              <div className="relative">
+                <EmailIcon />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3.5 text-sm shadow-sm transition focus:outline-none focus:ring-2 ${
+                    errors.email
+                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-200 focus:border-primary focus:ring-primary-100'
+                  }`}
+                  placeholder="Enter your email"
+                />
+              </div>
+              {errors.email && <p className="mt-1.5 text-xs text-red-600">{errors.email}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                className={`input-field ${errors.password ? 'border-red-300' : ''}`}
-                placeholder="Enter your password"
-              />
-              {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
-            </div>
-            <div className="text-right">
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
-            </div>
-            {/* <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const target = `${window.location.origin}${redirect || '/'}`;
-                  window.location.href =
-                    `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
-                }}
-                className="flex justify-center w-full"
-              >
-                <img
-                  src="/google-icon.svg"
-                  alt="Sign in with Google"
-                  className="h-10"
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Password</label>
+              <div className="relative">
+                <LockIcon />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  className={`w-full rounded-lg border bg-white py-2.5 pl-10 pr-3.5 text-sm shadow-sm transition focus:outline-none focus:ring-2 ${
+                    errors.password
+                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-200 focus:border-primary focus:ring-primary-100'
+                  }`}
+                  placeholder="Enter your password"
                 />
-              </button>
-            </div> */}
+              </div>
+              {errors.password && <p className="mt-1.5 text-xs text-red-600">{errors.password}</p>}
+            </div>
+
+            <div className="text-right">
+              <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
+              {loading && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
               {loading ? 'Logging in...' : 'Login'}
             </button>
 
             {/* Divider */}
-            <div className="flex items-center gap-3 my-5">
+            <div className="my-5 flex items-center gap-3">
               <div className="flex-1 border-t border-gray-200" />
-              <span className="text-xs text-gray-400 font-medium">OR</span>
+              <span className="text-xs font-medium text-gray-400">OR</span>
               <div className="flex-1 border-t border-gray-200" />
             </div>
 
             {/* Google Login */}
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  const target = `${window.location.origin}${redirect || '/'}`;
-
-                  window.location.href =
-                    `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
-                }}
-                className="flex justify-center w-full"
-              >
-                <img
-                  src="/google-icon.svg"
-                  alt="Sign in with Google"
-                  className="h-10"
-                />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const target = `${window.location.origin}${redirect || '/'}`;
+                window.location.href =
+                  `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
+              }}
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+            >
+              <GoogleLogo />
+              Continue with Google
+            </button>
           </form>
 
-          <p className="text-center mt-5 text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500">
             Don&apos;t have an account?{' '}
-            <Link to="/register" className="text-primary font-semibold hover:underline">
+            <Link to="/register" className="font-semibold text-primary hover:underline">
               Register here
             </Link>
           </p>
