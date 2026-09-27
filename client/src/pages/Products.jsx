@@ -27,6 +27,7 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState('all');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const resultsRef = useRef(null);
 
   useEffect(() => {
@@ -188,8 +189,8 @@ const Products = () => {
       ]} />
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        {/* Filters sidebar */}
-        <aside className="flex-shrink-0 lg:w-56">
+        {/* Filters sidebar — desktop only */}
+        <aside className="hidden flex-shrink-0 lg:block lg:w-56">
           <div className="sticky top-36 rounded-xl border border-gray-100 bg-white p-4 shadow-card">
             <h3 className="mb-3 text-sm font-bold text-dark">Filters</h3>
             <div className="space-y-4">
@@ -230,7 +231,22 @@ const Products = () => {
               </p>
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 lg:hidden"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-.553.894l-3 1.5A1 1 0 0010 20.5V14.414L3.293 6.707A1 1 0 013 6V4z" />
+                </svg>
+                Filters
+                {priceRange !== 'all' && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">1</span>
+                )}
+              </button>
+
+              <div className="relative">
               <button
                 type="button"
                 ref={sortButtonRef}
@@ -270,6 +286,7 @@ const Products = () => {
                   ))}
                 </ul>
               )}
+              </div>
             </div>
           </div>
 
@@ -372,6 +389,72 @@ const Products = () => {
           )}
         </div>
       </div>
+
+      {/* Mobile filter drawer */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl animate-slide-up">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h3 className="text-base font-bold text-dark">Filters</h3>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label="Close filters"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-5">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Price Range</p>
+              <div className="space-y-1">
+                {priceOptions.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-sm transition ${
+                      priceRange === opt.value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="price-mobile"
+                      value={opt.value}
+                      checked={priceRange === opt.value}
+                      onChange={(e) => setPriceRange(e.target.value)}
+                      className="accent-primary"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-100 p-5">
+              <button
+                type="button"
+                onClick={() => setPriceRange('all')}
+                className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+              >
+                Show Results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

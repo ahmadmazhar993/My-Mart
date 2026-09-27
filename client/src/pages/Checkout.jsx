@@ -84,7 +84,7 @@ const FieldIcon = ({ name }) => {
 };
 
 const StepBadge = ({ n }) => (
-  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">
+  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
     {n}
   </span>
 );
@@ -226,7 +226,6 @@ const Checkout = () => {
     setErrors({});
   };
 
-  // ADD THIS — right after handleQuantityChange
   const handleRemoveItem = (item) => {
     if (isBuyNow) {
       clearBuyNowItems();
@@ -368,7 +367,7 @@ const Checkout = () => {
           variant_sku: item.variant_sku || null,
         })),
         payment_details: {
-            sender_account_number: senderAccount || null,
+          sender_account_number: senderAccount || null,
         },
       };
 
@@ -414,7 +413,7 @@ const Checkout = () => {
   };
 
   return (
-    <div className="container-main py-6 animate-fade-in">
+    <div className="container-main animate-fade-in py-6">
       <Breadcrumb items={[
         { label: 'Home', to: '/' },
         ...(isBuyNow
@@ -423,20 +422,20 @@ const Checkout = () => {
         { label: isBuyNow ? 'Buy Now Checkout' : 'Checkout' },
       ]} />
 
-      <div className="flex items-center gap-2 mb-1 mt-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-dark">
+      <div className="mb-1 mt-4 flex items-center gap-2">
+        <h1 className="text-xl font-bold tracking-tight text-dark sm:text-2xl">
           {isBuyNow ? 'Buy Now Checkout' : 'Checkout'}
         </h1>
       </div>
-      <p className="text-sm text-gray-500 mb-6">Secure checkout &middot; {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in your order</p>
+      <p className="mb-6 text-sm text-gray-500">Secure checkout &middot; {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in your order</p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mt-0.5 flex-shrink-0">
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 flex-shrink-0">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 6a1 1 0 112 0v4a1 1 0 11-2 0V6zm1 8a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clipRule="evenodd" />
                 </svg>
                 <span>{error}</span>
@@ -444,16 +443,16 @@ const Checkout = () => {
             )}
 
             {/* Shipping Information card */}
-            <div className="bg-white rounded-xl shadow-card p-5 sm:p-6">
-              <div className="flex items-center gap-2.5 mb-5">
+            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+              <div className="mb-5 flex items-center gap-2.5">
                 <StepBadge n={1} />
-                <h2 className="font-bold text-base sm:text-lg text-dark">Shipping Information</h2>
+                <h2 className="text-base font-bold text-dark sm:text-lg">Shipping Information</h2>
               </div>
 
               {savedAddresses.length > 0 && (
                 <div className="mb-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Saved addresses</p>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved addresses</p>
                     <button type="button" onClick={startNewAddress} className="text-xs font-semibold text-primary hover:underline">
                       Add new address
                     </button>
@@ -464,10 +463,10 @@ const Checkout = () => {
                         type="button"
                         key={savedAddress.id}
                         onClick={() => selectAddress(savedAddress)}
-                        className={`text-left rounded-lg border p-3 transition ${selectedAddressId === savedAddress.id ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}
+                        className={`rounded-lg border p-3 text-left transition ${selectedAddressId === savedAddress.id ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}
                       >
                         <span className="block text-sm font-semibold text-dark">{savedAddress.label}</span>
-                        <span className="block text-xs text-gray-500 mt-0.5">{savedAddress.full_name} · {savedAddress.phone}</span>
+                        <span className="mt-0.5 block text-xs text-gray-500">{savedAddress.full_name} · {savedAddress.phone}</span>
                         <span className="block text-xs text-gray-500">{savedAddress.address}, {savedAddress.city}</span>
                       </button>
                     ))}
@@ -475,13 +474,13 @@ const Checkout = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                       <FieldIcon name="user" />
                     </span>
                     <input
@@ -493,15 +492,15 @@ const Checkout = () => {
                       placeholder="Ahm Mart"
                     />
                   </div>
-                  {errors.fullName && <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">{errors.fullName}</p>}
+                  {errors.fullName && <p className="mt-1.5 text-xs text-red-600">{errors.fullName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Phone Number <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                       <FieldIcon name="phone" />
                     </span>
                     <input
@@ -525,12 +524,11 @@ const Checkout = () => {
               </div>
 
               <div className="mt-4">
-                
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-3 pointer-events-none">
+                  <span className="pointer-events-none absolute left-3 top-3">
                     <FieldIcon name="pin" />
                   </span>
                   <textarea
@@ -538,7 +536,7 @@ const Checkout = () => {
                     value={form.address}
                     onChange={handleChange}
                     rows={3}
-                    className={`input-field pl-9 resize-none ${errors.address ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+                    className={`input-field resize-none pl-9 ${errors.address ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
                     placeholder="House no, street, area"
                   />
                 </div>
@@ -546,32 +544,32 @@ const Checkout = () => {
               </div>
 
               <div className="mt-4">
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                   City <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                     <FieldIcon name="city" />
                   </span>
                   <select
                     name="city"
                     value={form.city}
                     onChange={handleChange}
-                    className={`input-field pl-9 appearance-none ${errors.city ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
+                    className={`input-field appearance-none pl-9 ${errors.city ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
                   >
                     <option value="">Select a city</option>
                     {CITY_OPTIONS.map((city) => (
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
                     <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                   </svg>
                 </div>
                 {errors.city && <p className="mt-1.5 text-xs text-red-600">{errors.city}</p>}
               </div>
 
-              <label className="mt-4 flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-gray-600">
                 <input
                   type="checkbox"
                   checked={saveAddress}
@@ -583,17 +581,17 @@ const Checkout = () => {
             </div>
 
             {/* Payment card */}
-            <div className="bg-white rounded-xl shadow-card p-5 sm:p-6">
-              <div className="flex items-center gap-2.5 mb-1">
+            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+              <div className="mb-1 flex items-center gap-2.5">
                 <StepBadge n={2} />
-                <h2 className="font-bold text-base sm:text-lg text-dark">Payment Method</h2>
+                <h2 className="text-base font-bold text-dark sm:text-lg">Payment Method</h2>
               </div>
-              <p className="text-xs text-gray-500 mb-5 ml-8">All transactions are secure and encrypted.</p>
+              <p className="mb-5 ml-8 text-xs text-gray-500">All transactions are secure and encrypted.</p>
 
               <div className="space-y-3">
                 {/* Online payment option */}
                 <label
-                  className={`block p-4 border-2 rounded-xl cursor-pointer transition ${paymentMethod === 'online' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
+                  className={`block cursor-pointer rounded-xl border-2 p-4 transition ${paymentMethod === 'online' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <div className="flex items-start gap-3">
@@ -612,18 +610,16 @@ const Checkout = () => {
                       className="sr-only"
                     />
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-dark">{PAYMENT_METHOD_LABELS.online}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Bank transfer, Easypaisa &amp; more</p>
+                      <p className="text-sm font-semibold text-dark">{PAYMENT_METHOD_LABELS.online}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">Bank transfer, Easypaisa &amp; more</p>
 
                       {paymentMethod === 'online' && (
                         <div className="mt-4 space-y-5 text-sm text-gray-700">
 
-                          {/* Step 1: pick an account to pay into */}
                           <div>
-                            <p className="font-semibold text-dark text-sm mb-2.5">1. Send payment to</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <p className="mb-2.5 text-sm font-semibold text-dark">1. Send payment to</p>
+                            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                               {ONLINE_PAYMENT_ACCOUNTS.map((account) => {
-                                const isSelected = senderAccount === account.account || copiedAccount === account.account;
                                 return (
                                   <button
                                     key={`${account.type}-${account.account}`}
@@ -632,7 +628,7 @@ const Checkout = () => {
                                       e.preventDefault();
                                       handleCopyAccount(account.account, e);
                                     }}
-                                    className={`text-left rounded-lg border p-3 transition relative ${copiedAccount === account.account
+                                    className={`relative rounded-lg border p-3 text-left transition ${copiedAccount === account.account
                                       ? 'border-primary bg-primary-50/60'
                                       : 'border-gray-200 bg-white hover:border-gray-300'
                                       }`}
@@ -642,9 +638,9 @@ const Checkout = () => {
                                         {getPaymentIcon(account.type)}
                                       </div>
                                       <div className="min-w-0">
-                                        <p className="font-semibold text-dark text-sm truncate">{account.type}</p>
+                                        <p className="truncate text-sm font-semibold text-dark">{account.type}</p>
                                         {account.provider && account.type === 'Bank' && (
-                                          <p className="text-[11px] text-gray-500 truncate">{account.provider}</p>
+                                          <p className="truncate text-[11px] text-gray-500">{account.provider}</p>
                                         )}
                                       </div>
                                     </div>
@@ -662,7 +658,7 @@ const Checkout = () => {
                                     </div>
 
                                     <span
-                                      className={`absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${copiedAccount === account.account
+                                      className={`absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${copiedAccount === account.account
                                         ? 'bg-primary text-white'
                                         : 'bg-gray-100 text-gray-500'
                                         }`}
@@ -675,28 +671,26 @@ const Checkout = () => {
                             </div>
                           </div>
 
-                          {/* Step 2: instructions, compact */}
-                          <div className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 flex-shrink-0 mt-0.5">
+                          <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 flex-shrink-0">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 6a1 1 0 112 0v4a1 1 0 11-2 0V6zm1 8a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clipRule="evenodd" />
                             </svg>
                             <p>Transfer the total amount, then fill in the details below. We'll verify and move your order to processing.</p>
                           </div>
 
-                          {/* Step 3: proof of payment */}
                           <div>
-                            <p className="font-semibold text-dark text-sm mb-2.5">2. Confirm your payment</p>
+                            <p className="mb-2.5 text-sm font-semibold text-dark">2. Confirm your payment</p>
                             <div className="space-y-3">
                               <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                                   Payment Receipt <span className="text-red-500">*</span>
                                 </label>
                                 <label
-                                  className={`flex items-center gap-3 rounded-lg border-2 border-dashed p-3.5 cursor-pointer transition ${errors.receiptFile
+                                  className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed p-3.5 transition ${errors.receiptFile
                                     ? 'border-red-300 bg-red-50/40'
                                     : receiptFile
                                       ? 'border-primary bg-primary-50/40'
-                                      : 'border-gray-300 hover:border-gray-400 bg-gray-50/50'
+                                      : 'border-gray-300 bg-gray-50/50 hover:border-gray-400'
                                     }`}
                                 >
                                   <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${receiptFile ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'}`}>
@@ -706,7 +700,7 @@ const Checkout = () => {
                                     </svg>
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium text-dark truncate">
+                                    <p className="truncate text-sm font-medium text-dark">
                                       {receiptFile ? receiptFile.name : 'Upload screenshot or PDF'}
                                     </p>
                                     <p className="text-xs text-gray-500">PNG, JPG, or PDF up to 5MB</p>
@@ -738,7 +732,7 @@ const Checkout = () => {
                               </div>
 
                               <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                                   Sender Account <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -747,26 +741,26 @@ const Checkout = () => {
                                   value={senderAccount}
                                   required={paymentMethod === 'online'}
                                   aria-required={paymentMethod === 'online'}
-                                    aria-invalid={!!errors.senderAccount}
-                                    inputMode="numeric"
-                                    pattern="[0-9]{11}|[0-9]{14}"
-                                    onChange={(e) => {
-                                      const raw = e.target.value || '';
-                                      const digits = raw.replace(/\D/g, '');
-                                      setSenderAccount(digits);
-                                      setErrors((prev) => {
-                                        const next = { ...prev };
-                                        const senderError = validateSenderAccount(digits);
-                                        if (senderError) {
-                                          next.senderAccount = senderError;
-                                        } else {
-                                          delete next.senderAccount;
-                                        }
-                                        return next;
-                                      });
-                                    }}
-                                    className={`input-field ${errors.senderAccount ? 'border-red-300' : ''}`}
-                                    placeholder="03XXXXXXXXX or 11XXXXXXXXXXXX"
+                                  aria-invalid={!!errors.senderAccount}
+                                  inputMode="numeric"
+                                  pattern="[0-9]{11}|[0-9]{14}"
+                                  onChange={(e) => {
+                                    const raw = e.target.value || '';
+                                    const digits = raw.replace(/\D/g, '');
+                                    setSenderAccount(digits);
+                                    setErrors((prev) => {
+                                      const next = { ...prev };
+                                      const senderError = validateSenderAccount(digits);
+                                      if (senderError) {
+                                        next.senderAccount = senderError;
+                                      } else {
+                                        delete next.senderAccount;
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className={`input-field ${errors.senderAccount ? 'border-red-300' : ''}`}
+                                  placeholder="03XXXXXXXXX or 11XXXXXXXXXXXX"
                                 />
                                 {errors.senderAccount && <p className="mt-1 text-xs text-red-600">{errors.senderAccount}</p>}
                               </div>
@@ -780,7 +774,7 @@ const Checkout = () => {
 
                 {/* Cash on Delivery option */}
                 <label
-                  className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition ${paymentMethod === 'cod' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition ${paymentMethod === 'cod' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <span
@@ -798,7 +792,7 @@ const Checkout = () => {
                     className="sr-only"
                   />
                   <div>
-                    <p className="font-semibold text-sm text-dark">{PAYMENT_METHOD_LABELS.cod}</p>
+                    <p className="text-sm font-semibold text-dark">{PAYMENT_METHOD_LABELS.cod}</p>
                     <p className="text-xs text-gray-500">Pay when your order arrives</p>
                   </div>
                 </label>
@@ -808,11 +802,11 @@ const Checkout = () => {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-sm disabled:opacity-60"
+              className="w-full rounded-xl bg-primary py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                   </svg>
@@ -822,28 +816,28 @@ const Checkout = () => {
                 `Place Order — ${formatPrice(total)}`
               )}
             </button>
-            <p className="text-center text-xs text-gray-400 -mt-2">
+            <p className="-mt-2 text-center text-xs text-gray-400">
               By placing your order, you agree to our terms of service.
             </p>
           </form>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card p-5 sm:p-6 h-fit sticky top-36">
-          <h2 className="font-bold text-lg mb-4">Order Summary</h2>
+        <div className="sticky top-36 h-fit rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-dark">Order Summary</h2>
 
           {/* Shipping tier nudge */}
           {shippingInfo.nextTier ? (
-            <div className="mb-4 rounded-lg border border-primary/20 bg-primary-50/50 p-3">
-              <p className="text-xs text-gray-600 mb-2">
+            <div className="mb-4 rounded-lg border border-primary-100 bg-primary-50/50 p-3">
+              <p className="mb-2 text-xs text-gray-600">
                 {shippingInfo.nextTier.cost === 0 ? (
-                  <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more for <span className="font-semibold text-green-600">FREE delivery</span></>
+                  <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more for <span className="font-semibold text-emerald-600">FREE delivery</span></>
                 ) : (
                   <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more to cut delivery to <span className="font-semibold text-primary">{formatPrice(shippingInfo.nextTier.cost)}</span></>
                 )}
               </p>
-              <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-green-500 transition-all duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
                   style={{
                     width: `${Math.min(100, (subtotal / shippingInfo.nextTier.minSubtotal) * 100)}%`,
                   }}
@@ -851,8 +845,8 @@ const Checkout = () => {
               </div>
             </div>
           ) : (
-            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 flex items-center gap-1.5">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <div className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               You've unlocked FREE delivery!
@@ -860,39 +854,39 @@ const Checkout = () => {
           )}
 
           {/* Line items */}
-          <div className="space-y-3 mb-4 max-h-80 overflow-y-auto pr-1">
+          <div className="mb-4 max-h-80 space-y-3 overflow-y-auto pr-1">
             {checkoutItems.map((item) => (
-              <div key={`${item.id}-${item.variant_sku || ''}`} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                <div className="w-16 h-16 flex-shrink-0 rounded-md border border-gray-100 overflow-hidden">
-                  <ProductImage product={item} className="w-full h-full object-cover" />
+              <div key={`${item.id}-${item.variant_sku || ''}`} className="flex gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                  <ProductImage product={item} className="h-full w-full object-cover" />
                 </div>
 
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div className="flex min-w-0 flex-1 flex-col justify-between">
                   <div>
-                    <p className="text-sm font-medium text-dark line-clamp-2">{item.name}</p>
+                    <p className="line-clamp-2 text-sm font-medium text-dark">{item.name}</p>
                     {item.variant_label && (
-                      <p className="text-xs text-gray-500 mt-0.5">{item.variant_label}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">{item.variant_label}</p>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {canEditQuantity ? (
-                        <div className="flex items-center border border-gray-200 rounded-full">
+                        <div className="flex items-center rounded-full border border-gray-200 bg-gray-50">
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(item, -1)}
                             disabled={item.quantity <= 1}
-                            className="w-6 h-6 flex items-center justify-center text-gray-500 disabled:opacity-30"
+                            className="flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
                             aria-label="Decrease quantity"
                           >
                             −
                           </button>
-                          <span className="text-xs font-semibold w-6 text-center">{item.quantity}</span>
+                          <span className="w-6 text-center text-xs font-semibold text-gray-800">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => handleQuantityChange(item, 1)}
-                            className="w-6 h-6 flex items-center justify-center text-gray-500"
+                            className="flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary"
                             aria-label="Increase quantity"
                           >
                             +
@@ -905,7 +899,7 @@ const Checkout = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item)}
-                        className="text-[11px] font-medium text-red-500 hover:text-red-600 hover:underline"
+                        className="rounded-md px-1 py-0.5 text-[11px] font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
                       >
                         Remove
                       </button>
@@ -924,30 +918,36 @@ const Checkout = () => {
           </div>
 
           {/* Totals */}
-          <div className="border-t pt-4 space-y-2 text-sm">
+          <div className="space-y-2 border-t border-gray-100 pt-4 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Subtotal ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
-              <span className="font-medium">{formatPrice(subtotal)}</span>
+              <span className="font-medium text-gray-800">{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Delivery</span>
-              <span className={shipping === 0 ? 'text-green-600 font-medium' : 'font-medium text-amber-600'}>
+              <span className={shipping === 0 ? 'font-medium text-emerald-600' : 'font-medium text-amber-600'}>
                 {shipping === 0 ? 'FREE' : formatPrice(shipping)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Payment method</span>
-              <span className="font-medium">{PAYMENT_METHOD_LABELS[paymentMethod]}</span>
+              <span className="font-medium text-gray-800">{PAYMENT_METHOD_LABELS[paymentMethod]}</span>
             </div>
-            <div className="flex justify-between items-baseline font-bold text-lg pt-3 mt-1 border-t">
+            <div className="mt-1 flex items-baseline justify-between border-t border-gray-100 pt-3 text-lg font-bold">
               <span>Total</span>
               <span className="text-primary">{formatPrice(total)}</span>
             </div>
           </div>
 
           {!isBuyNow && (
-            <Link to="/cart" className="block text-center text-sm text-primary mt-4 hover:underline">
-              &larr; Back to Cart
+            <Link
+              to="/cart"
+              className="mt-4 flex items-center justify-center gap-1 text-center text-sm font-medium text-primary hover:underline"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Cart
             </Link>
           )}
         </div>
