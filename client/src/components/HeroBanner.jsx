@@ -29,6 +29,13 @@ const slides = [
     link: '/products?category=groceries',
     image: '/Grocery.png',
   },
+  {
+    id: 4,
+    title: 'Thank You for Choosing AHM Mart',
+    // link: '/products',
+    image: '/Thank_you.png',
+    imageOnly: true, // artwork already contains all text, so no overlay or gradient
+  },
 ];
 
 const SLIDE_DURATION = 5000;
@@ -77,61 +84,91 @@ const HeroBanner = () => {
     touchStartX.current = null;
   };
 
+  // Light artwork needs dark controls; dark-overlay slides keep white controls
+  const lightSlide = Boolean(slides[current].imageOnly);
+
+  const arrowClass = lightSlide
+    ? 'bg-white/80 text-primary-700 shadow-md hover:bg-white'
+    : 'bg-white/20 text-white hover:bg-white/30';
+
   return (
     <section className="container-main py-4">
       <div
-        className="group relative h-[220px] overflow-hidden rounded-xl shadow-card sm:h-[300px] md:h-[360px]"
+        className="group relative h-[220px] overflow-hidden rounded-xl bg-[#f3faf6] shadow-card sm:h-[300px] md:h-[360px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 flex items-center transition-opacity duration-700 ${
-              index === current ? 'opacity-100' : 'pointer-events-none opacity-0'
-            }`}
-          >
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+        {slides.map((slide, index) => {
+          const isActive = index === current;
+          const visibility = `transition-opacity duration-700 ${
+            isActive ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`;
 
-            <div className="relative z-10 max-w-lg px-6 sm:px-12 md:px-16">
-              {slide.badge && (
-                <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm sm:mb-3 sm:px-3 sm:py-1 sm:text-xs">
-                  <svg className="h-2.5 w-2.5 sm:h-3 sm:w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
-                  </svg>
-                  {slide.badge}
-                </span>
-              )}
-              <h2 className="mb-1.5 text-xl font-extrabold leading-tight text-white drop-shadow-sm sm:mb-2 sm:text-3xl md:text-4xl">
-                {slide.title}
-              </h2>
-              <p className="mb-3 text-xs text-white/90 sm:mb-6 sm:text-base">{slide.subtitle}</p>
+          // Image-only slide: clean artwork, no gradient, no overlay text
+          if (slide.imageOnly) {
+            return (
               <Link
+                key={slide.id}
                 to={slide.link}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-bold text-primary-700 shadow-md transition hover:-translate-y-0.5 hover:bg-primary-50 hover:shadow-lg sm:gap-2 sm:px-6 sm:py-2.5 sm:text-sm"
+                tabIndex={isActive ? 0 : -1}
+                aria-hidden={!isActive}
+                aria-label={slide.title}
+                className={`absolute inset-0 block ${visibility}`}
               >
-                {slide.cta}
-                <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
+                <img
+                  src={slide.image}
+                  alt={slide.title}
+                  draggable={false}
+                  className="h-full w-full object-contain object-center md:object-cover"
+                />
               </Link>
+            );
+          }
+
+          return (
+            <div key={slide.id} className={`absolute inset-0 flex items-center ${visibility}`}>
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+
+              <div className="relative z-10 max-w-lg px-6 sm:px-12 md:px-16">
+                {slide.badge && (
+                  <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm sm:mb-3 sm:px-3 sm:py-1 sm:text-xs">
+                    <svg className="h-2.5 w-2.5 sm:h-3 sm:w-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
+                    </svg>
+                    {slide.badge}
+                  </span>
+                )}
+                <h2 className="mb-1.5 text-xl font-extrabold leading-tight text-white drop-shadow-sm sm:mb-2 sm:text-3xl md:text-4xl">
+                  {slide.title}
+                </h2>
+                <p className="mb-3 text-xs text-white/90 sm:mb-6 sm:text-base">{slide.subtitle}</p>
+                <Link
+                  to={slide.link}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-bold text-primary-700 shadow-md transition hover:-translate-y-0.5 hover:bg-primary-50 hover:shadow-lg sm:gap-2 sm:px-6 sm:py-2.5 sm:text-sm"
+                >
+                  {slide.cta}
+                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Prev / Next arrows — appear on hover (desktop) */}
         <button
           type="button"
           onClick={prev}
           aria-label="Previous slide"
-          className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white opacity-0 backdrop-blur-sm transition hover:bg-white/30 group-hover:opacity-100 sm:block"
+          className={`absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 ${arrowClass}`}
         >
           <ChevronLeft />
         </button>
@@ -139,32 +176,40 @@ const HeroBanner = () => {
           type="button"
           onClick={next}
           aria-label="Next slide"
-          className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white opacity-0 backdrop-blur-sm transition hover:bg-white/30 group-hover:opacity-100 sm:block"
+          className={`absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 ${arrowClass}`}
         >
           <ChevronRight />
         </button>
 
         {/* Progress-bar dots */}
-        <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4">
           {slides.map((slide, index) => (
             <button
               key={slide.id}
               type="button"
               onClick={() => goTo(index)}
               aria-label={`Go to slide ${index + 1}`}
-              className="relative h-1.5 w-8 overflow-hidden rounded-full bg-white/30"
+              className={`relative h-1.5 w-6 overflow-hidden rounded-full sm:w-8 ${
+                lightSlide ? 'bg-primary/25' : 'bg-white/30'
+              }`}
             >
               {index === current && (
                 <span
                   key={progressKey}
-                  className="absolute inset-y-0 left-0 rounded-full bg-white"
+                  className={`absolute inset-y-0 left-0 rounded-full ${
+                    lightSlide ? 'bg-primary' : 'bg-white'
+                  }`}
                   style={{
                     animation: paused ? 'none' : `heroProgress ${SLIDE_DURATION}ms linear forwards`,
                     width: paused ? '100%' : undefined,
                   }}
                 />
               )}
-              {index < current && <span className="absolute inset-0 rounded-full bg-white" />}
+              {index < current && (
+                <span
+                  className={`absolute inset-0 rounded-full ${lightSlide ? 'bg-primary' : 'bg-white'}`}
+                />
+              )}
             </button>
           ))}
         </div>
