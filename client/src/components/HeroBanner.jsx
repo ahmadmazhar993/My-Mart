@@ -34,6 +34,7 @@ const slides = [
     title: 'Thank You for Choosing AHM Mart',
     // link: '/products',
     image: '/Thank_you.png',
+    mobileImage: '/Thank_you_mobile.png',
     imageOnly: true, // artwork already contains all text, so no overlay or gradient
   },
 ];
@@ -88,13 +89,13 @@ const HeroBanner = () => {
   const lightSlide = Boolean(slides[current].imageOnly);
 
   const arrowClass = lightSlide
-    ? 'bg-white/80 text-primary-700 shadow-md hover:bg-white'
+    ? 'bg-white/90 text-gray-800 shadow-md hover:bg-white'
     : 'bg-white/20 text-white hover:bg-white/30';
 
   return (
     <section className="container-main py-4">
       <div
-        className="group relative h-[220px] overflow-hidden rounded-xl bg-[#f3faf6] shadow-card sm:h-[300px] md:h-[360px]"
+        className="group relative h-[220px] overflow-hidden rounded-xl bg-white shadow-card sm:h-[300px] md:h-[360px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={handleTouchStart}
@@ -102,12 +103,18 @@ const HeroBanner = () => {
       >
         {slides.map((slide, index) => {
           const isActive = index === current;
-          const visibility = `transition-opacity duration-700 ${
-            isActive ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`;
+          // Active slide fades in on top; the old one waits, then fades out underneath,
+          // so the background never shows through mid-transition.
+          const visibility = `transition-opacity duration-700 ${isActive ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0 delay-700'
+            }`;
 
           // Image-only slide: clean artwork, no gradient, no overlay text
           if (slide.imageOnly) {
+            // Fade top/bottom edges into white on mobile when the image doesn't fill the box
+            const mobileFade = slide.mobileImage
+              ? 'object-cover'
+              : 'object-contain [mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]';
+
             return (
               <Link
                 key={slide.id}
@@ -115,14 +122,19 @@ const HeroBanner = () => {
                 tabIndex={isActive ? 0 : -1}
                 aria-hidden={!isActive}
                 aria-label={slide.title}
-                className={`absolute inset-0 block ${visibility}`}
+                className={`absolute inset-0 block overflow-hidden bg-white ${visibility}`}
               >
-                <img
-                  src={slide.image}
-                  alt={slide.title}
-                  draggable={false}
-                  className="h-full w-full object-contain object-center md:object-cover"
-                />
+                <picture className="block h-full w-full">
+                  {slide.mobileImage && (
+                    <source media="(max-width: 767px)" srcSet={slide.mobileImage} />
+                  )}
+                  <img
+                    src={slide.image}
+                    alt={slide.title}
+                    draggable={false}
+                    className={`h-full w-full object-center ${mobileFade} md:object-cover md:[mask-image:none]`}
+                  />
+                </picture>
               </Link>
             );
           }
@@ -168,7 +180,7 @@ const HeroBanner = () => {
           type="button"
           onClick={prev}
           aria-label="Previous slide"
-          className={`absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 ${arrowClass}`}
+          className={`absolute left-3 top-1/2 z-20 hidden -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 sm:block ${arrowClass}`}
         >
           <ChevronLeft />
         </button>
@@ -176,11 +188,10 @@ const HeroBanner = () => {
           type="button"
           onClick={next}
           aria-label="Next slide"
-          className={`absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 ${arrowClass}`}
+          className={`absolute right-3 top-1/2 z-20 hidden -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 sm:block ${arrowClass}`}
         >
           <ChevronRight />
         </button>
-
         {/* Progress-bar dots */}
         <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4">
           {slides.map((slide, index) => (
@@ -189,27 +200,19 @@ const HeroBanner = () => {
               type="button"
               onClick={() => goTo(index)}
               aria-label={`Go to slide ${index + 1}`}
-              className={`relative h-1.5 w-6 overflow-hidden rounded-full sm:w-8 ${
-                lightSlide ? 'bg-primary/25' : 'bg-white/30'
-              }`}
+              className="relative h-1.5 w-6 overflow-hidden rounded-full bg-white/40 sm:w-8"
             >
               {index === current && (
                 <span
                   key={progressKey}
-                  className={`absolute inset-y-0 left-0 rounded-full ${
-                    lightSlide ? 'bg-primary' : 'bg-white'
-                  }`}
+                  className="absolute inset-y-0 left-0 rounded-full bg-white"
                   style={{
                     animation: paused ? 'none' : `heroProgress ${SLIDE_DURATION}ms linear forwards`,
                     width: paused ? '100%' : undefined,
                   }}
                 />
               )}
-              {index < current && (
-                <span
-                  className={`absolute inset-0 rounded-full ${lightSlide ? 'bg-primary' : 'bg-white'}`}
-                />
-              )}
+              {index < current && <span className="absolute inset-0 rounded-full bg-white" />}
             </button>
           ))}
         </div>
