@@ -4,7 +4,7 @@ const rawApiBase = import.meta.env.VITE_API_BASE
   || (import.meta.env.VITE_API_URL
     ? String(import.meta.env.VITE_API_URL).replace(/\/api\/v1\/?$/, '')
     : undefined)
-  || 'http://0.0.0.0:5001';
+  || 'http://0.0.0.0:5000';
 
 export const API_BASE = String(rawApiBase).replace(/\/+$/, '');
 export const API_VERSION = '/api/v1';

@@ -26,7 +26,7 @@ const AdminCategories = () => {
     setLoading(true);
     Promise.all([
       categoryService.getAllCategories(),
-      productService.getAllProducts(),
+      productService.getAllProductsAdmin(),
     ])
       .then(([categoriesRes, productsRes]) => {
         setCategories(categoriesRes.data?.data || []);

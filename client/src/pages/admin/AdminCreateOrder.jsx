@@ -55,7 +55,7 @@ const AdminCreateOrder = () => {
   useEffect(() => {
     Promise.all([
       userService.getAllUsers({ limit: 100 }),
-      productService.getAllProducts({ limit: 100, forOrder: true }),
+      productService.getAllProductsAdmin({ limit: 100, forOrder: true }),
     ])
       .then(([usersResponse, productsResponse]) => {
         setUsers((usersResponse.data?.data || []).filter((user) => String(user.role || '').toLowerCase() === 'customer'));
@@ -79,7 +79,7 @@ const AdminCreateOrder = () => {
   useEffect(() => {
     const query = productSearch.trim();
     if (!query) {
-      productService.getAllProducts({ limit: 100, forOrder: true })
+      productService.getAllProductsAdmin({ limit: 100, forOrder: true })
         .then((response) => setProducts(response.data?.data || []))
         .catch(() => setError('Products could not be loaded. Please try again.'));
       return undefined;
@@ -87,7 +87,7 @@ const AdminCreateOrder = () => {
 
     const timer = setTimeout(() => {
       setProductSearchLoading(true);
-      productService.getAllProducts({ limit: 100, search: query, forOrder: true })
+      productService.getAllProductsAdmin({ limit: 100, search: query, forOrder: true })
         .then((response) => setProducts(response.data?.data || []))
         .catch(() => setError('Products could not be searched. Please try again.'))
         .finally(() => setProductSearchLoading(false));

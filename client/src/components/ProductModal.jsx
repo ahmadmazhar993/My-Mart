@@ -64,10 +64,10 @@ const ProductModal = ({
             setForm({
                 name: product.name || "",
                 sku: product.sku || "",
-                price: product.price || "",
+                price: product.price ?? "",
                 purchase_price: product.purchase_price ?? product.purchasePrice ?? "",
-                discount_price: product.discount_price || "",
-                stock_quantity: product.stock_quantity || "",
+                discount_price: product.discount_price ?? "",
+                stock_quantity: product.stock_quantity ?? "",
                 category_id: product.category_id || "",
                 images: existingImages.length
                     ? existingImages
@@ -93,6 +93,11 @@ const ProductModal = ({
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        // Public product data omits cost prices and exact stock; saving it would erase them.
+        if (product && !('purchase_price' in product)) {
+            alert('This product was loaded without admin data. Reload the page and try again.');
+            return;
+        }
         const normalizedVariants = (form.variants || [])
             .map((variant) => ({
                 name: String(variant.name || variant.label || "").trim(),
@@ -144,6 +149,7 @@ const ProductModal = ({
             }
         } catch (err) {
             console.error('Variant image upload failed', err);
+            alert(err.response?.data?.message || 'Variant image upload failed');
         }
     };
 

@@ -89,6 +89,22 @@ const uploadPaymentProofMiddleware = (req, res, next) => {
   });
 };
 
+// Customers must never see the store's cost or profit figures.
+function stripOrderCosts(order) {
+  const {
+    profit_total: _pt, profit_percent: _pp, items, ...rest
+  } = order;
+  return {
+    ...rest,
+    items: (items || []).map((item) => {
+      const {
+        purchase_price: _a, profit_per_unit: _b, profit_total: _c, profit_percent: _d, ...safe
+      } = item;
+      return safe;
+    }),
+  };
+}
+
 async function listOrders(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -217,13 +233,14 @@ async function listOrders(req, res) {
         const profit_total = items.reduce((s, it) => s + (it.profit_total != null ? Number(it.profit_total) : 0), 0);
         const revenue = items.reduce((s, it) => s + (it.total_price != null ? Number(it.total_price) : 0), 0);
         const profit_percent = revenue ? (profit_total / revenue) * 100 : null;
-        return {
+        const full = {
           ...mapped,
           userName: order.userName,
           userEmail: order.userEmail,
           profit_total: Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total),
           profit_percent: profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null,
         };
+        return roleRow?.type === 'Admin' ? full : stripOrderCosts(full);
       }),
       pagination: {
         page,
@@ -306,7 +323,10 @@ async function getOrderById(req, res) {
     mappedOrder.profit_total = Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total);
     mappedOrder.profit_percent = profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null;
 
-    return res.status(StatusCodes.OK).json({ success: true, data: mappedOrder });
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: roleRow?.type === 'Admin' ? mappedOrder : stripOrderCosts(mappedOrder),
+    });
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,

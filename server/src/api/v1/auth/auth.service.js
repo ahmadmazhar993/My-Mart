@@ -10,6 +10,10 @@ const { mapUser } = require('../../../libs/serializers');
 
 const { NODE_ENV = 'development', TOKEN_SECRET_KEY = 'TokenSecretKey', CLIENT_URL = 'http://localhost:5173' } = process.env;
 
+if (NODE_ENV.toLowerCase() === 'production' && (!process.env.TOKEN_SECRET_KEY || TOKEN_SECRET_KEY === 'TokenSecretKey')) {
+  throw new Error('TOKEN_SECRET_KEY must be set to a strong random value in production');
+}
+
 const getTokenCookieOptions = () => ({
   httpOnly: true,
   secure: NODE_ENV.toLowerCase() === 'production',
@@ -121,7 +125,7 @@ const isAuthenticated = (req, res, next) => {
   try {
     let { token } = req.cookies;
 
-    if (!token && req.query?.token) {
+    if (!token && req.query?.token && isSseRequest(req)) {
       token = req.query.token;
     }
 
@@ -134,7 +138,7 @@ const isAuthenticated = (req, res, next) => {
     }
 
     if (token) {
-      return jwt.verify(token, TOKEN_SECRET_KEY, (err, decoded) => {
+      return jwt.verify(token, TOKEN_SECRET_KEY, { algorithms: ['HS256'] }, (err, decoded) => {
         if (err) {
           logger.log('info', `[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::Error::Token verification failed. You are not authorized to perform this operation!`, err);
           clearTokenCookie(res);
@@ -167,6 +171,10 @@ const isAuthenticated = (req, res, next) => {
               req.isAzureUser = true;
             }
             return next();
+          })
+          .catch((dbErr) => {
+            logger.error(`[AUTH][Function::isAuthenticated][Path::${req.path}][Method::${req.method}]::DB error::`, dbErr);
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: true, message: 'Authentication failed' });
           });
       });
     }

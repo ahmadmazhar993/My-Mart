@@ -3,7 +3,43 @@ const path = require('path');
 const multer = require('multer');
 const { StatusCodes } = require('http-status-codes');
 const db = require('../../../db');
-const { mapProduct } = require('../../../libs/serializers');
+const { mapProduct, mapProductAdmin } = require('../../../libs/serializers');
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const slugify = (value) => String(value || '')
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '');
+
+const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+
+// Escape LIKE wildcards so a search for "100%" or "a_b" is treated literally.
+const escapeLike = (value) => String(value).replace(/[\\%_]/g, (char) => `\\${char}`);
+
+// Builds a unique slug. Pass excludeId when updating so a product doesn't
+// collide with itself.
+const generateUniqueSlug = async (name, excludeId = null) => {
+  const base = slugify(name) || 'product';
+  let candidate = base;
+  let counter = 2;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const query = db('products').where({ slug: candidate });
+    if (excludeId) query.whereNot({ productID: excludeId });
+
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await query.first('productID');
+    if (!exists) return candidate;
+
+    candidate = `${base}-${counter}`;
+    counter += 1;
+  }
+};
 
 const normalizeImagesPayload = (images) => {
   if (images == null) return null;
@@ -41,6 +77,8 @@ const normalizeImagesPayload = (images) => {
   return [String(normalized)];
 };
 
+const toNumberOrNull = (value) => (value == null || value === '' ? null : Number(value));
+
 const normalizeVariantsPayload = (variants) => {
   if (variants == null) return null;
 
@@ -62,127 +100,21 @@ const normalizeVariantsPayload = (variants) => {
       if (!variant || typeof variant !== 'object') return null;
       const name = String(variant.name || variant.label || '').trim();
       if (!name) return null;
-        return {
+
+      return {
         name,
         label: String(variant.label || variant.name || '').trim() || name,
-        price: variant.price == null || variant.price === '' ? null : Number(variant.price),
-        discount_price: variant.discount_price == null || variant.discount_price === '' ? null : Number(variant.discount_price),
-          purchase_price: variant.purchase_price == null || variant.purchase_price === '' ? (variant.purchasePrice == null || variant.purchasePrice === '' ? null : Number(variant.purchasePrice)) : Number(variant.purchase_price),
-        discount_percentage: variant.discount_percentage == null || variant.discount_percentage === '' ? null : Number(variant.discount_percentage),
-        stock_quantity: variant.stock_quantity == null || variant.stock_quantity === '' ? null : Number(variant.stock_quantity),
+        price: toNumberOrNull(variant.price),
+        discount_price: toNumberOrNull(variant.discount_price),
+        purchase_price: toNumberOrNull(variant.purchase_price ?? variant.purchasePrice),
+        discount_percentage: toNumberOrNull(variant.discount_percentage),
+        stock_quantity: toNumberOrNull(variant.stock_quantity),
         sku: String(variant.sku || '').trim(),
         image: String(variant.image || variant.image_url || variant.imageUrl || '').trim(),
       };
     })
     .filter(Boolean);
 };
-
-async function listProducts(req, res) {
-  try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
-    const offset = (page - 1) * limit;
-    const search = String(req.query.search || '').trim().toLowerCase();
-    const forOrder = req.query.forOrder === 'true';
-    const categoryId = req.query.category_id;
-    const saleOnly = req.query.sale === 'true';
-    const priceRange = req.query.priceRange || 'all';
-
-    const baseQuery = db('products').where('isActive', true);
-
-    if (search) {
-      baseQuery.whereRaw('LOWER(name) LIKE ?', [`%${search}%`]);
-    }
-
-    if (categoryId) {
-      baseQuery.where('category_id', categoryId);
-    }
-
-    if (saleOnly) {
-      baseQuery.whereNotNull('discountPrice');
-    }
-
-    if (priceRange === 'under-500') {
-      baseQuery.where((builder) => {
-        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) < ?)', [500])
-          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) < ?)', [500]);
-      });
-    } else if (priceRange === '500-2000') {
-      baseQuery.where((builder) => {
-        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000])
-          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000]);
-      });
-    } else if (priceRange === 'over-2000') {
-      baseQuery.where((builder) => {
-        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) > ?)', [2000])
-          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) > ?)', [2000]);
-      });
-    }
-
-    const filteredQuery = baseQuery.clone();
-    const countQuery = baseQuery.clone();
-    const orderedQuery = filteredQuery.select('*').orderBy('createdOn', 'desc');
-
-    const totalResult = await countQuery.count({ total: '*' }).first();
-    const products = await orderedQuery.clone().limit(limit).offset(offset);
-
-    const data = forOrder
-      ? products.map(mapProduct)
-      : await Promise.all(
-        products.map(async (product) => {
-          const [cartItem, orderItem, review] = await Promise.all([
-            db('cart_items').where({ product_id: product.productID }).first(),
-            db('order_items').where({ product_id: product.productID }).first(),
-            db('reviews').where({ product_id: product.productID }).first(),
-          ]);
-
-          return {
-            ...mapProduct(product),
-            can_delete: !(cartItem || orderItem || review),
-          };
-        })
-      );
-
-    const total = Number(totalResult?.total || 0);
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-
-    return res.status(StatusCodes.OK).json({
-      success: true,
-      data,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
-      },
-    });
-  } catch (err) {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: err.message || 'Failed to load products',
-    });
-  }
-}
-
-const productImageDir = path.join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'uploads',
-  'products'
-);
-
-const slugify = (value) => String(value || '')
-  .toLowerCase()
-  .trim()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/(^-|-$)/g, '');
-
-const isUuid = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 
 const resolveFallbackUuid = async (value, table, column, options = {}) => {
   if (value != null && value !== '' && isUuid(value)) {
@@ -225,17 +157,144 @@ const resolveFallbackUuid = async (value, table, column, options = {}) => {
   return fallbackRow?.id ? String(fallbackRow.id) : null;
 };
 
-const resolveProductByIdentifier = async (identifier) => {
+// Finds a product by UUID or slug using indexed lookups (no full-table scan).
+// Public callers only see active products; admin callers pass includeInactive.
+const resolveProductByIdentifier = async (identifier, { includeInactive = false } = {}) => {
   if (!identifier) return null;
 
-  if (isUuid(identifier)) {
-    const byId = await db('products').where({ productID: identifier }).first();
+  const value = String(identifier).trim();
+  const base = db('products');
+  if (!includeInactive) base.where('isActive', true);
+
+  if (isUuid(value)) {
+    const byId = await base.clone().where({ productID: value }).first();
     if (byId) return byId;
   }
 
-  const products = await db('products').select('*');
-  return products.find((product) => slugify(product.name) === identifier) || null;
+  const bySlug = await base.clone().where({ slug: value.toLowerCase() }).first();
+  return bySlug || null;
 };
+
+const getUsageFlags = async (productID) => {
+  const [cartItem, orderItem, review] = await Promise.all([
+    db('cart_items').where({ product_id: productID }).first(),
+    db('order_items').where({ product_id: productID }).first(),
+    db('reviews').where({ product_id: productID }).first(),
+  ]);
+  return { inUse: Boolean(cartItem || orderItem || review) };
+};
+
+/* -------------------------------------------------------------------------- */
+/* Listing (public + admin share one builder)                                 */
+/* -------------------------------------------------------------------------- */
+
+async function buildProductList(req, res, { admin }) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const offset = (page - 1) * limit;
+    const search = String(req.query.search || '').trim();
+    const forOrder = req.query.forOrder === 'true';
+    const categoryId = req.query.category_id;
+    const saleOnly = req.query.sale === 'true';
+    const priceRange = req.query.priceRange || 'all';
+
+    const baseQuery = db('products').where('isActive', true);
+
+    if (search) {
+      // Case-insensitive, wildcard-safe, matches name or SKU.
+      const pattern = `%${escapeLike(search)}%`;
+      baseQuery.where((builder) => {
+        builder.whereRaw('name ILIKE ?', [pattern])
+          .orWhereRaw('sku ILIKE ?', [pattern]);
+      });
+    }
+
+    if (categoryId) {
+      baseQuery.where('category_id', categoryId);
+    }
+
+    if (saleOnly) {
+      baseQuery.whereNotNull('discountPrice');
+    }
+
+    if (priceRange === 'under-500') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) < ?)', [500])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) < ?)', [500]);
+      });
+    } else if (priceRange === '500-2000') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) BETWEEN ? AND ?)', [500, 2000]);
+      });
+    } else if (priceRange === 'over-2000') {
+      baseQuery.where((builder) => {
+        builder.whereRaw('("discountPrice" IS NOT NULL AND CAST("discountPrice" AS NUMERIC) > ?)', [2000])
+          .orWhereRaw('("discountPrice" IS NULL AND CAST("price" AS NUMERIC) > ?)', [2000]);
+      });
+    }
+
+    const countQuery = baseQuery.clone();
+    const totalResult = await countQuery.count({ total: '*' }).first();
+    const products = await baseQuery
+      .clone()
+      .select('*')
+      .orderBy('createdOn', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    const mapper = admin ? mapProductAdmin : mapProduct;
+
+    // can_delete is an admin-only flag; skip its 3 queries/product for the public.
+    const data = (forOrder || !admin)
+      ? products.map(mapper)
+      : await Promise.all(
+        products.map(async (product) => {
+          const { inUse } = await getUsageFlags(product.productID);
+          return { ...mapper(product), can_delete: !inUse };
+        })
+      );
+
+    const total = Number(totalResult?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (err) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: err.message || 'Failed to load products',
+    });
+  }
+}
+
+const listProducts = (req, res) => buildProductList(req, res, { admin: false });
+const listProductsAdmin = (req, res) => buildProductList(req, res, { admin: true });
+
+/* -------------------------------------------------------------------------- */
+/* Image upload                                                               */
+/* -------------------------------------------------------------------------- */
+
+const productImageDir = path.join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'uploads',
+  'products'
+);
 
 const getProductImageFilename = (imagePath) => {
   if (!imagePath) return null;
@@ -327,26 +386,17 @@ async function uploadProductImages(req, res) {
         oldImagePaths = [req.body.oldImagePath];
       }
 
-      const productName = req.body.name || 'product';
-
-      const slug = productName
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-
+      const slug = slugify(req.body.name || 'product') || 'product';
       const renamedPaths = [];
 
       files.forEach((file, index) => {
         const extension = path.extname(file.filename);
-
         const newFilename = `${slug}-${Date.now()}-${index + 1}${extension}`;
 
         const oldPath = path.join(productImageDir, file.filename);
         const newPath = path.join(productImageDir, newFilename);
 
         fs.renameSync(oldPath, newPath);
-
         renamedPaths.push(`uploads/products/${newFilename}`);
       });
 
@@ -359,27 +409,29 @@ async function uploadProductImages(req, res) {
   }
 }
 
-async function getProductById(req, res) {
+/* -------------------------------------------------------------------------- */
+/* Single product (public + admin)                                            */
+/* -------------------------------------------------------------------------- */
+
+async function buildGetProduct(req, res, { admin }) {
   try {
-    const { identifier } = req.params;
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier, {
+      includeInactive: admin,
+    });
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
 
-    const [cartItem, orderItem, review] = await Promise.all([
-      db('cart_items').where({ product_id: product.productID }).first(),
-      db('order_items').where({ product_id: product.productID }).first(),
-      db('reviews').where({ product_id: product.productID }).first(),
-    ]);
+    if (!admin) {
+      return res.status(StatusCodes.OK).json({ success: true, data: mapProduct(product) });
+    }
+
+    const { inUse } = await getUsageFlags(product.productID);
 
     return res.status(StatusCodes.OK).json({
       success: true,
-      data: {
-        ...mapProduct(product),
-        can_delete: !(cartItem || orderItem || review),
-      },
+      data: { ...mapProductAdmin(product), can_delete: !inUse },
     });
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -389,10 +441,16 @@ async function getProductById(req, res) {
   }
 }
 
+const getProductById = (req, res) => buildGetProduct(req, res, { admin: false });
+const getProductByIdAdmin = (req, res) => buildGetProduct(req, res, { admin: true });
+
+/* -------------------------------------------------------------------------- */
+/* Reviews                                                                    */
+/* -------------------------------------------------------------------------- */
+
 async function getProductReviews(req, res) {
   try {
-    const { identifier } = req.params;
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier);
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
@@ -403,11 +461,9 @@ async function getProductReviews(req, res) {
       .select(
         'reviews.reviewID as id',
         'reviews.product_id',
-        'reviews.user_id',
         'reviews.rating',
         'reviews.comment',
         'reviews.createdOn',
-        'user.email',
         'user.firstName',
         'user.lastName'
       )
@@ -419,12 +475,11 @@ async function getProductReviews(req, res) {
       data: reviews.map((review) => ({
         id: review.id,
         productId: review.product_id,
-        userId: review.user_id,
-        userName: (
-          [review.firstName, review.lastName].filter(Boolean).join(' ')
-          || review.email
-          || 'Customer'
-        ),
+        // First name + last initial only. No email, no user id.
+        userName: [
+          review.firstName,
+          review.lastName?.[0] && `${review.lastName[0]}.`,
+        ].filter(Boolean).join(' ') || 'Customer',
         rating: Number(review.rating),
         comment: review.comment,
         createdAt: review.createdOn,
@@ -440,7 +495,6 @@ async function getProductReviews(req, res) {
 
 async function createProductReview(req, res) {
   try {
-    const { identifier } = req.params;
     const { rating, comment } = req.body;
     const userId = req.activeUser?.userID;
 
@@ -448,7 +502,7 @@ async function createProductReview(req, res) {
       return res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: 'Authentication required' });
     }
 
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier);
 
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
@@ -510,16 +564,15 @@ async function createProductReview(req, res) {
       updatedOn: db.fn.now(),
     });
 
+    const firstName = req.activeUser?.firstName;
+    const lastInitial = req.activeUser?.lastName?.[0];
+
     return res.status(StatusCodes.CREATED).json({
       success: true,
       data: {
         id: created.reviewID,
         productId: created.product_id,
-        userId: created.user_id,
-        userName:
-          ([req.activeUser?.firstName, req.activeUser?.lastName].filter(Boolean).join(' ')
-            || req.activeUser?.email
-            || 'Customer'),
+        userName: [firstName, lastInitial && `${lastInitial}.`].filter(Boolean).join(' ') || 'Customer',
         rating: Number(created.rating),
         comment: created.comment,
         createdAt: created.createdOn,
@@ -532,6 +585,10 @@ async function createProductReview(req, res) {
     });
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Admin: create / update / delete                                            */
+/* -------------------------------------------------------------------------- */
 
 async function createProduct(req, res) {
   try {
@@ -550,6 +607,7 @@ async function createProduct(req, res) {
 
     const payload = {
       name: req.body.name,
+      slug: await generateUniqueSlug(req.body.name),
       description: req.body.description,
       price: req.body.price,
       purchasePrice: req.body.purchase_price ?? req.body.purchasePrice,
@@ -570,7 +628,7 @@ async function createProduct(req, res) {
     const [created] = await db('products').insert(payload, '*');
     return res.status(StatusCodes.CREATED).json({
       success: true,
-      data: mapProduct(created),
+      data: mapProductAdmin(created),
     });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
@@ -582,15 +640,22 @@ async function createProduct(req, res) {
 
 async function updateProduct(req, res) {
   try {
-    const { identifier } = req.params;
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier, {
+      includeInactive: true,
+    });
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
 
     const payload = {};
 
-    if (req.body.name != null) payload.name = req.body.name;
+    if (req.body.name != null) {
+      payload.name = req.body.name;
+      // Keep the slug in sync with the name (matches the old name-based URLs).
+      if (req.body.name !== product.name) {
+        payload.slug = await generateUniqueSlug(req.body.name, product.productID);
+      }
+    }
     if (req.body.description != null) payload.description = req.body.description;
     if (req.body.price != null) payload.price = req.body.price;
     if (req.body.purchase_price != null || req.body.purchasePrice != null) {
@@ -599,9 +664,13 @@ async function updateProduct(req, res) {
     if (req.body.discount_price != null || req.body.discountPrice != null) {
       payload.discountPrice = req.body.discount_price ?? req.body.discountPrice;
     }
+    if (req.body.discount_percentage != null || req.body.discountPercentage != null) {
+      payload.discountPercentage = req.body.discount_percentage ?? req.body.discountPercentage;
+    }
     if (req.body.stock_quantity != null || req.body.stockQuantity != null) {
       payload.stockQuantity = req.body.stock_quantity ?? req.body.stockQuantity;
     }
+    if (req.body.sku != null) payload.sku = req.body.sku;
     if (req.body.images != null) {
       payload.images = JSON.stringify(normalizeImagesPayload(req.body.images));
     }
@@ -635,7 +704,7 @@ async function updateProduct(req, res) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
 
-    return res.status(StatusCodes.OK).json({ success: true, data: mapProduct(updated) });
+    return res.status(StatusCodes.OK).json({ success: true, data: mapProductAdmin(updated) });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({
       success: false,
@@ -646,19 +715,16 @@ async function updateProduct(req, res) {
 
 async function deleteProduct(req, res) {
   try {
-    const { identifier } = req.params;
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier, {
+      includeInactive: true,
+    });
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
 
-    const [cartItem, orderItem, review] = await Promise.all([
-      db('cart_items').where({ product_id: product.productID }).first(),
-      db('order_items').where({ product_id: product.productID }).first(),
-      db('reviews').where({ product_id: product.productID }).first(),
-    ]);
+    const { inUse } = await getUsageFlags(product.productID);
 
-    if (cartItem || orderItem || review) {
+    if (inUse) {
       return res.status(StatusCodes.CONFLICT).json({
         success: false,
         message: 'Product is already in use and cannot be deleted.',
@@ -680,8 +746,7 @@ async function deleteProduct(req, res) {
 
 async function checkProductPurchased(req, res) {
   try {
-    const { identifier } = req.params;
-    const product = await resolveProductByIdentifier(identifier);
+    const product = await resolveProductByIdentifier(req.params.identifier);
     if (!product) {
       return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Product not found' });
     }
@@ -702,6 +767,10 @@ async function checkProductPurchased(req, res) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message || 'Failed to check purchase status' });
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Google Merchant feed                                                       */
+/* -------------------------------------------------------------------------- */
 
 const escapeXml = (value) => {
   if (value === null || value === undefined) return '';
@@ -726,282 +795,91 @@ const getAbsoluteUrl = (value) => {
   return `https://ahmmart.store/${url.replace(/^\/+/, '')}`;
 };
 
-// const googleProductFeed = async (req, res) => {
-//   try {
-//     const products = await db('products')
-//       .where('isActive', true)
-//       .select('*')
-//       .orderBy('createdOn', 'desc');
+// Tobacco products are kept on AHM Mart but excluded from Google Merchant.
+const TOBACCO_KEYWORDS = [
+  'cigarette',
+  'cigarettes',
+  'cigar',
+  'cigars',
+  'tobacco',
+  'snus',
+  'hookah tobacco',
+  'rolling tobacco',
+  'pipe tobacco',
+  'dunhill',
+];
 
-//     const items = products
-//       .map((product) => {
-//         const id = product.productID;
-//         const title = product.name;
-//         const description = product.description || product.name;
+const isTobaccoProduct = (name = '') => {
+  const normalizedName = String(name).toLowerCase().trim();
+  return TOBACCO_KEYWORDS.some((keyword) => normalizedName.includes(keyword));
+};
 
-//         // Use discounted price when available
-//         const finalPrice =
-//           product.discountPrice != null
-//             ? Number(product.discountPrice)
-//             : Number(product.price);
-
-//         // Product availability
-//         const availability =
-//           Number(product.stockQuantity || 0) > 0
-//             ? 'in_stock'
-//             : 'out_of_stock';
-
-//         // Product page URL
-//         const productUrl =
-//           `https://ahmmart.store/products/${slugify(product.name)}`;
-
-//         // Get images from PostgreSQL JSON column
-//         let productImages = [];
-
-//         if (Array.isArray(product.images)) {
-//           productImages = product.images;
-//         } else if (typeof product.images === 'string') {
-//           try {
-//             const parsedImages = JSON.parse(product.images);
-
-//             if (Array.isArray(parsedImages)) {
-//               productImages = parsedImages;
-//             }
-//           } catch (error) {
-//             productImages = [];
-//           }
-//         }
-
-//         // Convert image paths to absolute URLs
-//         const imageUrls = productImages
-//           .filter(Boolean)
-//           .map((image) => getAbsoluteUrl(image))
-//           .filter(Boolean);
-
-//         // First image = main image
-//         const imageUrl = imageUrls[0];
-
-//         // Skip products that don't have an image
-//         if (!imageUrl) {
-//           return '';
-//         }
-
-//         // Remaining images = additional images
-//         const additionalImages = imageUrls
-//           .slice(1)
-//           .map(
-//             (url) =>
-//               `<g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`
-//           )
-//           .join('');
-
-//         return `
-//     <item>
-//       <g:id>${escapeXml(id)}</g:id>
-//       <g:title>${escapeXml(title)}</g:title>
-//       <g:description>${escapeXml(description)}</g:description>
-//       <g:link>${escapeXml(productUrl)}</g:link>
-//       <g:image_link>${escapeXml(imageUrl)}</g:image_link>
-//       ${additionalImages}
-//       <g:availability>${availability}</g:availability>
-//       <g:condition>new</g:condition>
-//       <g:price>${finalPrice.toFixed(2)} PKR</g:price>
-//       ${product.sku
-//             ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>`
-//             : ''
-//           }
-//     </item>`;
-//       })
-//       .filter(Boolean)
-//       .join('');
-
-//     const xml = `<?xml version="1.0" encoding="UTF-8"?>
-// <rss version="2.0"
-//   xmlns:g="http://base.google.com/ns/1.0">
-
-//   <channel>
-//     <title>AHM Mart</title>
-//     <link>https://ahmmart.store</link>
-//     <description>Products available from AHM Mart</description>
-//     ${items}
-//   </channel>
-
-// </rss>`;
-
-//     res
-//       .status(StatusCodes.OK)
-//       .type('application/xml')
-//       .send(xml);
-
-//   } catch (err) {
-//     console.error('Google product feed error:', err);
-
-//     return res
-//       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//       .type('application/xml')
-//       .send(`
-//         <?xml version="1.0" encoding="UTF-8"?>
-//         <error>${escapeXml(
-//         err.message || 'Failed to generate product feed'
-//       )}</error>
-//       `);
-//   }
-// };
+const parseImages = (images, productName) => {
+  if (Array.isArray(images)) return images;
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      console.log(`Google Feed: Invalid images JSON for: ${productName}`);
+    }
+  }
+  return [];
+};
 
 const googleProductFeed = async (req, res) => {
   try {
-    // =========================================================
-    // Helper: Identify tobacco products
-    // These products should NOT be submitted to Google Merchant
-    // but will remain available on AHM Mart.
-    // =========================================================
-    const isTobaccoProduct = (name = '') => {
-      const tobaccoKeywords = [
-        'cigarette',
-        'cigarettes',
-        'cigar',
-        'cigars',
-        'tobacco',
-        'snus',
-        'hookah tobacco',
-        'rolling tobacco',
-        'pipe tobacco',
-        'dunhill'
-      ];
-
-      const normalizedName = String(name).toLowerCase().trim();
-
-      return tobaccoKeywords.some((keyword) =>
-        normalizedName.includes(keyword)
-      );
-    };
-
-    // =========================================================
-    // Get all active products
-    // =========================================================
     const products = await db('products')
       .where('isActive', true)
       .select('*')
       .orderBy('createdOn', 'desc');
 
-    // =========================================================
-    // Generate Google Merchant products
-    // =========================================================
     const items = products
       .map((product) => {
-        // -----------------------------------------------------
-        // Exclude tobacco products from Google feed
-        // -----------------------------------------------------
         if (isTobaccoProduct(product.name)) {
-          console.log(
-            `Google Feed: Skipping tobacco product: ${product.name}`
-          );
-
+          console.log(`Google Feed: Skipping tobacco product: ${product.name}`);
           return '';
         }
 
-        const id = product.productID;
-        const title = product.name;
         const description = product.description || product.name;
 
-        // -----------------------------------------------------
         // Use discounted price when available
-        // -----------------------------------------------------
-        const finalPrice =
-          product.discountPrice != null
-            ? Number(product.discountPrice)
-            : Number(product.price);
+        const finalPrice = product.discountPrice != null
+          ? Number(product.discountPrice)
+          : Number(product.price);
 
-        // -----------------------------------------------------
-        // Validate price
-        // -----------------------------------------------------
         if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
-          console.log(
-            `Google Feed: Skipping product with invalid price: ${product.name}`
-          );
-
+          console.log(`Google Feed: Skipping product with invalid price: ${product.name}`);
           return '';
         }
 
-        // -----------------------------------------------------
-        // Product availability
-        // -----------------------------------------------------
-        const availability =
-          Number(product.stockQuantity || 0) > 0
-            ? 'in_stock'
-            : 'out_of_stock';
+        const availability = Number(product.stockQuantity || 0) > 0
+          ? 'in_stock'
+          : 'out_of_stock';
 
-        // -----------------------------------------------------
-        // Product page URL
-        // -----------------------------------------------------
-        const productUrl =
-          `https://ahmmart.store/products/${slugify(product.name)}`;
+        const productUrl = `https://ahmmart.store/products/${product.slug || slugify(product.name)}`;
 
-        // -----------------------------------------------------
-        // Get images from PostgreSQL JSON column
-        // -----------------------------------------------------
-        let productImages = [];
-
-        if (Array.isArray(product.images)) {
-          productImages = product.images;
-        } else if (typeof product.images === 'string') {
-          try {
-            const parsedImages = JSON.parse(product.images);
-
-            if (Array.isArray(parsedImages)) {
-              productImages = parsedImages;
-            }
-          } catch (error) {
-            console.log(
-              `Google Feed: Invalid images JSON for: ${product.name}`
-            );
-
-            productImages = [];
-          }
-        }
-
-        // -----------------------------------------------------
-        // Convert image paths to absolute URLs
-        // -----------------------------------------------------
-        const imageUrls = productImages
+        const imageUrls = parseImages(product.images, product.name)
           .filter(Boolean)
           .map((image) => getAbsoluteUrl(image))
           .filter(Boolean);
 
-        // -----------------------------------------------------
-        // First image = main image
-        // -----------------------------------------------------
         const imageUrl = imageUrls[0];
 
-        // Skip products without an image
         if (!imageUrl) {
-          console.log(
-            `Google Feed: Skipping product without image: ${product.name}`
-          );
-
+          console.log(`Google Feed: Skipping product without image: ${product.name}`);
           return '';
         }
 
-        // -----------------------------------------------------
-        // Remaining images = additional images
-        // -----------------------------------------------------
         const additionalImages = imageUrls
           .slice(1)
-          .map(
-            (url) =>
-              `<g:additional_image_link>${escapeXml(
-                url
-              )}</g:additional_image_link>`
-          )
+          .map((url) => `<g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`)
           .join('');
 
-        // -----------------------------------------------------
-        // Build Google Merchant item
-        // -----------------------------------------------------
         return `
     <item>
-      <g:id>${escapeXml(id)}</g:id>
-      <g:title>${escapeXml(title)}</g:title>
+      <g:id>${escapeXml(product.productID)}</g:id>
+      <g:title>${escapeXml(product.name)}</g:title>
       <g:description>${escapeXml(description)}</g:description>
       <g:link>${escapeXml(productUrl)}</g:link>
       <g:image_link>${escapeXml(imageUrl)}</g:image_link>
@@ -1009,18 +887,12 @@ const googleProductFeed = async (req, res) => {
       <g:availability>${availability}</g:availability>
       <g:condition>new</g:condition>
       <g:price>${finalPrice.toFixed(2)} PKR</g:price>
-      ${product.sku
-            ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>`
-            : ''
-          }
+      ${product.sku ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>` : ''}
     </item>`;
       })
       .filter(Boolean)
       .join('');
 
-    // =========================================================
-    // Generate RSS XML
-    // =========================================================
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:g="http://base.google.com/ns/1.0">
@@ -1034,32 +906,26 @@ const googleProductFeed = async (req, res) => {
 
 </rss>`;
 
-    // =========================================================
-    // Send XML response
-    // =========================================================
     return res
       .status(StatusCodes.OK)
       .type('application/xml')
       .send(xml);
-
   } catch (err) {
     console.error('Google product feed error:', err);
 
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .type('application/xml')
-      .send(`
-        <?xml version="1.0" encoding="UTF-8"?>
-        <error>${escapeXml(
-        err.message || 'Failed to generate product feed'
-      )}</error>
-      `);
+      .send(`<?xml version="1.0" encoding="UTF-8"?>
+<error>${escapeXml(err.message || 'Failed to generate product feed')}</error>`);
   }
 };
 
 module.exports = {
   listProducts,
+  listProductsAdmin,
   getProductById,
+  getProductByIdAdmin,
   getProductReviews,
   checkProductPurchased,
   createProductReview,
@@ -1067,5 +933,5 @@ module.exports = {
   updateProduct,
   deleteProduct,
   uploadProductImages,
-  googleProductFeed
+  googleProductFeed,
 };

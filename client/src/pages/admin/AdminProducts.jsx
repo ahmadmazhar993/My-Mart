@@ -47,7 +47,7 @@ const AdminProducts = () => {
   const loadData = (nextPage = page, search = urlSearch) => {
     setLoading(true);
     Promise.all([
-      productService.getAllProducts({ page: nextPage, limit: 25, search }),
+      productService.getAllProductsAdmin({ page: nextPage, limit: 25, search }),
       categoryService.getAllCategories(),
     ])
       .then(([productsRes, categoriesRes]) => {

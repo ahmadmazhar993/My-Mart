@@ -34,7 +34,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     Promise.all([
-      productService.getAllProducts(),
+      productService.getAllProductsAdmin(),
       categoryService.getAllCategories(),
       orderService.getAllOrders(),
       userService.getAllUsers(),

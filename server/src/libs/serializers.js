@@ -29,27 +29,55 @@ const parseVariants = (value) => {
   return [];
 };
 
+// Public responses never reveal real stock above this number.
+const PUBLIC_STOCK_CAP = 20;
+
+const mapPublicVariant = (variant) => {
+  if (!variant || typeof variant !== 'object') return variant;
+  const { purchase_price, purchasePrice, ...safe } = variant;
+  if (safe.stock_quantity != null) {
+    safe.stock_quantity = Math.min(Number(safe.stock_quantity) || 0, PUBLIC_STOCK_CAP);
+  }
+  return safe;
+};
+
 const mapProduct = (product) => {
   if (!product) return null;
+
+  const stock = Number(product.stockQuantity || 0);
 
   return {
     id: product.productID,
     name: product.name,
+    slug: product.slug,
     description: product.description,
     price: Number(product.price),
-      purchase_price: product.purchasePrice != null ? Number(product.purchasePrice) : null,
     discount_price: product.discountPrice != null ? Number(product.discountPrice) : null,
     discount_percentage: product.discountPercentage,
-    stock_quantity: product.stockQuantity,
-    seller_id: product.seller_id,
+    in_stock: stock > 0,
+    stock_quantity: Math.min(stock, PUBLIC_STOCK_CAP),
+
     category_id: product.category_id,
     sku: product.sku,
     rating: Number(product.rating || 0),
     review_count: product.reviewCount || 0,
     image_url: product.imageUrl,
     images: product.images,
-    variants: parseVariants(product.variants),
+    variants: parseVariants(product.variants).map(mapPublicVariant),
     is_active: product.isActive,
+  };
+};
+
+// ADMIN ONLY: full data.
+const mapProductAdmin = (product) => {
+  if (!product) return null;
+
+  return {
+    ...mapProduct(product),
+    purchase_price: product.purchasePrice != null ? Number(product.purchasePrice) : null,
+    stock_quantity: product.stockQuantity,
+    seller_id: product.seller_id,
+    variants: parseVariants(product.variants), // includes variant purchase_price
     created_at: product.createdOn,
     updated_at: product.updatedOn,
   };
@@ -114,6 +142,7 @@ const mapCartItem = (item, product = null) => ({
 module.exports = {
   mapUser,
   mapProduct,
+  mapProductAdmin,
   mapCategory,
   mapOrder,
   mapCartItem,
