@@ -27,6 +27,9 @@ const Reviews = lazy(() => import('./pages/Reviews'));
 const AccountSettings = lazy(() => import('./pages/AccountSettings'));
 const HelpCenter = lazy(() => import('./pages/HelpCenter'));
 const InfoPage = lazy(() => import('./pages/InfoPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogArticle = lazy(() => import('./pages/BlogArticle'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'));
@@ -154,7 +157,10 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/help" element={<HelpCenter />} />
+            <Route path="/pages/contact" element={<ContactPage />} />
             <Route path="/pages/:slug" element={<InfoPage />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogArticle />} />
           </Route>
         </Routes>
       </Suspense>

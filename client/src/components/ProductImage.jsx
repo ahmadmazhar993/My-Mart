@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getProductImageUrl } from '../utils/product';
 
-const ProductImage = ({ product, variant = null, className = '' }) => {
+const ProductImage = ({ product, variant = null, className = '', eager = false }) => {
   const [hasError, setHasError] = useState(false);
   const src = getProductImageUrl(product, variant);
 
@@ -26,7 +26,7 @@ const ProductImage = ({ product, variant = null, className = '' }) => {
       src={src}
       alt={product?.name}
       className={`w-full h-full object-contain ${className}`}
-      loading="eager"
+      loading={eager ? 'eager' : 'lazy'}
       decoding="async"
       onError={() => setHasError(true)}
     />

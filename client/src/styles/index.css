@@ -18,33 +18,72 @@
   body {
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
   }
 
   #root {
     width: 100%;
     min-height: 100vh;
   }
+
+  img {
+    max-width: 100%;
+  }
+
+  /* Let grid cells shrink below their content width so long text never forces horizontal scroll */
+  .grid > * {
+    min-width: 0;
+  }
+
+  /* Visible keyboard focus everywhere, without affecting mouse/touch users */
+  :focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+  }
+
+  /* 16px inputs stop iOS Safari from zooming the page on focus */
+  @media (max-width: 639px) {
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white font-semibold px-6 py-2.5 rounded-sm
-           hover:bg-primary-600 active:bg-primary-700 transition-colors
+    @apply bg-primary text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm
+           hover:bg-primary-600 active:bg-primary-700 active:scale-[0.98] transition
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
-    @apply border-2 border-primary text-primary font-semibold px-6 py-2.5 rounded-sm
-           hover:bg-primary-50 transition-colors;
+    @apply border-2 border-primary text-primary font-semibold px-6 py-2.5 rounded-lg
+           hover:bg-primary-50 active:scale-[0.98] transition
+           disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-white border border-gray-200 text-dark font-medium px-6 py-2.5 rounded-sm
+    @apply bg-white border border-gray-200 text-dark font-medium px-6 py-2.5 rounded-lg
            hover:bg-gray-50 transition-colors;
   }
 
   .input-field {
-    @apply w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm
+    @apply w-full border border-gray-300 rounded-lg bg-white px-4 py-3 text-sm sm:py-2.5
            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
            placeholder:text-gray-400 transition;
   }
@@ -71,16 +110,32 @@
   }
 
   .product-card {
-    @apply bg-white rounded-sm shadow-card hover:shadow-card-hover
+    @apply bg-white rounded-xl shadow-card hover:shadow-card-hover
            transition-all duration-200 overflow-hidden;
   }
 
   .badge-sale {
-    @apply bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-sm;
+    @apply bg-red-500 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md;
   }
 
   .container-main {
-    @apply max-w-[1280px] mx-auto px-4;
+    @apply max-w-[1280px] mx-auto px-3 sm:px-4;
+  }
+
+  /* Horizontal swipe row (carousel feel on mobile, no JS) */
+  .snap-row {
+    @apply flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .snap-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .snap-row > * {
+    @apply snap-start;
   }
 }
 
@@ -99,5 +154,9 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

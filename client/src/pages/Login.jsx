@@ -160,7 +160,7 @@ const Login = () => {
   };
 
   return (
-    <div className="container-main animate-fade-in py-10">
+    <div className="container-main animate-fade-in py-6 sm:py-10">
       <div className="mx-auto max-w-md">
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-dark">Welcome Back</h1>

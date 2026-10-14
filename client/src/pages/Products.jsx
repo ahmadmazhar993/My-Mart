@@ -331,13 +331,13 @@ const Products = () => {
                 <div className="text-sm text-gray-600">
                   {products.length ? `Showing ${((page - 1) * limit) + 1}-${Math.min(page * limit, pagination?.total || products.length)} of ${pagination?.total || products.length} products` : 'No products'}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setPage(1)}
                     disabled={page === 1}
                     aria-label="First page"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full sm:h-8 sm:w-8 border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     «
                   </button>
@@ -347,7 +347,7 @@ const Products = () => {
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     disabled={!pagination?.hasPrevPage}
                     aria-label="Previous page"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full sm:h-8 sm:w-8 border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     ‹
                   </button>
@@ -364,7 +364,7 @@ const Products = () => {
                           type="button"
                           onClick={() => setPage(p)}
                           aria-current={p === page ? 'page' : undefined}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition ${p === page
+                          className={`inline-flex h-10 w-10 items-center justify-center rounded-full sm:h-8 sm:w-8 text-sm font-medium transition ${p === page
                             ? 'bg-primary text-white shadow-sm'
                             : 'border border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary'
                             }`}
@@ -380,7 +380,7 @@ const Products = () => {
                     onClick={() => setPage((current) => current + 1)}
                     disabled={!pagination?.hasNextPage}
                     aria-label="Next page"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full sm:h-8 sm:w-8 border border-gray-300 bg-white text-sm text-gray-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     ›
                   </button>
@@ -390,7 +390,7 @@ const Products = () => {
                     onClick={() => setPage(totalPages)}
                     disabled={page === totalPages}
                     aria-label="Last page"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full sm:h-8 sm:w-8 border border-gray-300 bg-white text-sm text-gray-500 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     »
                   </button>

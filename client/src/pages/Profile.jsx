@@ -51,18 +51,18 @@ const Profile = () => {
   ];
 
   return (
-    <div className="container-main animate-fade-in py-6">
+    <div className="container-main animate-fade-in py-4 sm:py-6">
       {/* Profile header card */}
-      <div className="mb-6 rounded-xl border border-gray-100 bg-white p-6 shadow-card">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200 text-2xl font-bold text-primary-700 ring-2 ring-primary-100">
+      <div className="mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:mb-6 sm:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex h-14 w-14 flex-shrink-0 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-primary-200 text-2xl font-bold text-primary-700 ring-2 ring-primary-100">
             {(user?.firstName || user?.email || 'U').charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-dark">
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words text-lg font-bold tracking-tight text-dark sm:text-xl">
               {[user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'AHM Mart User'}
             </h1>
-            <p className="text-sm text-gray-500">{user?.email || ''}</p>
+            <p className="break-all text-sm text-gray-500">{user?.email || ''}</p>
             {user?.role && (
               <span className="mt-1.5 inline-flex items-center rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold capitalize text-primary-700 ring-1 ring-inset ring-primary-200">
                 {user.role}
@@ -78,10 +78,10 @@ const Profile = () => {
           <Link
             key={item.label}
             to={item.to}
-            className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover"
+            className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-card transition hover:-translate-y-0.5 sm:gap-4 sm:p-5 hover:shadow-card-hover"
           >
             {iconWrapper(item.icon)}
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold text-dark">{item.label}</h3>
               <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
@@ -124,7 +124,7 @@ const Profile = () => {
                 key={address.id}
                 className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 p-3.5 transition hover:border-gray-300"
               >
-                <div>
+                <div className="min-w-0 break-words">
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
                       {address.label}

@@ -10,12 +10,7 @@ import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
 import { validatePaymentReceiptFile, validateSenderAccount } from '../utils/paymentValidation';
-
-const CITY_OPTIONS = [
-  // 'Karachi',
-  'Lahore',
-  // 'Islamabad',
-];
+import { DELIVERY_CITIES as CITY_OPTIONS } from '../config/policies';
 
 const getPaymentIcon = (type) => {
   switch (type) {
@@ -429,8 +424,8 @@ const Checkout = () => {
       </div>
       <p className="mb-6 text-sm text-gray-500">Secure checkout &middot; {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in your order</p>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {error && (
@@ -581,7 +576,7 @@ const Checkout = () => {
             </div>
 
             {/* Payment card */}
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+            <div className="rounded-xl border border-gray-100 bg-white p-3.5 shadow-card sm:p-6">
               <div className="mb-1 flex items-center gap-2.5">
                 <StepBadge n={2} />
                 <h2 className="text-base font-bold text-dark sm:text-lg">Payment Method</h2>
@@ -591,7 +586,7 @@ const Checkout = () => {
               <div className="space-y-3">
                 {/* Online payment option */}
                 <label
-                  className={`block cursor-pointer rounded-xl border-2 p-4 transition ${paymentMethod === 'online' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
+                  className={`block min-w-0 cursor-pointer rounded-xl border-2 p-3 transition sm:p-4 ${paymentMethod === 'online' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <div className="flex items-start gap-3">
@@ -609,7 +604,7 @@ const Checkout = () => {
                       onChange={() => setPaymentMethod('online')}
                       className="sr-only"
                     />
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-dark">{PAYMENT_METHOD_LABELS.online}</p>
                       <p className="mt-0.5 text-xs text-gray-500">Bank transfer, Easypaisa &amp; more</p>
 
@@ -628,7 +623,7 @@ const Checkout = () => {
                                       e.preventDefault();
                                       handleCopyAccount(account.account, e);
                                     }}
-                                    className={`relative rounded-lg border p-3 text-left transition ${copiedAccount === account.account
+                                    className={`w-full min-w-0 rounded-lg border p-3 text-left transition ${copiedAccount === account.account
                                       ? 'border-primary bg-primary-50/60'
                                       : 'border-gray-200 bg-white hover:border-gray-300'
                                       }`}
@@ -637,34 +632,33 @@ const Checkout = () => {
                                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-600">
                                         {getPaymentIcon(account.type)}
                                       </div>
-                                      <div className="min-w-0">
+                                      <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-semibold text-dark">{account.type}</p>
                                         {account.provider && account.type === 'Bank' && (
                                           <p className="truncate text-[11px] text-gray-500">{account.provider}</p>
                                         )}
                                       </div>
+                                      <span
+                                        className={`ml-auto flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${copiedAccount === account.account
+                                          ? 'bg-primary text-white'
+                                          : 'bg-gray-100 text-gray-500'
+                                          }`}
+                                      >
+                                        {copiedAccount === account.account ? 'Copied ✓' : 'Tap to copy'}
+                                      </span>
                                     </div>
-                                    <div className="mt-3 flex items-center gap-3">
+                                    <div className="mt-3 flex flex-wrap items-center gap-3">
                                       {account.qrImage ? (
-                                        <div className="flex h-[104px] w-[104px] flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-white p-1.5 ring-1 ring-gray-200" aria-label={`QR code for ${account.provider} account`}>
+                                        <div className="flex h-24 w-24 flex-shrink-0 sm:h-[104px] sm:w-[104px] items-center justify-center overflow-hidden rounded-md bg-white p-1.5 ring-1 ring-gray-200" aria-label={`QR code for ${account.provider} account`}>
                                           <img src={account.qrImage} alt={`${account.provider} bank account QR code`} className="h-full w-full object-contain" />
                                         </div>
                                       ) : null}
-                                      <div className="min-w-0">
-                                        <p className="font-mono text-sm font-semibold text-gray-900">{account.account}</p>
-                                        <p className="text-[11px] text-gray-500">{account.accountHolder}</p>
+                                      <div className="min-w-0 flex-1 basis-32">
+                                        <p className="break-all font-mono text-sm font-semibold text-gray-900">{account.account}</p>
+                                        <p className="break-words text-[11px] text-gray-500">{account.accountHolder}</p>
                                         {account.qrImage && <p className="mt-1 text-[10px] font-medium text-primary">Scan to pay with your banking app</p>}
                                       </div>
                                     </div>
-
-                                    <span
-                                      className={`absolute right-2.5 top-2.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${copiedAccount === account.account
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 text-gray-500'
-                                        }`}
-                                    >
-                                      {copiedAccount === account.account ? 'Copied ✓' : 'Tap to copy'}
-                                    </span>
                                   </button>
                                 );
                               })}
@@ -822,7 +816,7 @@ const Checkout = () => {
           </form>
         </div>
 
-        <div className="sticky top-36 h-fit rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+        <div className="h-fit lg:sticky lg:top-36 rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
           <h2 className="mb-4 text-lg font-bold text-dark">Order Summary</h2>
 
           {/* Shipping tier nudge */}

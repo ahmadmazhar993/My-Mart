@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useCartStore } from '../store';
 import { authService } from '../services';
+import { NAV_CATEGORIES as categories } from '../config/categories';
+import { shouldShowBottomNav } from './BottomNav';
 
 const SearchIcon = () => (
   <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,6 +61,8 @@ const Header = () => {
       document.removeEventListener('touchstart', handleOutsideClick);
     };
   }, [accountMenuOpen]);
+  // On phones the cart lives in the bottom bar; the header shows it only where that bar is hidden.
+  const bottomNavVisible = shouldShowBottomNav(location.pathname);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const getProductsPath = (query) => {
@@ -122,17 +126,6 @@ const Header = () => {
     }
   };
 
-  const categories = [
-    { name: 'Accessories', slug: 'accessories' },
-    { name: 'Beauty', slug: 'beauty' },
-    { name: 'Electronics', slug: 'electronics' },
-    { name: 'Fashion', slug: 'clothing' },
-    { name: 'Groceries', slug: 'groceries' },
-    { name: 'Home & Living', slug: 'home' },
-    { name: 'Sports', slug: 'sports' },
-    { name: 'Toys & Games', slug: 'toys' },
-  ];
-
   const activeCategory = params.get('category') || '';
   const isAllCategoriesActive = !activeCategory;
   const shouldShowSearchBar = !['/help', '/pages'].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
@@ -141,8 +134,8 @@ const Header = () => {
     <header className="sticky top-0 z-50 shadow-header">
       {/* Announcement bar */}
       <div className="bg-primary text-xs text-white">
-        <div className="container-main flex items-center justify-between py-1.5">
-          <span>Free shipping on orders over Rs. 2,000</span>
+        <div className="container-main flex items-center justify-between py-1.5 text-[11px] sm:text-xs">
+          <span className="truncate">🚚 Free shipping on orders over Rs. 2,000</span>
           <div className="hidden items-center gap-4 sm:flex">
             <Link to="/help" className="hover:underline">Help Center</Link>
           </div>
@@ -151,11 +144,12 @@ const Header = () => {
 
       {/* Main header row */}
       <div className="border-b border-gray-100 bg-white">
-        <div className="container-main flex items-center gap-2 py-3 lg:gap-5">
-          <Link to="/" className="flex-shrink-0">
+        <div className="container-main flex items-center gap-2 py-2 sm:py-3 lg:gap-5">
+          <Link to="/" className="flex-shrink-0" aria-label="AHM Mart home">
             {/* Mobile */}
-            <div className="flex items-center sm:hidden">
-              <span className="whitespace-nowrap text-2xl font-extrabold tracking-tight">
+            <div className="flex items-center gap-1.5 sm:hidden">
+              <img src="/logo.png" alt="" className="h-8 w-8" />
+              <span className="whitespace-nowrap text-xl font-extrabold tracking-tight">
                 <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
               </span>
@@ -172,7 +166,7 @@ const Header = () => {
           </Link>
 
           {shouldShowSearchBar && (
-            <form onSubmit={handleSearch} className="hidden max-w-full flex-1 sm:flex">
+            <form onSubmit={handleSearch} role="search" className="hidden max-w-full flex-1 sm:flex">
               <div className="relative flex-1">
                 <SearchIcon />
                 <input
@@ -197,8 +191,10 @@ const Header = () => {
               <div ref={accountMenuRef} className="relative z-40">
                 <button
                   type="button"
+                  aria-label="Account menu"
+                  aria-expanded={accountMenuOpen}
                   onClick={() => setAccountMenuOpen((open) => !open)}
-                  className="flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary"
+                  className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary"
                 >
                   <UserIcon />
                   <span className="mt-0.5 hidden max-w-[80px] truncate text-xs md:block">
@@ -234,16 +230,16 @@ const Header = () => {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
+              <Link to="/login" aria-label="Login" className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
                 <UserIcon />
                 <span className="mt-0.5 hidden text-xs md:block">Login</span>
               </Link>
             )}
 
-            <Link to="/cart" className="relative flex flex-col items-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
+            <Link to="/cart" aria-label={`Cart, ${cartCount} items`} className={`${bottomNavVisible ? 'hidden md:flex' : 'flex'} relative min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary`}>
               <CartIcon />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
@@ -254,19 +250,22 @@ const Header = () => {
 
         {!shouldShowSearchBar && <div className="container-main pb-3 sm:hidden" />}
         {shouldShowSearchBar && (
-          <div className="container-main pb-3 sm:hidden">
-            <form onSubmit={handleSearch} className="flex">
+          <div className="container-main pb-2 sm:hidden">
+            <form onSubmit={handleSearch} className="flex" role="search">
               <div className="relative flex-1">
                 <SearchIcon />
                 <input
-                  type="text"
+                  id="site-search-mobile"
+                  type="search"
+                  enterKeyHint="search"
+                  aria-label="Search products"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search in AHM Mart"
-                  className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="search-clear-red h-11 w-full rounded-l-lg border border-r-0 border-gray-200 bg-gray-50 pl-9 pr-3 text-sm transition focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
-              <button type="submit" className="rounded-r-lg bg-primary px-4 text-white transition-colors hover:bg-primary-600">
+              <button type="submit" aria-label="Search" className="rounded-r-lg bg-primary px-4 text-white transition-colors hover:bg-primary-600">
                 <SearchButtonIcon />
               </button>
             </form>
@@ -275,12 +274,12 @@ const Header = () => {
       </div>
 
       {/* Category nav */}
-      <div className="hidden border-b border-gray-100 bg-white md:block">
+      <div className="border-b border-gray-100 bg-white">
         <div className="container-main">
-          <nav className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-2">
+          <nav aria-label="Categories" className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-1.5 sm:py-2">
             <Link
               to="/products"
-              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
                 isAllCategoriesActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
               }`}
             >
@@ -292,7 +291,7 @@ const Header = () => {
                 <Link
                   key={cat.slug}
                   to={`/products?category=${cat.slug}`}
-                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
                     isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
                   }`}
                 >

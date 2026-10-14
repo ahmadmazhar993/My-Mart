@@ -26,10 +26,10 @@ const FlashSale = ({ products = [] }) => {
 
   return (
     <section className="container-main py-4">
-      <div className="bg-white rounded-sm shadow-card overflow-hidden">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-gradient-to-r from-primary to-accent-dark">
-          <div className="flex items-center gap-3">
-            <h2 className="text-white font-extrabold text-lg sm:text-xl italic">Flash Sale</h2>
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-card">
+        <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-primary to-accent-dark px-3 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <h2 className="whitespace-nowrap text-base font-extrabold italic text-white sm:text-xl">⚡ Flash Sale</h2>
             <div className="flex items-center gap-1">
               {[timeLeft.hours, timeLeft.minutes, timeLeft.seconds].map((val, i) => (
                 <React.Fragment key={i}>
@@ -41,13 +41,15 @@ const FlashSale = ({ products = [] }) => {
               ))}
             </div>
           </div>
-          <Link to="/products?sale=true" className="text-white text-sm font-semibold hover:underline">
-            SHOP ALL &rarr;
+          <Link to="/products?sale=true" className="whitespace-nowrap text-xs font-semibold text-white hover:underline sm:text-sm">
+            See all &rarr;
           </Link>
         </div>
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="snap-row p-3 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:p-4 md:grid-cols-4 lg:grid-cols-5">
           {saleProducts.map((product) => (
-            <ProductCard key={product.id} product={product} compact />
+            <div key={product.id} className="w-[44%] min-w-[140px] flex-shrink-0 sm:w-auto">
+              <ProductCard product={product} compact />
+            </div>
           ))}
         </div>
       </div>

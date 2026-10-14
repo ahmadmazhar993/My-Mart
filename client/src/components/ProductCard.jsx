@@ -144,14 +144,14 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   };
 
   return (
-    <Link to={buildProductPath(product)} className="product-card flex flex-col h-full group rounded-xl border border-gray-100 overflow-hidden bg-white hover:shadow-md hover:border-gray-200 transition-shadow">
+    <Link to={buildProductPath(product)} className="product-card flex flex-col h-full group rounded-xl border border-gray-100 overflow-hidden bg-white hover:shadow-md hover:border-gray-200 transition-shadow active:scale-[0.99]">
       <div className={`relative ${compact ? 'aspect-square' : 'aspect-[4/5]'} bg-gray-50 overflow-hidden`}>
         <ProductImage
           product={product}
           className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'opacity-60' : ''}`}
         />
         {!isOutOfStock && discount && (
-          <span className="absolute top-2 left-2 badge-sale">-{discount}%</span>
+          <span className="absolute top-2 left-2 badge-sale shadow-sm">-{discount}%</span>
         )}
         {isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -164,17 +164,19 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
           <button
             type="button"
             onClick={handleWishlist}
-            className={`absolute top-2 right-2 w-8 h-8 rounded-full shadow flex items-center justify-center text-sm transition-colors ${
-              inWishlist ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-500'
+            className={`absolute top-1.5 right-1.5 w-9 h-9 rounded-full shadow flex items-center justify-center text-base transition-colors ${
+              inWishlist ? 'bg-red-500 text-white' : 'bg-white/95 text-gray-500 hover:text-red-500'
             }`}
+            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={inWishlist}
             title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             {inWishlist ? '♥' : '♡'}
           </button>
         )}
       </div>
-      <div className={`flex flex-col flex-1 ${compact ? 'p-2' : 'p-3'} ${isOutOfStock ? 'opacity-70' : ''}`}>
-        <h3 className={`font-medium text-dark line-clamp-2 ${compact ? 'text-xs' : 'text-sm'} mb-1.5 min-h-[2.5em]`}>
+      <div className={`flex flex-col flex-1 ${compact ? 'p-2' : 'p-2.5 sm:p-3'} ${isOutOfStock ? 'opacity-70' : ''}`}>
+        <h3 className={`font-medium text-dark line-clamp-2 ${compact ? 'text-xs' : 'text-[13px] sm:text-sm'} leading-snug mb-1.5 min-h-[2.5em]`}>
           {product.name}
         </h3>
         <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -210,12 +212,12 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
               type="button"
               onClick={handleAddToCart}
               disabled={isOutOfStock}
-              className={`w-full py-2 text-sm font-semibold rounded-sm transition-all border ${
+              className={`w-full min-h-[40px] py-2 text-sm font-semibold rounded-lg transition-all border active:scale-[0.98] ${
                 added
                   ? 'bg-green-500 border-green-500 text-white'
                   : isOutOfStock
                     ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-primary-50 border-transparent text-primary hover:bg-primary hover:text-white'
+                    : 'bg-primary border-primary text-white hover:bg-primary-600 sm:bg-primary-50 sm:border-transparent sm:text-primary sm:hover:bg-primary sm:hover:text-white'
               }`}
             >
               {isOutOfStock ? 'Out of stock' : (added ? '✓ Added to cart' : 'Add to cart')}

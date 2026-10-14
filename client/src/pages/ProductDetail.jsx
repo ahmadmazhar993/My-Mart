@@ -24,6 +24,7 @@ const ProductDetail = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
+  const [activeImage, setActiveImage] = useState(null);
   const { addItem, cart, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const currentUserId = user?.id || user?.userID;
@@ -270,28 +271,68 @@ const ProductDetail = () => {
 
   const productReviews = reviews;
   const inWishlist = isInWishlist(product.id);
+  const handleToggleWishlist = () => toggleItem({
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  discount_price: product.discount_price,
+                  image_url: product.image_url,
+                  images: product.images,
+                  rating: product.rating,
+                  review_count: product.review_count,
+                });
+  const isOutOfStock = availableStock <= 0;
 
   return (
-    <div className="container-main py-6 animate-fade-in">
-      <Breadcrumb items={[
-        { label: 'Home', to: '/' },
-        { label: 'Products', to: '/products' },
-        { label: product.name },
-      ]} />
+    <div className="container-main animate-fade-in py-3 pb-28 sm:py-6 md:pb-6">
+      <div className="hidden sm:block">
+        <Breadcrumb items={[
+          { label: 'Home', to: '/' },
+          { label: 'Products', to: '/products' },
+          { label: product.name },
+        ]} />
+      </div>
 
-      <div className="bg-white rounded-sm shadow-card overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-          <div className="bg-gray-50 p-6 flex items-center justify-center min-h-[400px]">
-            <div className="relative w-full max-w-[560px]">
-              <ProductImage product={product} variant={selectedVariant} className="max-h-[400px] w-full rounded-sm" />
-              {availableStock <= 0 && (
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-card">
+        <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
+          <div className="flex flex-col items-center justify-center bg-gray-50 p-3 sm:p-6 md:min-h-[400px]">
+            <div className="relative aspect-square w-full max-w-[560px] md:aspect-auto">
+              <ProductImage
+                product={product}
+                variant={activeImage ? { image: activeImage } : selectedVariant}
+                eager
+                className="h-full max-h-[420px] w-full rounded-lg"
+              />
+              {!isOutOfStock && hasDiscount && discount != null && (
+                <span className="badge-sale absolute left-2 top-2 text-xs shadow-sm">-{discount}%</span>
+              )}
+              {isOutOfStock && (
                 <SoldOutBanner />
               )}
             </div>
+            {normalizedImages.length > 1 && (
+              <div className="scrollbar-hide mt-3 flex w-full max-w-[560px] gap-2 overflow-x-auto pb-1" role="list" aria-label="Product images">
+                {normalizedImages.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    role="listitem"
+                    onClick={() => setActiveImage(img)}
+                    aria-label={`View image ${i + 1}`}
+                    aria-current={(activeImage || primaryImage) === img}
+                    className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition ${
+                      (activeImage || primaryImage) === img ? 'border-primary' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="p-6 md:p-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-dark mb-3">{product.name}</h1>
+          <div className="p-4 sm:p-6 md:p-8">
+            <h1 className="mb-2 text-lg font-bold leading-snug text-dark sm:mb-3 sm:text-2xl">{product.name}</h1>
 
             {product.rating > 0 && (
               <div className="flex items-center gap-2 mb-4">
@@ -305,11 +346,11 @@ const ProductDetail = () => {
               </div>
             )}
 
-            <div className="flex items-baseline gap-3 mb-6">
-              <span className="text-3xl font-extrabold text-primary">{formatPrice(displayPrice)}</span>
+            <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:mb-6">
+              <span className="text-2xl font-extrabold text-primary sm:text-3xl">{formatPrice(displayPrice)}</span>
               {hasDiscount && (
                 <>
-                  <span className="text-lg text-gray-400 line-through">
+                  <span className="text-base text-gray-400 line-through sm:text-lg">
                     {selectedVariant?.price != null ? formatPrice(selectedVariant.price) : formatPrice(product.price)}
                   </span>
                   {discount != null && <span className="badge-sale text-sm">-{discount}%</span>}
@@ -317,7 +358,7 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <p className="text-gray-600 text-sm leading-relaxed mb-6">{product.description}</p>
+            <p className="mb-5 text-sm leading-relaxed text-gray-600 sm:mb-6">{product.description}</p>
 
             {variantOptions.length > 0 && (
               <div className="mb-6">
@@ -329,8 +370,9 @@ const ProductDetail = () => {
                       <button
                         key={variant.name}
                         type="button"
-                        onClick={() => setSelectedVariant(variant)}
-                        className={`rounded-sm border px-3 py-2 text-sm font-medium transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-primary'}`}
+                        onClick={() => { setSelectedVariant(variant); setActiveImage(null); }}
+                        aria-pressed={isSelected}
+                        className={`min-h-[40px] rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-primary'}`}
                       >
                         {variant.label || variant.name}
                       </button>
@@ -356,17 +398,18 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-4 mb-6">
-              <label className="text-sm font-semibold">Quantity:</label>
-              <div className="flex items-center border border-gray-300 rounded-sm">
+            <div className="mb-6 flex items-center gap-4">
+              <span className="text-sm font-semibold">Quantity:</span>
+              <div className="flex items-center overflow-hidden rounded-lg border border-gray-300">
                 <button
                   type="button"
+                  aria-label="Decrease quantity"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                  className="h-10 w-10 text-lg transition-colors hover:bg-gray-100"
                 >
                   −
                 </button>
-                <span className="px-4 py-2 border-x border-gray-300 min-w-[48px] text-center">{quantity}</span>
+                <span className="min-w-[48px] border-x border-gray-300 px-3 py-2 text-center font-semibold" aria-live="polite">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -380,7 +423,8 @@ const ProductDetail = () => {
                     }
                     setQuantity((current) => current + 1);
                   }}
-                  className="px-3 py-2 hover:bg-gray-100 transition-colors"
+                  aria-label="Increase quantity"
+                  className="h-10 w-10 text-lg transition-colors hover:bg-gray-100 disabled:opacity-40"
                   disabled={remainingStock <= 0}
                 >
                   +
@@ -388,34 +432,27 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            {/* Desktop / tablet actions (phones use the sticky bar below) */}
+            <div className="hidden gap-3 md:flex">
               <button
                 type="button"
                 onClick={handleAddToCart}
-                disabled={availableStock <= 0}
-                className={`flex-1 py-3 font-bold rounded-sm transition-all ${
+                disabled={isOutOfStock}
+                className={`flex-1 rounded-lg py-3 font-bold transition-all ${
                   added
                     ? 'bg-green-500 text-white'
-                    : (availableStock <= 0 ? 'bg-red-500 text-white cursor-not-allowed' : 'btn-primary py-3')
+                    : (isOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : 'btn-primary py-3')
                 }`}
               >
-                {availableStock <= 0 ? 'Out of Stock' : (added ? '✓ Added to Cart' : 'Add to Cart')}
+                {isOutOfStock ? 'Out of Stock' : (added ? '✓ Added to Cart' : 'Add to Cart')}
               </button>
               <button
                 type="button"
-                onClick={() => toggleItem({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  discount_price: product.discount_price,
-                  image_url: product.image_url,
-                  images: product.images,
-                  rating: product.rating,
-                  review_count: product.review_count,
-                })}
-                className={`px-4 py-3 font-bold rounded-sm border-2 transition-all ${
+                onClick={handleToggleWishlist}
+                aria-pressed={inWishlist}
+                className={`rounded-lg border-2 px-4 py-3 font-bold transition-all ${
                   inWishlist
-                    ? 'border-red-400 text-red-500 bg-red-50'
+                    ? 'border-red-400 bg-red-50 text-red-500'
                     : 'border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-500'
                 }`}
               >
@@ -424,18 +461,24 @@ const ProductDetail = () => {
               <button
                 type="button"
                 onClick={handleBuyNow}
-                disabled={availableStock <= 0}
-                className="flex-1 btn-outline text-center py-3"
+                disabled={isOutOfStock}
+                className="btn-outline flex-1 py-3 text-center"
               >
                 Buy Now
               </button>
             </div>
+
+            <ul className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center text-[11px] text-gray-600 sm:text-xs">
+              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">🚚</span>Fast delivery</li>
+              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">↩️</span>7-day returns</li>
+              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">🔒</span>Secure payment</li>
+            </ul>
           </div>
         </div>
 
         {/* Reviews section */}
-        <div className="border-t p-6">
-          <h2 className="text-lg font-bold text-dark mb-4">
+        <div className="border-t p-4 sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-dark">
             Customer Reviews ({productReviews.length})
           </h2>
 
@@ -502,13 +545,45 @@ const ProductDetail = () => {
           )}
         </div>
 
-        {normalizedImages.length > 1 && (
-          <div className="border-t p-4 flex gap-2 overflow-x-auto">
-            {normalizedImages.map((img) => (
-              <img key={img} src={img} alt="" className="w-16 h-16 object-cover rounded-sm border" />
-            ))}
-          </div>
-        )}
+      </div>
+
+      {/* Mobile sticky purchase bar */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-3 pt-2 pb-safe shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:hidden">
+        <div className="flex items-center gap-2 pb-2">
+          <button
+            type="button"
+            onClick={handleToggleWishlist}
+            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={inWishlist}
+            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border text-xl transition ${
+              inWishlist ? 'border-red-300 bg-red-50 text-red-500' : 'border-gray-300 text-gray-500'
+            }`}
+          >
+            {inWishlist ? '♥' : '♡'}
+          </button>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            className={`h-12 flex-1 rounded-lg border-2 text-sm font-bold transition active:scale-[0.98] ${
+              added
+                ? 'border-green-500 bg-green-500 text-white'
+                : isOutOfStock
+                  ? 'cursor-not-allowed border-gray-200 bg-gray-200 text-gray-500'
+                  : 'border-primary text-primary'
+            }`}
+          >
+            {isOutOfStock ? 'Out of Stock' : (added ? '✓ Added' : 'Add to Cart')}
+          </button>
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={isOutOfStock}
+            className="btn-primary h-12 flex-1 px-2 text-sm"
+          >
+            Buy Now
+          </button>
+        </div>
       </div>
     </div>
   );

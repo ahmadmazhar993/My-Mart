@@ -189,8 +189,8 @@ const OrderDetail = () => {
           <h1 className="text-xl font-bold tracking-tight text-dark">Order #{order.display_order_id || order.id}</h1>
           <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString('en-PK')}</p>
         </div>
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right text-xs">
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <div className="text-left text-xs sm:text-right">
             <div className="text-xs text-gray-500">Invoice</div>
             <div className="whitespace-nowrap font-semibold text-gray-800">{receipt?.invoice_number || '—'}</div>
             <div className="mt-1 text-xs text-gray-500">Order</div>

@@ -95,7 +95,7 @@ const HeroBanner = () => {
   return (
     <section className="container-main py-4">
       <div
-        className="group relative h-[220px] overflow-hidden rounded-xl bg-white shadow-card sm:h-[300px] md:h-[360px]"
+        className="group relative h-[190px] overflow-hidden rounded-xl bg-white shadow-card min-[400px]:h-[220px] sm:h-[300px] md:h-[360px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={handleTouchStart}

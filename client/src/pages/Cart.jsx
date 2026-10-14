@@ -43,8 +43,8 @@ const Cart = () => {
   };
 
   return (
-    <div className="container-main animate-fade-in py-6">
-      <h1 className="mb-6 text-xl font-bold tracking-tight text-dark">
+    <div className="container-main animate-fade-in py-4 pb-24 sm:py-6 lg:pb-6">
+      <h1 className="mb-4 text-lg sm:mb-6 sm:text-xl font-bold tracking-tight text-dark">
         Shopping Cart {cart.length > 0 && <span className="font-normal text-gray-400">({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>}
       </h1>
 
@@ -74,7 +74,7 @@ const Cart = () => {
               >
                 <Link
                   to={buildProductPath({ id: item.id, name: item.product_name || item.name })}
-                  className="block h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 sm:h-20 sm:w-20"
+                  className="block h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 sm:h-24 sm:w-24"
                 >
                   <ProductImage product={item} variant={item.variant || null} className="h-full w-full object-cover" />
                 </Link>
@@ -104,16 +104,16 @@ const Cart = () => {
                         type="button"
                         onClick={() => handleQuantityDecrease(item)}
                         disabled={item.quantity <= 1}
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-gray-500 transition hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
                         aria-label="Decrease quantity"
                       >
                         −
                       </button>
-                      <span className="w-7 text-center text-sm font-semibold text-gray-800">{item.quantity}</span>
+                      <span className="w-8 text-center text-sm font-semibold text-gray-800" aria-live="polite">{item.quantity}</span>
                       <button
                         type="button"
                         onClick={() => handleQuantityIncrease(item)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary"
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-gray-500 transition hover:bg-white hover:text-primary"
                         aria-label="Increase quantity"
                       >
                         +
@@ -122,7 +122,8 @@ const Cart = () => {
                     <button
                       type="button"
                       onClick={() => removeItem(item)}
-                      className="rounded-md px-1.5 py-0.5 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Remove ${item.name} from cart`}
+                      className="min-h-[36px] rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
                     >
                       Remove
                     </button>
@@ -213,6 +214,24 @@ const Cart = () => {
               className="w-full rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-600 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:py-2.5 sm:text-sm"
             >
               Clear Cart
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-14 z-40 border-t border-gray-200 bg-white px-3 py-2.5 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:bottom-0 lg:hidden">
+          <div className="mx-auto flex max-w-[1280px] items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-gray-500">Total ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</p>
+              <p className="truncate text-lg font-extrabold leading-tight text-primary">{formatPrice(total)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCheckout}
+              className="btn-primary ml-auto h-12 flex-1 text-sm sm:max-w-xs sm:flex-none sm:px-8"
+            >
+              Checkout
             </button>
           </div>
         </div>

@@ -51,7 +51,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    productService.getAllProducts({ limit: 25 })
+    productService.getAllProducts({ limit: 30 })
       .then((res) => setProducts(res.data?.data || []))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
@@ -65,7 +65,7 @@ const Home = () => {
 
       {/* Just For You */}
       <section className="container-main py-4 pb-8">
-        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:p-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-card sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Just For You</h2>
             <Link
@@ -86,9 +86,15 @@ const Home = () => {
               <p className="text-sm text-gray-500">No products available yet.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
+              {products.map((product, index) => (
+                // On phones (2 columns) drop a trailing odd item so the last row is never half empty
+                <div
+                  key={product.id}
+                  className={index === products.length - 1 && products.length % 2 === 1 ? 'hidden sm:block' : ''}
+                >
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           )}
@@ -101,7 +107,7 @@ const Home = () => {
           {TRUST_FEATURES.map((feature) => (
             <div
               key={feature.title}
-              className="flex flex-col items-center gap-2.5 rounded-xl border border-gray-100 bg-white p-4 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover sm:flex-row sm:items-center sm:gap-4 sm:text-left"
+              className="flex flex-col items-center gap-2 rounded-xl border border-gray-100 bg-white p-3 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover sm:flex-row sm:items-center sm:gap-4 sm:text-left"
             >
               <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
                 {feature.icon}
