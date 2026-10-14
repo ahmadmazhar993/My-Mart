@@ -29,6 +29,7 @@ const Products = () => {
   const [pagination, setPagination] = useState(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const resultsRef = useRef(null);
+  const lastScrolledPageRef = useRef(page);
 
   useEffect(() => {
     if (!sortOpen) return undefined;
@@ -82,6 +83,16 @@ const Products = () => {
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   }, [page, search, categoryId, saleOnly, priceRange]);
+
+  useEffect(() => {
+    if (loading || lastScrolledPageRef.current === page) return;
+
+    lastScrolledPageRef.current = page;
+    if (!resultsRef.current) return;
+
+    const top = resultsRef.current.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({ top: Math.max(top - 120, 0), behavior: 'smooth' });
+  }, [page, loading]);
 
   // When a search is present on small screens, scroll results into view
   useEffect(() => {
