@@ -198,6 +198,8 @@ async function buildProductList(req, res, { admin }) {
     const categoryId = req.query.category_id;
     const saleOnly = req.query.sale === 'true';
     const priceRange = req.query.priceRange || 'all';
+    // Optional sort: popular | price-asc | price-desc | rating. Omitted = newest first (legacy/admin).
+    const sort = String(req.query.sort || '').trim();
 
     const baseQuery = db('products').where('isActive', true);
 
@@ -237,10 +239,36 @@ async function buildProductList(req, res, { admin }) {
 
     const countQuery = baseQuery.clone();
     const totalResult = await countQuery.count({ total: '*' }).first();
-    const products = await baseQuery
-      .clone()
-      .select('*')
-      .orderBy('createdOn', 'desc')
+    const effectivePrice = 'COALESCE(CAST("discountPrice" AS NUMERIC), CAST("price" AS NUMERIC))';
+    const listQuery = baseQuery.clone().select('*');
+
+    switch (sort) {
+      case 'popular':
+        // Best sellers: units sold in non-cancelled orders.
+        listQuery
+          .select(db.raw(
+            '(SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi JOIN orders o ON o."orderID" = oi.order_id WHERE oi.product_id = products."productID" AND o.status <> ?) AS "unitsSold"',
+            ['cancelled']
+          ))
+          .orderByRaw('"unitsSold" DESC')
+          .orderBy('createdOn', 'desc');
+        break;
+      case 'price-asc':
+        listQuery.orderByRaw(`${effectivePrice} ASC`).orderBy('createdOn', 'desc');
+        break;
+      case 'price-desc':
+        listQuery.orderByRaw(`${effectivePrice} DESC`).orderBy('createdOn', 'desc');
+        break;
+      case 'rating':
+        listQuery.orderBy('rating', 'desc').orderBy('reviewCount', 'desc').orderBy('createdOn', 'desc');
+        break;
+      default:
+        listQuery.orderBy('createdOn', 'desc');
+    }
+
+    // productID as a final tie-breaker keeps pages stable (no repeats/gaps across pages).
+    const products = await listQuery
+      .orderBy('productID', 'asc')
       .limit(limit)
       .offset(offset);
 
