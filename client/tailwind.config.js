@@ -38,8 +38,13 @@ module.exports = {
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',
         'slide-up': 'slideUp 0.4s ease-out',
+        'brand-spin': 'brandSpin 1.2s linear infinite',
       },
       keyframes: {
+        brandSpin: {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },

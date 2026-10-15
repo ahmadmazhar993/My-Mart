@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { userService } from '../../services';
 import { useAuthStore } from '../../store';
 import { useToast } from '../../components/ToastProvider';
+import BrandLoader from '../../components/BrandLoader';
 
 const roleBadge = (role) => {
   const colors = {
@@ -108,7 +109,7 @@ const AdminUsers = () => {
       {/* Table card */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <div className="p-6 text-sm text-gray-500">Loading...</div>
+          <BrandLoader minHeight={200} />
         ) : (
           <>
             <div className="overflow-x-auto">

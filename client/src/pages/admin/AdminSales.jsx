@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { reportsService } from '../../services';
 import { formatPrice } from '../../utils/format';
 import { Bar, Line } from 'react-chartjs-2';
+import BrandLoader from '../../components/BrandLoader';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -290,7 +291,7 @@ const AdminSales = () => {
           
         </div>
         {loading ? (
-          <p className="text-gray-500">Loading...</p>
+          <BrandLoader minHeight={200} />
         ) : data.length === 0 ? (
           <p className="text-gray-500">No data for selected range.</p>
         ) : (

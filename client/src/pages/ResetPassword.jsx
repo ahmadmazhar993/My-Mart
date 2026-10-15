@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services';
 import { useToast } from '../components/ToastProvider';
+import BrandLoader from '../components/BrandLoader';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -121,7 +122,8 @@ const ResetPassword = () => {
                   disabled={loading}
                 />
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+              <button type="submit" disabled={loading} className="btn-primary flex w-full items-center justify-center gap-2 py-3">
+                {loading && <BrandLoader variant="button" />}
                 {loading ? 'Updating...' : 'Save New Password'}
               </button>
             </form>

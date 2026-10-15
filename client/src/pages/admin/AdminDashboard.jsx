@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { productService, categoryService, orderService, userService } from '../../services';
+import BrandLoader from '../../components/BrandLoader';
 
 const StatCard = ({ label, value, icon, to, color }) => (
   <Link
@@ -58,7 +59,7 @@ const AdminDashboard = () => {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-gray-500">Loading dashboard...</p>;
+    return <BrandLoader minHeight={320} text="Loading dashboard" />;
   }
 
   return (

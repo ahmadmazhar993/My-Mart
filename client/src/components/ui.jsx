@@ -1,21 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export const ProductSkeleton = ({ count = 4 }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-    {Array.from({ length: count }).map((_, i) => (
-      <div key={i} className="product-card animate-pulse">
-        <div className="bg-gray-200 aspect-square" />
-        <div className="p-3 space-y-2">
-          <div className="h-3 bg-gray-200 rounded w-full" />
-          <div className="h-3 bg-gray-200 rounded w-2/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/2" />
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
 export const EmptyState = ({ icon, title, description, action }) => (
   <div className="flex flex-col items-center justify-center py-16 px-4 text-center animate-fade-in">
     <div className="text-5xl mb-4">{icon}</div>

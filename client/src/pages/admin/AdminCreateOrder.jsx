@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { orderService, productService, userService } from '../../services';
 import { PAYMENT_METHOD_LABELS } from '../../config/paymentAccounts';
+import BrandLoader from '../../components/BrandLoader';
 
 const emptyForm = {
   user_id: '',
@@ -222,7 +223,7 @@ const AdminCreateOrder = () => {
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      {loading ? <div className="rounded-xl border border-gray-200 bg-white p-8 text-sm text-gray-500">Loading order tools...</div> : (
+      {loading ? <BrandLoader minHeight={240} text="Loading order tools" /> : (
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

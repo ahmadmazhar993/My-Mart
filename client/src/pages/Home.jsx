@@ -4,8 +4,8 @@ import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
 import FlashSale from '../components/FlashSale';
 import ProductCard from '../components/ProductCard';
-import { ProductSkeleton } from '../components/ui';
 import { productService } from '../services';
+import BrandLoader from '../components/BrandLoader';
 
 const TRUST_FEATURES = [
   {
@@ -80,7 +80,7 @@ const Home = () => {
           </div>
 
           {loading ? (
-            <ProductSkeleton count={10} />
+            <BrandLoader minHeight={420} text="Loading products" />
           ) : products.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-sm text-gray-500">No products available yet.</p>

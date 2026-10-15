@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import BrandLoader from './BrandLoader';
 
 const initialForm = { name: '', slug: '', description: '' };
 
@@ -139,7 +140,7 @@ const CategoryModal = ({
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {saving && (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <BrandLoader variant="button" />
               )}
               {saving ? 'Saving...' : category ? 'Update Category' : 'Add Category'}
             </button>

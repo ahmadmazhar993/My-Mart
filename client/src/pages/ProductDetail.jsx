@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
-import { Breadcrumb, ProductSkeleton } from '../components/ui';
+import { Breadcrumb } from '../components/ui';
 import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl } from '../utils/product';
 import SoldOutBanner from '../components/SoldOutBanner';
+import BrandLoader from '../components/BrandLoader';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -111,7 +112,7 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <div className="container-main py-6">
-        <ProductSkeleton count={1} />
+        <BrandLoader minHeight={420} text="Loading product" />
       </div>
     );
   }

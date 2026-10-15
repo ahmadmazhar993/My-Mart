@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { Breadcrumb, EmptyState, ProductSkeleton } from '../components/ui';
+import { Breadcrumb, EmptyState } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
 import { useAuthStore } from '../store';
@@ -8,6 +8,7 @@ import { useToast } from '../components/ToastProvider';
 import { API_BASE, API_VERSION } from '../services/api';
 import { formatPrice } from '../utils/format';
 import { validatePaymentReceiptFile } from '../utils/paymentValidation';
+import BrandLoader from '../components/BrandLoader';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
@@ -190,7 +191,7 @@ const Orders = () => {
       )}
 
       {loading ? (
-        <ProductSkeleton count={3} />
+        <BrandLoader minHeight={280} text="Loading your orders" />
       ) : orders.length === 0 ? (
         <div className="rounded-xl border border-gray-100 bg-white shadow-card">
           <EmptyState
@@ -378,7 +379,7 @@ const Orders = () => {
                             <p className="mt-2 text-xs text-gray-500">PNG, JPG, or PDF up to 5MB.</p>
                             {uploadingId === order.id && (
                               <p className="mt-2 flex items-center gap-2 text-sm text-amber-800">
-                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" />
+                                <BrandLoader variant="button" tone="brand" size={16} />
                                 Uploading...
                               </p>
                             )}

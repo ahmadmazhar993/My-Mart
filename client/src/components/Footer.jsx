@@ -71,7 +71,7 @@ const Footer = () => (
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#25D366] px-4 text-sm font-semibold text-white transition hover:brightness-95"
+            className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-[#25D366] lg:hidden px-4 text-sm font-semibold text-white transition hover:brightness-95"
           >
             <FaWhatsapp className="h-5 w-5" aria-hidden="true" />
             Chat on WhatsApp

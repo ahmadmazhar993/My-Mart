@@ -3,6 +3,7 @@ import { categoryService, productService } from '../../services';
 import CategoryModal from '../../components/CategoryModal';
 import ConfirmDeleteModal from '../../components/ConfirmDeleteModal';
 import { useToast } from '../../components/ToastProvider';
+import BrandLoader from '../../components/BrandLoader';
 
 const PlusIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,7 +126,7 @@ const AdminCategories = () => {
       {/* Table card */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <div className="p-6 text-sm text-gray-500">Loading...</div>
+          <BrandLoader minHeight={200} />
         ) : categories.length === 0 ? (
           <div className="p-10 text-center">
             <p className="mb-4 text-sm text-gray-500">No categories found.</p>

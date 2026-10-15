@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { orderService } from '../../services';
 import { PAYMENT_METHOD_LABELS } from '../../config/paymentAccounts';
+import BrandLoader from '../../components/BrandLoader';
 
 const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
@@ -392,7 +393,7 @@ const AdminOrders = () => {
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-card">
         {loading ? (
-          <div className="p-6 text-sm text-gray-500">Loading...</div>
+          <BrandLoader minHeight={200} />
         ) : orders.length === 0 ? (
           <div className="p-6 text-sm text-gray-500">No orders yet.</div>
         ) : (

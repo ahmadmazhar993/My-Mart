@@ -5,6 +5,7 @@ import MinimalHeader from './Minimalheader';
 import Footer from './Footer';
 import WhatsAppButton from './WhatsAppButton';
 import BottomNav, { shouldShowBottomNav } from './BottomNav';
+import BackButton from './BackButton';
 
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 
@@ -20,6 +21,7 @@ const Layout = () => {
     <div className={`flex min-h-screen flex-col bg-surface ${showBottomNav ? (matches(pathname, '/cart') ? 'pb-32 md:pb-20 lg:pb-0' : 'pb-14 md:pb-0') : ''}`}>
       {isAuthPage ? <MinimalHeader /> : <Header />}
       <main className="flex-1">
+        <BackButton />
         <Outlet />
       </main>
       <Footer />

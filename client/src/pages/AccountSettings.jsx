@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Breadcrumb } from '../components/ui';
 import { userService } from '../services';
 import { useAuthStore } from '../store';
+import BrandLoader from '../components/BrandLoader';
 
 const CITY_OPTIONS = [
   // 'Karachi',
@@ -148,7 +149,7 @@ const AccountSettings = () => {
           <p className="text-sm text-gray-500 mb-6">Update your personal information</p>
 
           {loadingProfile ? (
-            <p className="text-sm text-gray-500">Loading profile...</p>
+            <BrandLoader minHeight={200} text="Loading profile" />
           ) : (
             <>
               {message && (

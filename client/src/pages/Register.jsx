@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services';
 import { API_BASE, API_VERSION } from '../services/api';
 import { useAuthStore } from '../store';
+import BrandLoader from '../components/BrandLoader';
 
 const UserFieldIcon = () => (
   <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +287,7 @@ const Register = () => {
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading && (
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                <BrandLoader variant="button" />
               )}
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>

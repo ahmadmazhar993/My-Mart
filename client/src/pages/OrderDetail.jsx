@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
-import { Breadcrumb, EmptyState, ProductSkeleton } from '../components/ui';
+import { Breadcrumb, EmptyState } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
 import { API_BASE, API_VERSION } from '../services/api';
@@ -11,6 +11,7 @@ import { validatePaymentReceiptFile } from '../utils/paymentValidation';
 import ReceiptButtons from '../components/ReceiptButtons';
 import { MART_INFO } from '../data/siteContent';
 import { receiptService } from '../services';
+import BrandLoader from '../components/BrandLoader';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
@@ -132,7 +133,7 @@ const OrderDetail = () => {
   if (loading) {
     return (
       <div className="container-main animate-fade-in py-6">
-        <ProductSkeleton count={3} />
+        <BrandLoader minHeight={320} text="Loading order details" />
       </div>
     );
   }
@@ -380,7 +381,7 @@ const OrderDetail = () => {
                     />
                     {uploading && (
                       <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                        <BrandLoader variant="button" tone="brand" size={16} />
                         Uploading...
                       </p>
                     )}
