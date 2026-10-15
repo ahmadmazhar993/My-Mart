@@ -74,7 +74,8 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const inWishlist = isInWishlist(product.id);
   const variants = parseProductVariants(product);
   const firstVariant = variants[0] || null;
-  const availableStock = Number(firstVariant?.stock_quantity ?? product.stock_quantity ?? 0);
+  const stockValue = firstVariant?.stock_quantity ?? product.stock_quantity;
+  const availableStock = stockValue == null ? Number.MAX_SAFE_INTEGER : Number(stockValue);
   const isOutOfStock = availableStock <= 0;
   const isLowStock = !isOutOfStock && availableStock <= LOW_STOCK_THRESHOLD;
   const effectivePrice = firstVariant?.discount_price != null
@@ -131,16 +132,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const handleWishlist = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      discount_price: product.discount_price,
-      image_url: product.image_url,
-      images: product.images,
-      rating: product.rating,
-      review_count: product.review_count,
-    });
+    toggleItem({ ...product });
   };
 
   return (

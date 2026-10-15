@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { EmptyState, Breadcrumb } from '../components/ui';
 import { useAuthStore, useWishlistStore } from '../store';
+import { productService } from '../services';
+import BrandLoader from '../components/BrandLoader';
 
 const Wishlist = () => {
   const { isAuthenticated } = useAuthStore();
   const { items, removeItem } = useWishlistStore();
+  const [refreshing, setRefreshing] = useState(true);
+
+  // Saved items are a snapshot; reload each product so stock, price and variants are current.
+  useEffect(() => {
+    const saved = useWishlistStore.getState().items;
+    if (!isAuthenticated || saved.length === 0) {
+      setRefreshing(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    Promise.allSettled(saved.map((item) => productService.getProductById(item.id)))
+      .then((results) => {
+        if (cancelled) return;
+        const current = useWishlistStore.getState().items;
+        const merged = current.map((item) => {
+          const index = saved.findIndex((s) => s.id === item.id);
+          const result = index >= 0 ? results[index] : null;
+          const fresh = result?.status === 'fulfilled' ? result.value.data?.data : null;
+          return fresh ? { ...item, ...fresh } : item;
+        });
+        useWishlistStore.setState({ items: merged });
+      })
+      .finally(() => { if (!cancelled) setRefreshing(false); });
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login?redirect=/wishlist" replace />;
@@ -25,7 +54,9 @@ const Wishlist = () => {
         <p className="text-sm text-gray-500">{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
       </div>
 
-      {items.length === 0 ? (
+      {refreshing && items.length > 0 ? (
+        <BrandLoader minHeight={280} text="Loading your wishlist" />
+      ) : items.length === 0 ? (
         <div className="bg-white rounded-sm shadow-card">
           <EmptyState
             icon="❤️"

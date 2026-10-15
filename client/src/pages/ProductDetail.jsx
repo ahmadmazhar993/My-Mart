@@ -272,16 +272,7 @@ const ProductDetail = () => {
 
   const productReviews = reviews;
   const inWishlist = isInWishlist(product.id);
-  const handleToggleWishlist = () => toggleItem({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  discount_price: product.discount_price,
-                  image_url: product.image_url,
-                  images: product.images,
-                  rating: product.rating,
-                  review_count: product.review_count,
-                });
+  const handleToggleWishlist = () => toggleItem({ ...product });
   const isOutOfStock = availableStock <= 0;
 
   return (

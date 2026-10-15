@@ -31,6 +31,7 @@ const Products = () => {
 
   const [products, setProducts] = useState(restored?.products || []);
   const [categories, setCategories] = useState(restored?.categories || []);
+  const [categoriesReady, setCategoriesReady] = useState(Boolean(restored));
   const [loading, setLoading] = useState(!restored);
   const [sort, setSort] = useState(restored?.sort || 'popular');
   const [sortOpen, setSortOpen] = useState(false);
@@ -78,9 +79,23 @@ const Products = () => {
   const categoryMatch = categories.find((c) => c.slug === category);
   const categoryId = categoryMatch?.id;
 
+  // Categories load separately so a ?category=slug URL can be resolved to an id before the first
+  // product request (otherwise unfiltered products flash first, then get replaced).
+  useEffect(() => {
+    if (restored) return undefined;
+    let cancelled = false;
+    categoryService.getAllCategories()
+      .then((res) => { if (!cancelled) setCategories(res.data?.data || []); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setCategoriesReady(true); });
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const waitingForCategories = Boolean(category) && !categoriesReady;
+
   // Infinite scroll: `page` is the highest page loaded so far. Page 1 replaces the list (filters
   // changed or first visit); later pages are appended as the sentinel below the grid scrolls into view.
-  const filterKey = `${search}|${categoryId || ''}|${saleOnly}|${priceRange}`;
+  const filterKey = `${search}|${categoryId || ''}|${saleOnly}|${priceRange}|${sort}`;
 
   snapshotRef.current = { products, categories, sort, priceRange, page, pagination, filterKey, loading };
 
@@ -104,6 +119,8 @@ const Products = () => {
       filterKeyRef.current = filterKey;
       return undefined;
     }
+
+    if (waitingForCategories) return undefined;
 
     const filtersChanged = filterKeyRef.current !== filterKey;
     filterKeyRef.current = filterKey;
@@ -131,10 +148,11 @@ const Products = () => {
       category_id: categoryId || undefined,
       sale: saleOnly || undefined,
       priceRange,
+      sort, // ordering is done by the server so it applies to every page, not just the loaded ones
     });
 
-    Promise.all([productsRequest, isFirstPage ? categoryService.getAllCategories() : null])
-      .then(([productsRes, categoriesRes]) => {
+    productsRequest
+      .then((productsRes) => {
         if (cancelled) return;
         const incoming = productsRes.data?.data || [];
         setProducts((prev) => {
@@ -143,7 +161,6 @@ const Products = () => {
           return [...prev, ...incoming.filter((p) => !seen.has(p.id))];
         });
         setPagination(productsRes.data?.pagination || null);
-        if (categoriesRes) setCategories(categoriesRes.data?.data || []);
       })
       .catch(() => {
         if (cancelled) return;
@@ -158,7 +175,13 @@ const Products = () => {
       });
 
     return () => { cancelled = true; };
-  }, [page, filterKey, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, filterKey, retryKey, waitingForCategories]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // True while a request is pending or the filters just changed and the data on screen is for the
+  // previous filters (so we never show the old category's products or count).
+  const showLoading = loading
+    || waitingForCategories
+    || (filterKeyRef.current !== null && filterKeyRef.current !== filterKey);
 
   const hasNextPage = pagination
     ? Boolean(pagination.hasNextPage ?? page < (pagination.totalPages || 1))
@@ -223,14 +246,6 @@ const Products = () => {
       }
       if (priceRange === 'over-2000' && (p.discount_price || p.price) <= 2000) return false;
       return true;
-    })
-    .sort((a, b) => {
-      const priceA = a.discount_price || a.price;
-      const priceB = b.discount_price || b.price;
-      if (sort === 'price-asc') return priceA - priceB;
-      if (sort === 'price-desc') return priceB - priceA;
-      if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
-      return 0;
     });
 
   const pageTitle = saleOnly
@@ -295,6 +310,7 @@ const Products = () => {
               <h1 className="text-xl font-bold tracking-tight text-dark">{pageTitle}</h1>
               <p className="mt-0.5 text-sm text-gray-500">
                 {(() => {
+                  if (showLoading) return 'Loading products…';
                   const count = pagination?.total ?? filtered.length;
                   return count === 1 ? '1 product found' : `${count} products found`;
                 })()}
@@ -360,7 +376,7 @@ const Products = () => {
             </div>
           </div>
 
-          {loading ? (
+          {showLoading ? (
             <BrandLoader minHeight={420} text="Loading products" />
           ) : filtered.length === 0 ? (
             <div className="rounded-xl border border-gray-100 bg-white shadow-card">
