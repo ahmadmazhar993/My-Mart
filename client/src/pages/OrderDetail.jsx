@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 import { Link, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
-import { API_BASE, API_VERSION } from '../services/api';
+import { API_BASE } from '../services/api';
 import { useAuthStore } from '../store';
 import { useToast } from '../components/ToastProvider';
 import { formatPrice } from '../utils/format';
 import { validatePaymentReceiptFile } from '../utils/paymentValidation';
 import ReceiptButtons from '../components/ReceiptButtons';
 import { MART_INFO } from '../data/siteContent';
-import { receiptService } from '../services';
+import { receiptService, returnService } from '../services';
+import ItemReturn from '../components/ItemReturn';
 import BrandLoader from '../components/BrandLoader';
 
 const STATUS_STYLES = {
@@ -41,11 +43,16 @@ const OrderDetail = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [showReplaceForm, setShowReplaceForm] = useState(false);
+  const [returns, setReturns] = useState([]);
 
-  const loadOrder = useCallback(async (showToast = false) => {
+  const loadReturns = useCallback(() => {
+    returnService.forOrder(id).then((res) => setReturns(res.data?.data || [])).catch(() => setReturns([]));
+  }, [id]);
+
+  const loadOrder = useCallback(async (showToast = false, silent = false) => {
     if (!isAuthenticated) return;
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await orderService.getOrderById(id);
       const nextOrder = res.data?.data || null;
@@ -63,7 +70,7 @@ const OrderDetail = () => {
         setReceipt(null);
       }
     } catch {
-      setError('Failed to load order details');
+      if (!silent) setError('Failed to load order details');
     } finally {
       setLoading(false);
     }
@@ -74,29 +81,12 @@ const OrderDetail = () => {
   }, [id, isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
+    if (isAuthenticated && order?.status === 'delivered') loadReturns();
+  }, [isAuthenticated, order?.status, loadReturns]);
 
-    const eventSourceUrl = (() => {
-      const url = new URL(`${API_VERSION}/orders/events`, API_BASE);
-      const token = localStorage.getItem('token');
-      if (token) {
-        url.searchParams.set('token', token);
-      }
-      return url.toString();
-    })();
-
-    const eventSource = new EventSource(eventSourceUrl);
-    eventSource.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === 'orders-updated') {
-        loadOrder(true);
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [isAuthenticated, loadOrder]);
+  // Live updates: only this customer's own order and returns are announced (scoped stream).
+  useLiveRefresh(['order'], () => loadOrder(false, true), { enabled: isAuthenticated });
+  useLiveRefresh(['return'], loadReturns, { enabled: isAuthenticated && order?.status === 'delivered' });
 
   const handleReceiptUpload = async (event) => {
     const file = event.target.files?.[0];
@@ -270,6 +260,8 @@ const OrderDetail = () => {
                     )}
 
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+
+                    <ItemReturn order={order} item={item} returns={returns} onChange={loadReturns} />
                   </div>
 
                   <p className="font-semibold text-gray-900">

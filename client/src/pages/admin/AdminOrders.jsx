@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 import { Link, useNavigate } from 'react-router-dom';
 import { orderService } from '../../services';
 import { PAYMENT_METHOD_LABELS } from '../../config/paymentAccounts';
@@ -46,10 +47,10 @@ const AdminOrders = () => {
   const filterButtonRef = useRef(null);
   const panelRef = useRef(null);
 
-  const loadOrders = (nextPage = page) => {
-    setLoading(true);
+  const loadOrders = (nextPage = page, silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
-    orderService.getAllOrders({
+    return orderService.getAllOrders({
       page: nextPage,
       limit: 10,
       status: statusFilter || undefined,
@@ -67,6 +68,7 @@ const AdminOrders = () => {
   };
 
   useEffect(() => { loadOrders(page); }, [page, statusFilter, paymentFilter, startDate, endDate, search]);
+  useLiveRefresh(['order'], () => loadOrders(page, true));
 
   const submitSearch = (event) => {
     event.preventDefault();
@@ -161,8 +163,9 @@ const AdminOrders = () => {
       await orderService.updateOrderStatus(id, status);
       broadcastOrderUpdate();
       loadOrders(page);
-    } catch {
-      setError('Failed to update order status');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to update order status');
+      loadOrders(page);
     }
   };
 

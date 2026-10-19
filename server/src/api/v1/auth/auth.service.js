@@ -270,6 +270,45 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
+// Loads the caller's seller profile. Access is granted only when the account
+// holds the Seller role AND the application is approved; every seller API
+// scopes its queries by req.seller.sellerID, never by anything in the request.
+const isApprovedSeller = async (req, res, next) => {
+  try {
+    const roleRow = await db('accessTemplate')
+      .first('type')
+      .where('accessTemplateID', req.activeUser.accessTemplateID);
+
+    const seller = roleRow?.type === 'Seller'
+      ? await db('sellers').first('*').where('user_id', req.activeUser.userID)
+      : null;
+
+    if (!seller) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Seller access required',
+      });
+    }
+
+    if (seller.status !== 'approved') {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        code: `seller_${seller.status}`,
+        message: `Your seller account is ${seller.status}.`,
+      });
+    }
+
+    req.seller = seller;
+    return next();
+  } catch (e) {
+    logger.error(`[AUTH][Function::isApprovedSeller][Path::${req.path}][Method::${req.method}]::Exception::`, e);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Authorization failed',
+    });
+  }
+};
+
 const logout = (req, res) => {
   activityLogger({
     targetEntity: 'Auth',
@@ -675,6 +714,7 @@ module.exports = {
   register,
   login,
   isAdmin,
+  isApprovedSeller,
   logout,
   createRecoverUserPasswordToken,
   validateRecoverPasswordToken,

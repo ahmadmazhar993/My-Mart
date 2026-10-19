@@ -43,6 +43,11 @@ const AuthInitializer = ({ children }) => {
         window.__AHM_AUTH_INIT_DONE = true;
       })
       .catch((error) => {
+        // Only a real "you are not signed in" answer ends the session. A network error, a timeout, or a
+        // request cancelled because the page was reloaded/navigated must NOT wipe the stored login.
+        const status = error?.response?.status;
+        if (status !== 401 && status !== 403) return;
+
         const message = error?.response?.data?.message || error?.message || '';
         const isExpiredSession = /token expired|invalid token|no token provided/i.test(message);
 

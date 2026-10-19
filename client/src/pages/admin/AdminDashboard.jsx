@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 import { Link } from 'react-router-dom';
 import { productService, categoryService, orderService, userService } from '../../services';
 import BrandLoader from '../../components/BrandLoader';
@@ -33,8 +34,8 @@ const AdminDashboard = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
+  const load = useCallback(() => {
+    return Promise.all([
       productService.getAllProductsAdmin(),
       categoryService.getAllCategories(),
       orderService.getAllOrders(),
@@ -57,6 +58,9 @@ const AdminDashboard = () => {
       .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useLiveRefresh(['order', 'product', 'seller'], load);
 
   if (loading) {
     return <BrandLoader minHeight={320} text="Loading dashboard" />;

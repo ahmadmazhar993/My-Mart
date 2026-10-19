@@ -314,14 +314,14 @@ export const INFO_PAGES = {
     sections: [
       {
         heading: 'Selling with AHM Mart',
-        body: 'We are interested in hearing from businesses that offer quality products in the categories we sell. At the moment sellers are onboarded by our team directly; there is no self-service seller registration on the website.',
+        body: 'We are interested in hearing from businesses that offer quality products in the categories we sell. You can apply online with your AHM Mart account. Every application is reviewed by our team before a seller account is activated, and new products are reviewed before they appear on the store.',
       },
       {
         heading: 'How to get started',
-        body: '1. Contact us with your business name, the products you sell, and your contact details\n2. Our team will review your enquiry and reply with the next steps\nTerms, fees and requirements are discussed directly with each seller.',
+        body: '1. Sign in (or create a customer account) and submit the seller application\n2. Our team reviews your application and you can check its status any time\n3. Once approved, add products in the Seller Centre; each product is reviewed before it goes live\nThe current seller fees are shown on the application page before you submit.',
       },
     ],
-    cta: { title: 'Tell us about your business', label: 'Send an enquiry', to: '/pages/contact?topic=seller', secondary: { label: 'Become a Seller', to: '/pages/become-seller' } },
+    cta: { title: 'Ready to start?', label: 'Apply to sell', to: '/seller/apply', secondary: { label: 'Ask a question first', to: '/pages/contact?topic=seller' } },
   },
 
   'become-seller': {
@@ -334,10 +334,10 @@ export const INFO_PAGES = {
       },
       {
         heading: 'What happens next',
-        body: 'Our team will review your information and contact you. We will explain the onboarding steps, requirements and any commercial terms before anything is agreed.',
+        body: 'Our team reviews your application. Your account is not a seller account until it is approved, and we will explain the requirements and any commercial terms before anything is agreed.',
       },
     ],
-    cta: { title: 'Apply to sell', label: 'Send an enquiry', to: '/pages/contact?topic=seller', secondary: { label: 'Sell on AHM Mart', to: '/pages/sell' } },
+    cta: { title: 'Apply to sell', label: 'Start your application', to: '/seller/apply', secondary: { label: 'Ask a question first', to: '/pages/contact?topic=seller' } },
   },
 
   advertise: {
@@ -474,7 +474,7 @@ export const HELP_FAQ = [
       },
       {
         q: 'I want to sell on AHM Mart. What do I do?',
-        a: 'See Become a Seller and send us an enquiry through the contact page.',
+        a: 'Sign in and submit the seller application. See Become a Seller for what to prepare, or send us an enquiry through the contact page.',
       },
     ],
   },

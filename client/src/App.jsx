@@ -1,8 +1,11 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import Layout from './components/Layout';
 import RequireAdmin from './components/RequireAdmin';
+import RequireSeller from './components/seller/RequireSeller';
+import SellerLayout from './components/seller/SellerLayout';
 import AdminLayout from './components/admin/AdminLayout';
 import PageLoader from './components/PageLoader';
+import RealtimeBridge from './components/RealtimeBridge';
 import { useToast } from './components/ToastProvider';
 import axiosClient from './services/api';
 
@@ -37,10 +40,28 @@ const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminCreateOrder = lazy(() => import('./pages/admin/AdminCreateOrder'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
 const AdminSales = lazy(() => import('./pages/admin/AdminSales'));
+const AdminSellers = lazy(() => import('./pages/admin/AdminSellers'));
+const AdminSellerDetail = lazy(() => import('./pages/admin/AdminSellerDetail'));
+const AdminProductReview = lazy(() => import('./pages/admin/AdminProductReview'));
+const SellerApply = lazy(() => import('./pages/seller/SellerApply'));
+const SellerDashboard = lazy(() => import('./pages/seller/SellerDashboard'));
+const SellerProducts = lazy(() => import('./pages/seller/SellerProducts'));
+const SellerProductForm = lazy(() => import('./pages/seller/SellerProductForm'));
+const SellerInventory = lazy(() => import('./pages/seller/SellerInventory'));
+const SellerOrders = lazy(() => import('./pages/seller/SellerOrders'));
+const SellerOrderDetail = lazy(() => import('./pages/seller/SellerOrderDetail'));
+const SellerStoreSettings = lazy(() => import('./pages/seller/SellerStoreSettings'));
+const SellerEarnings = lazy(() => import('./pages/seller/SellerEarnings'));
+const SellerAnalytics = lazy(() => import('./pages/seller/SellerAnalytics'));
+const SellerReturns = lazy(() => import('./pages/seller/SellerReturns'));
+const SellerReturnDetail = lazy(() => import('./pages/seller/SellerReturns').then((m) => ({ default: m.SellerReturnDetail })));
+const AdminFinance = lazy(() => import('./pages/admin/AdminFinance'));
+const AdminReturns = lazy(() => import('./pages/admin/AdminReturns'));
+const MyReturns = lazy(() => import('./pages/MyReturns'));
 
 import './styles/index.css';
 
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 function App() {
   const { addToast } = useToast();
@@ -104,6 +125,7 @@ function App() {
 
   return (
     <>
+      <RealtimeBridge />
       {showVersionUpdateModal && (
         <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -136,6 +158,29 @@ function App() {
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/create" element={<AdminCreateOrder />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="sellers" element={<AdminSellers />} />
+              <Route path="sellers/:id" element={<AdminSellerDetail />} />
+              <Route path="seller-products" element={<AdminProductReview />} />
+              <Route path="finance" element={<AdminFinance />} />
+              <Route path="returns" element={<AdminReturns />} />
+            </Route>
+          </Route>
+
+          <Route element={<RequireSeller />}>
+            <Route path="/seller" element={<SellerLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<SellerDashboard />} />
+              <Route path="products" element={<SellerProducts />} />
+              <Route path="products/new" element={<SellerProductForm />} />
+              <Route path="products/:id/edit" element={<SellerProductForm />} />
+              <Route path="inventory" element={<SellerInventory />} />
+              <Route path="orders" element={<SellerOrders />} />
+              <Route path="orders/:id" element={<SellerOrderDetail />} />
+              <Route path="earnings" element={<SellerEarnings />} />
+              <Route path="analytics" element={<SellerAnalytics />} />
+              <Route path="returns" element={<SellerReturns />} />
+              <Route path="returns/:id" element={<SellerReturnDetail />} />
+              <Route path="store-settings" element={<SellerStoreSettings />} />
             </Route>
           </Route>
 
@@ -145,12 +190,14 @@ function App() {
             <Route path="/products/:identifier" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/seller/apply" element={<SellerApply />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />
+            <Route path="/returns" element={<MyReturns />} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/settings" element={<AccountSettings />} />

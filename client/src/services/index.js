@@ -80,10 +80,107 @@ export const cartService = {
   updateCartItem: (itemId, quantity) => api.put(`/cart/items/${itemId}`, { quantity }),
 };
 
-export const sellerService = {
-  getAllSellers: () => api.get('/sellers'),
-  getSellerById: (id) => api.get(`/sellers/${id}`),
-  createSeller: (data) => api.post('/sellers', data),
+// Seller self-service (approved sellers) and the public application endpoints.
+export const sellerPortalService = {
+  getMyStatus: () => api.get('/seller/me'),
+  apply: (data) => api.post('/seller/apply', data),
+  getDashboard: (params) => api.get('/seller/dashboard', { params }),
+  getProfile: () => api.get('/seller/profile'),
+  updateProfile: (data) => api.put('/seller/profile', data),
+  uploadLogo: (file) => {
+    const form = new FormData();
+    form.append('logo', file);
+    return api.post('/seller/profile/logo', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  getCategories: () => api.get('/seller/categories'),
+  listProducts: (params) => api.get('/seller/products', { params }),
+  getProduct: (id) => api.get(`/seller/products/${id}`),
+  createProduct: (data) => api.post('/seller/products', data),
+  updateProduct: (id, data) => api.put(`/seller/products/${id}`, data),
+  submitProduct: (id) => api.post(`/seller/products/${id}/submit`),
+  publishProduct: (id) => api.post(`/seller/products/${id}/publish`),
+  unpublishProduct: (id) => api.post(`/seller/products/${id}/unpublish`),
+  deleteProduct: (id) => api.delete(`/seller/products/${id}`),
+  uploadProductImages: (files) => {
+    const form = new FormData();
+    files.forEach((file) => form.append('images', file));
+    return api.post('/seller/products/upload-images', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  listInventory: (params) => api.get('/seller/inventory', { params }),
+  updateStock: (id, data) => api.put(`/seller/inventory/${id}`, data),
+  listStockMovements: (id) => api.get(`/seller/inventory/${id}/movements`),
+  listOrders: (params) => api.get('/seller/orders', { params }),
+  getOrder: (id) => api.get(`/seller/orders/${id}`),
+  updateFulfillment: (id, status) => api.put(`/seller/orders/${id}/fulfillment`, { status }),
+  getFeePolicy: () => api.get('/seller/fee-policy'),
+  getEarnings: (params) => api.get('/seller/earnings', { params }),
+  listTransactions: (params) => api.get('/seller/earnings/transactions', { params }),
+  listLedger: (params) => api.get('/seller/earnings/ledger', { params }),
+  listPayouts: (params) => api.get('/seller/payouts', { params }),
+  // The key makes a retried/double-clicked request return the original payout instead of creating another.
+  requestPayout: (data, idempotencyKey) => api.post('/seller/payouts', data, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  getAnalytics: (params) => api.get('/seller/analytics', { params }),
+  downloadSalesCsv: (params) => api.get('/seller/analytics/export.csv', { params, responseType: 'blob' }),
+  listReturns: (params) => api.get('/seller/returns', { params }),
+  getReturn: (id) => api.get(`/seller/returns/${id}`),
+  messageReturn: (id, body) => api.post(`/seller/returns/${id}/messages`, { body }),
+  receiveReturn: (id, note) => api.post(`/seller/returns/${id}/receive`, { note }),
+};
+
+// Customer returns.
+export const returnService = {
+  uploadEvidence: (files) => {
+    const form = new FormData();
+    files.forEach((file) => form.append('images', file));
+    return api.post('/returns/upload-evidence', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  create: (data) => api.post('/returns', data),
+  mine: () => api.get('/returns/mine'),
+  forOrder: (orderId) => api.get(`/returns/order/${orderId}`),
+  get: (id) => api.get(`/returns/${id}`),
+  message: (id, body) => api.post(`/returns/${id}/messages`, { body }),
+  cancel: (id) => api.post(`/returns/${id}/cancel`),
+};
+
+// Admin finance and returns.
+export const adminFinanceService = {
+  getCommission: () => api.get('/admin/finance/commission'),
+  setCommission: (rate_percent, note) => api.post('/admin/finance/commission', { rate_percent, note }),
+  overview: (params) => api.get('/admin/finance/overview', { params }),
+  commissionReport: (params) => api.get('/admin/finance/commissions', { params }),
+  sellerBalances: (params) => api.get('/admin/finance/sellers', { params }),
+  sellerFinance: (id) => api.get(`/admin/finance/sellers/${id}`),
+  listPayouts: (params) => api.get('/admin/finance/payouts', { params }),
+  completePayout: (id, reference) => api.post(`/admin/finance/payouts/${id}/complete`, { reference }),
+  rejectPayout: (id, reason) => api.post(`/admin/finance/payouts/${id}/reject`, { reason }),
+  failPayout: (id, reason) => api.post(`/admin/finance/payouts/${id}/fail`, { reason }),
+};
+
+export const adminReturnService = {
+  list: (params) => api.get('/admin/returns', { params }),
+  get: (id) => api.get(`/admin/returns/${id}`),
+  message: (id, body) => api.post(`/admin/returns/${id}/messages`, { body }),
+  approve: (id, note) => api.post(`/admin/returns/${id}/approve`, { note }),
+  reject: (id, note) => api.post(`/admin/returns/${id}/reject`, { note }),
+  refund: (id, amount) => api.post(`/admin/returns/${id}/refund`, { amount }),
+  getSettings: () => api.get('/admin/returns/settings'),
+  setReturnWindow: (return_window_days) => api.put('/admin/returns/settings', { return_window_days }),
+};
+
+// Admin seller management.
+export const adminSellerService = {
+  listSellers: (params) => api.get('/sellers', { params }),
+  getSeller: (id) => api.get(`/sellers/${id}`),
+  updateSeller: (id, data) => api.put(`/sellers/${id}`, data),
+  approve: (id) => api.post(`/sellers/${id}/approve`),
+  reject: (id, reason) => api.post(`/sellers/${id}/reject`, { reason }),
+  suspend: (id, reason) => api.post(`/sellers/${id}/suspend`, { reason }),
+  reactivate: (id) => api.post(`/sellers/${id}/reactivate`),
+  listSellerOrders: (id, params) => api.get(`/sellers/${id}/orders`, { params }),
+  listSellerProducts: (id, params) => api.get(`/sellers/${id}/products`, { params }),
+  listReviewQueue: (params) => api.get('/sellers/products/review', { params }),
+  approveProduct: (productId) => api.post(`/sellers/products/${productId}/approve`),
+  rejectProduct: (productId, reason) => api.post(`/sellers/products/${productId}/reject`, { reason }),
 };
 
 export const contactService = {

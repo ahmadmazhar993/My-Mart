@@ -11,6 +11,7 @@ const buildPasswordResetBody = require('./builders/passwordReset');
 const buildEmailVerificationBody = require('./builders/emailVerification');
 const buildNewOrderAdminBody = require('./builders/newOrderAdmin');
 const buildAdminCreatedOrderBody = require('./builders/adminCreatedOrder');
+const buildSellerNotificationBody = require('./builders/sellerNotification');
 
 async function sendContactEmails({ name, email, message }) {
   const adminResult = await sendEmail({
@@ -185,7 +186,20 @@ async function sendAdminNewOrderEmail({
   });
 }
 
+async function sendSellerNotificationEmail({
+  email, subject, shopName, title, lines, dictionary, buttonText, path = '/seller/dashboard',
+}) {
+  return sendEmail({
+    to: email,
+    subject,
+    body: buildSellerNotificationBody({
+      shopName, title, lines, dictionary, buttonText, link: `${site.siteUrl}${path}`,
+    }),
+  });
+}
+
 module.exports = {
+  sendSellerNotificationEmail,
   sendContactEmails,
   sendWelcomeEmail,
   sendOrderConfirmationEmail,

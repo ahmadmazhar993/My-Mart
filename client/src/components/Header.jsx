@@ -206,6 +206,10 @@ const Header = () => {
                     <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Profile</Link>
                     <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Orders</Link>
                     <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">Wishlist</Link>
+                    <Link to="/returns" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Returns</Link>
+                    {user?.role === 'Seller' && (
+                      <Link to="/seller/dashboard" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-50">Seller Centre</Link>
+                    )}
                     {user?.role === 'Admin' && (
                       <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-50">Admin Panel</Link>
                     )}

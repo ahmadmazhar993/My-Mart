@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
 import { useAuthStore } from '../store';
 import { useToast } from '../components/ToastProvider';
-import { API_BASE, API_VERSION } from '../services/api';
+import { API_BASE } from '../services/api';
 import { formatPrice } from '../utils/format';
 import { validatePaymentReceiptFile } from '../utils/paymentValidation';
 import BrandLoader from '../components/BrandLoader';
@@ -52,10 +53,10 @@ const Orders = () => {
   const [replaceFormIds, setReplaceFormIds] = useState(() => new Set());
   const placedPaymentMethod = location.state?.paymentMethod;
 
-  const loadOrders = useCallback(async (showToast = false) => {
+  const loadOrders = useCallback(async (showToast = false, silent = false) => {
     if (!isAuthenticated) return;
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await orderService.getAllOrders();
       const nextOrders = res.data?.data || [];
@@ -66,7 +67,7 @@ const Orders = () => {
         return nextOrders;
       });
     } catch {
-      setOrders([]);
+      if (!silent) setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -76,30 +77,8 @@ const Orders = () => {
     loadOrders();
   }, [isAuthenticated, user?.id]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return undefined;
-
-    const eventSourceUrl = (() => {
-      const url = new URL(`${API_VERSION}/orders/events`, API_BASE);
-      const token = localStorage.getItem('token');
-      if (token) {
-        url.searchParams.set('token', token);
-      }
-      return url.toString();
-    })();
-
-    const eventSource = new EventSource(eventSourceUrl);
-    eventSource.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === 'orders-updated') {
-        loadOrders(true);
-      }
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [isAuthenticated, loadOrders]);
+  // Live updates: only this customer's own orders are announced (scoped stream).
+  useLiveRefresh(['order'], () => loadOrders(false, true), { enabled: isAuthenticated });
 
   const toggleReplaceForm = (orderId, show) => {
     setReplaceFormIds((current) => {

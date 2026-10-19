@@ -10,6 +10,12 @@ const {
   sendOrderConfirmationEmail, sendAdminCreatedOrderEmail, sendOrderStatusEmail, sendAdminNewOrderEmail,
 } = require('../../../email/templates');
 const orderEvents = require('../../../libs/orderEvents');
+const { lockProduct, applyStockDelta, StockError } = require('../../../libs/stock');
+const { postOrderEarnings, reverseOrderEarnings, FinanceError } = require('../../../libs/ledger');
+const { notifySeller } = require('../../../libs/sellerNotify');
+const realtime = require('../../../libs/realtime');
+const { shippingCostFor, isDeliverableAddress, DELIVERY_CITIES } = require('../../../libs/shipping');
+const { canTransition, allowedNext } = require('../../../libs/orderStatus');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_METHODS = ['cod', 'online'];
@@ -339,7 +345,7 @@ async function createOrder(req, res) {
   const {
     user_id,
     shipping_address,
-    shipping_cost = 0,
+    shipping_cost,
     payment_method = 'cod',
     items,
     payment_details = {},
@@ -388,6 +394,13 @@ async function createOrder(req, res) {
       });
     }
 
+    if (!isAdminRequest && !isDeliverableAddress(shipping_address)) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: `We currently deliver only in ${DELIVERY_CITIES.join(', ')}.`,
+      });
+    }
+
     const userId = user_id || req.activeUser.userID;
     const selectedUser = await db('user')
       .where({ userID: userId, isDeleted: false })
@@ -400,10 +413,21 @@ async function createOrder(req, res) {
       let subtotal = 0;
       const lineItems = [];
 
-      for (const item of items) {
-        const product = await trx('products').where({ productID: item.product_id }).first();
+      // Lock products in a stable order so concurrent multi-item checkouts
+      // cannot deadlock each other.
+      const orderedItems = [...items].sort((a, b) => String(a.product_id).localeCompare(String(b.product_id)));
+      for (const item of orderedItems) {
+        if (!Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1) {
+          throw new Error('Item quantity must be a whole number of at least 1');
+        }
+        // Row lock: concurrent checkouts of the same product queue here, so the
+        // stock check below and the decrement are atomic.
+        const product = await lockProduct(trx, item.product_id);
         if (!product) {
           throw new Error(`Product ${item.product_id} not found`);
+        }
+        if (!product.isActive || product.approvalStatus !== 'approved') {
+          throw new Error(`${product.name} is not available for purchase`);
         }
         const requestedVariant = item.variant_sku || item.variant_name || item.variant_label;
         const variants = parseProductVariants(product.variants);
@@ -423,10 +447,25 @@ async function createOrder(req, res) {
         if (availableStock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
+        // Decrement now (inside the lock) so repeated lines for one product
+        // are checked against the already-reduced stock.
+        await applyStockDelta(trx, product, {
+          delta: -Number(item.quantity),
+          reason: 'order_placed',
+          variant: selectedVariant
+            ? { sku: selectedVariant.sku, name: selectedVariant.name, label: selectedVariant.label }
+            : null,
+          actorId: req.activeUser.userID,
+        });
 
         const unitPrice = Number(
           selectedVariant?.discount_price ?? selectedVariant?.price
             ?? product.discountPrice ?? product.price
+        );
+        // List price before any discount: the seller commission base.
+        const originalUnitPrice = Math.max(
+          Number(selectedVariant?.price ?? product.price),
+          unitPrice
         );
         // Prefer variant-level purchase price if available, otherwise fallback to product.purchasePrice
         const purchasePriceSnapshot = (selectedVariant && (selectedVariant.purchase_price != null))
@@ -440,6 +479,7 @@ async function createOrder(req, res) {
           seller_id: product.seller_id,
           quantity: item.quantity,
           unitPrice,
+          originalUnitPrice,
           purchasePrice: purchasePriceSnapshot,
           totalPrice: lineTotal,
           variant_name: selectedVariant?.name || item.variant_name || null,
@@ -453,7 +493,10 @@ async function createOrder(req, res) {
       //   throw new Error(`Minimum order amount is Rs. ${MINIMUM_ORDER_SUBTOTAL}. Please add more items to your cart.`);
       // }
 
-      const shipping = Number(shipping_cost) || 0;
+      // Delivery is priced by the server; only an admin may override it (never negative).
+      const adminShipping = isAdminRequest && shipping_cost != null && Number(shipping_cost) >= 0
+        ? Number(shipping_cost) : null;
+      const shipping = adminShipping ?? shippingCostFor(subtotal);
       const totalPrice = subtotal + shipping;
       const orderCode = await createUniqueOrderReferenceCode(trx);
 
@@ -477,15 +520,13 @@ async function createOrder(req, res) {
           seller_id: line.seller_id,
           quantity: line.quantity,
           unitPrice: line.unitPrice,
+          originalUnitPrice: line.originalUnitPrice,
           purchasePrice: line.purchasePrice,
           totalPrice: line.totalPrice,
           variant_name: line.variant_name,
           variant_label: line.variant_label,
           variant_sku: line.variant_sku,
         });
-        await trx('products')
-          .where({ productID: line.product_id })
-          .decrement('stockQuantity', line.quantity);
       }));
 
       await trx('payments').insert({
@@ -545,9 +586,32 @@ async function createOrder(req, res) {
       });
     }
 
+    // One email per seller, listing only that seller's items (fire-and-forget).
+    const itemsBySeller = new Map();
+    orderItems.forEach((item) => {
+      itemsBySeller.set(item.seller_id, [...(itemsBySeller.get(item.seller_id) || []), item]);
+    });
+    itemsBySeller.forEach((sellerItems, sellerId) => {
+      notifySeller(sellerId, 'newOrder', {
+        subject: `New order #${result.orderCode || result.orderID} – AHM Mart`,
+        title: 'You have a new order',
+        lines: ['A customer has placed an order that includes your products.'],
+        dictionary: {
+          Order: `#${result.orderCode || result.orderID}`,
+          Items: sellerItems.map((i) => `${i.quantity} × ${i.product_name || 'Product'}`).join(', '),
+        },
+        buttonText: 'View order',
+        path: `/seller/orders/${result.orderID}`,
+      });
+    });
+
     // Notify admin clients (SSE/Web UI) that orders have been updated/created
     try {
       orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: result.orderID });
+      realtime.emitOrder(result.orderID, 'created', {
+        admin: `New order #${result.orderCode}`,
+        seller: 'You have a new order.',
+      });
     } catch (evErr) {
       logger.error('[ORDERS][createOrder]::Failed to emit order event', evErr);
     }
@@ -667,6 +731,32 @@ async function submitPaymentProof(req, res) {
   }
 }
 
+// direction: 1 = give the order's quantities back, -1 = take them again.
+async function adjustOrderStock(trx, orderId, direction, actorId) {
+  const items = await trx('order_items').where({ order_id: orderId }).orderBy('product_id');
+  for (const item of items) {
+    const product = await lockProduct(trx, item.product_id);
+    if (product) {
+      const options = {
+        delta: direction * Number(item.quantity),
+        reason: direction > 0 ? 'order_cancelled' : 'order_reopened',
+        orderId,
+        actorId,
+      };
+      const variant = (item.variant_name || item.variant_label)
+        ? { sku: item.variant_sku, name: item.variant_name, label: item.variant_label }
+        : null;
+      try {
+        await applyStockDelta(trx, product, { ...options, variant });
+      } catch (err) {
+        // The variant may have been removed since the order; fall back to the product total.
+        if (!(variant && err instanceof StockError && /no longer available/.test(err.message))) throw err;
+        await applyStockDelta(trx, product, options);
+      }
+    }
+  }
+}
+
 async function updateOrderStatus(req, res) {
   try {
     const { id } = req.params;
@@ -704,6 +794,14 @@ async function updateOrderStatus(req, res) {
       });
     }
 
+    if (normalizedStatus && !canTransition(order.status, normalizedStatus)) {
+      return res.status(StatusCodes.CONFLICT).json({
+        success: false,
+        message: `An order cannot move from ${order.status} to ${normalizedStatus}. Allowed next: ${allowedNext(order.status).join(', ') || 'none'}.`,
+        allowed: allowedNext(order.status),
+      });
+    }
+
     const updatePayload = {
       updatedOn: db.fn.now(),
     };
@@ -716,12 +814,10 @@ async function updateOrderStatus(req, res) {
       updatePayload.paymentStatus = normalizedPaymentStatus;
     }
 
-    if (normalizedPaymentStatus === 'paid') {
+    // Confirming payment on a not-yet-processing order starts processing; it never moves a
+    // shipped/delivered/cancelled order backwards.
+    if (normalizedPaymentStatus === 'paid' && !normalizedStatus && ['pending', 'confirmed'].includes(order.status)) {
       updatePayload.status = 'processing';
-    }
-
-    if (normalizedPaymentStatus === 'unpaid' && !normalizedStatus) {
-      updatePayload.status = 'pending';
     }
 
     if (normalizedStatus === 'shipped') {
@@ -736,11 +832,69 @@ async function updateOrderStatus(req, res) {
       updatePayload.paymentStatus = 'paid';
     }
 
-    const [updatedOrder] = await db('orders')
-      .where({ orderID: id })
-      .update(updatePayload, '*');
+    // Stock follows the order: cancelling returns it, re-opening a cancelled
+    // order takes it again (and fails if it is no longer available).
+    const nextStatus = updatePayload.status;
+    const stockDirection = (() => {
+      if (nextStatus === 'cancelled' && order.status !== 'cancelled') return 1;
+      if (order.status === 'cancelled' && nextStatus && nextStatus !== 'cancelled') return -1;
+      return 0;
+    })();
+
+    let updatedOrder;
+    try {
+      updatedOrder = await db.transaction(async (trx) => {
+        if (stockDirection !== 0) {
+          await adjustOrderStock(trx, id, stockDirection, req.activeUser?.userID);
+        }
+        const [row] = await trx('orders').where({ orderID: id }).update(updatePayload, '*');
+
+        // Admin dispatch/delivery marks every item shipped so seller views stay consistent.
+        if (['shipped', 'delivered'].includes(row.status) && row.status !== order.status) {
+          const lagging = await trx('order_items').where({ order_id: id }).whereNot('fulfillmentStatus', 'shipped')
+            .select('orderItemID', 'fulfillmentStatus');
+          if (lagging.length) {
+            await trx('order_items').whereIn('orderItemID', lagging.map((i) => i.orderItemID)).update({ fulfillmentStatus: 'shipped' });
+            await trx('order_item_status_history').insert(lagging.map((i) => ({
+              order_item_id: i.orderItemID, fromStatus: i.fulfillmentStatus, toStatus: 'shipped', actor_user_id: req.activeUser?.userID,
+            })));
+          }
+        }
+
+        // Seller earnings follow the order, in the same transaction so the two can never disagree.
+        const actorId = req.activeUser?.userID;
+        const becamePaid = row.paymentStatus === 'paid' && order.paymentStatus !== 'paid';
+        const reopened = order.status === 'cancelled' && row.status !== 'cancelled';
+        if (row.status === 'cancelled' && order.status !== 'cancelled') {
+          await reverseOrderEarnings(trx, id, { reason: 'order_cancelled', actorId });
+        } else if (row.paymentStatus === 'refunded' && order.paymentStatus !== 'refunded') {
+          await reverseOrderEarnings(trx, id, { reason: 'order_refunded', actorId });
+        } else if (order.paymentStatus === 'paid' && row.paymentStatus === 'unpaid') {
+          await reverseOrderEarnings(trx, id, { reason: 'payment_reverted', actorId });
+        } else if (row.paymentStatus === 'paid' && (becamePaid || reopened) && row.status !== 'cancelled') {
+          await postOrderEarnings(trx, id, { actorId });
+        }
+        return row;
+      });
+    } catch (err) {
+      if (err instanceof StockError) {
+        return res.status(StatusCodes.CONFLICT).json({ success: false, message: err.message });
+      }
+      if (err instanceof FinanceError) {
+        return res.status(err.status).json({ success: false, message: err.message });
+      }
+      throw err;
+    }
 
     orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: id });
+    {
+      const statusChanged = updatedOrder.status !== order.status;
+      const label = `#${updatedOrder.orderCode}`;
+      realtime.emitOrder(id, statusChanged ? 'status' : 'updated', {
+        customer: statusChanged ? `Your order ${label} is now ${updatedOrder.status}.` : `Your order ${label} was updated.`,
+        seller: statusChanged ? `Order ${label} is now ${updatedOrder.status}.` : null,
+      });
+    }
 
     const paymentUpdate = {};
     if (normalizedPaymentStatus === 'paid') {

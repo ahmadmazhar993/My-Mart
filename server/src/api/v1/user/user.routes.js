@@ -35,7 +35,7 @@ const {
 
 router
   .route('/')
-  .get(isAuthenticated, getAllUsers, sendUserResponse);
+  .get(isAuthenticated, isAdmin, getAllUsers, sendUserResponse);
 
 router
   .route('/profile')
@@ -81,6 +81,7 @@ router
   .route('/create')
   .post(
     isAuthenticated,
+    isAdmin,
     validateCreateUserForm,
     getUserByEmail,
     createUser,
@@ -93,9 +94,10 @@ router
 
 router
   .route('/:userID')
-  .get(isAuthenticated, getUserById, sendUserResponse)
+  .get(isAuthenticated, isAdmin, getUserById, sendUserResponse)
   .put(
     isAuthenticated,
+    isAdmin,
     getUserById,
     validateUpdateUserWithAdminForm,
     getUserByEmail,
@@ -103,6 +105,8 @@ router
     sendUserResponse
   )
   .patch(
+    isAuthenticated,
+    isAdmin,
     getUserById,
     validateUserStatusWithAdminForm,
     updateUserStatusWithAdmin,
@@ -110,6 +114,7 @@ router
   )
   .delete(
     isAuthenticated,
+    isAdmin,
     getUserById,
     removeUserById,
     sendUserResponse,

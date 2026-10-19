@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { productService, categoryService } from '../../services';
 import { formatPrice } from '../../utils/format';
@@ -45,9 +46,9 @@ const AdminProducts = () => {
     : '';
   const [searchQuery, setSearchQuery] = useState(urlSearch);
 
-  const loadData = (nextPage = page, search = urlSearch) => {
-    setLoading(true);
-    Promise.all([
+  const loadData = (nextPage = page, search = urlSearch, silent = false) => {
+    if (!silent) setLoading(true);
+    return Promise.all([
       productService.getAllProductsAdmin({ page: nextPage, limit: 25, search }),
       categoryService.getAllCategories(),
     ])
@@ -61,6 +62,7 @@ const AdminProducts = () => {
   };
 
   useEffect(() => { loadData(page, urlSearch); }, [page, urlSearch]);
+  useLiveRefresh(['product', 'inventory'], () => loadData(page, urlSearch, true));
 
   useEffect(() => {
     setSearchQuery(urlSearch);

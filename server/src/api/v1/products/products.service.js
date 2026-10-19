@@ -164,7 +164,7 @@ const resolveProductByIdentifier = async (identifier, { includeInactive = false 
 
   const value = String(identifier).trim();
   const base = db('products');
-  if (!includeInactive) base.where('isActive', true);
+  if (!includeInactive) base.where('isActive', true).where('approvalStatus', 'approved');
 
   if (isUuid(value)) {
     const byId = await base.clone().where({ productID: value }).first();
@@ -202,6 +202,8 @@ async function buildProductList(req, res, { admin }) {
     const sort = String(req.query.sort || '').trim();
 
     const baseQuery = db('products').where('isActive', true);
+    // Seller submissions stay invisible to shoppers until an admin approves them.
+    if (!admin) baseQuery.where('approvalStatus', 'approved');
 
     if (search) {
       // Case-insensitive, wildcard-safe, matches name or SKU.
@@ -859,6 +861,7 @@ const googleProductFeed = async (req, res) => {
   try {
     const products = await db('products')
       .where('isActive', true)
+      .where('approvalStatus', 'approved')
       .select('*')
       .orderBy('createdOn', 'desc');
 
@@ -950,6 +953,7 @@ const googleProductFeed = async (req, res) => {
 };
 
 module.exports = {
+  generateUniqueSlug,
   listProducts,
   listProductsAdmin,
   getProductById,
