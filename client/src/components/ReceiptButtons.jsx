@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Receipt from './Receipt';
 import { receiptService } from '../services/receipt';
-import { Eye, Download, Printer, MessageCircle, Mail } from 'lucide-react';
+import { Eye, Download, Printer, Loader2 } from 'lucide-react';
+import { useToast } from './ToastProvider';
 
 const PRINT_STYLES = `
-  body { margin: 0; padding: 24px; background: #F3F4F6; display: flex; justify-content: center; }
+  body { margin: 0; padding: 16px; background: #F3F4F6; display: flex; justify-content: center; }
   @media print {
     body { background: #fff; padding: 0; }
   }
@@ -12,6 +13,8 @@ const PRINT_STYLES = `
 
 const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
     const containerRef = useRef();
+    const { addToast } = useToast();
+    const [downloading, setDownloading] = useState(false);
 
     const openReceiptWindow = ({ autoPrint = false } = {}) => {
         const html = (containerRef.current && containerRef.current.outerHTML) || document.querySelector('.receipt-root')?.outerHTML;
@@ -23,6 +26,7 @@ const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
         win.document.write(`
   <html>
     <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Receipt${order?.orderCode ? ' - ' + order.orderCode : ''}</title>
       <script src="https://cdn.tailwindcss.com"></script>
       <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,12 +53,22 @@ const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
     };
 
     const handleDownload = async () => {
+        if (downloading) return;
         const el = containerRef.current || document.querySelector('.receipt-root');
-        await receiptService.downloadPdfFromElement(
-            el,
-            `receipt-${order.orderID || order.orderCode}.pdf`,
-            'a4'
-        );
+        setDownloading(true);
+        addToast('Preparing your receipt…', 'info');
+        try {
+            await receiptService.downloadPdfFromElement(
+                el,
+                `receipt-${receipt?.invoice_number || order.invoice_number || order.display_order_id || order.orderCode || order.orderID || order.id}.pdf`,
+                'a4'
+            );
+            addToast('Receipt downloaded', 'success');
+        } catch (err) {
+            addToast('Could not download the receipt. Please try again.', 'error');
+        } finally {
+            setDownloading(false);
+        }
     };
 
     const handlePrint = () => {
@@ -104,10 +118,12 @@ const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
                 <button
                     type="button"
                     onClick={handleDownload}
-                    className={`${baseBtn} text-white border-transparent`}
-                    style={{ background: 'linear-gradient(90deg,#4F46E5,#7C3AED)' }}
+                    disabled={downloading}
+                    aria-busy={downloading}
+                    className={`${baseBtn} bg-primary text-white border-transparent hover:bg-primary-600 disabled:cursor-wait disabled:opacity-70`}
                 >
-                    <Download size={16} /> Download PDF
+                    {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {downloading ? 'Preparing PDF…' : 'Download PDF'}
                 </button>
 
                 <button
