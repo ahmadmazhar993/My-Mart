@@ -223,16 +223,16 @@ const AdminOrders = () => {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-6 py-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-white px-4 py-4 sm:px-6 sm:py-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-dark">Orders</h2>
           <p className="mt-0.5 text-sm text-gray-500">Manage customer orders</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
           {/* Search group — input + button visually joined */}
-          <form onSubmit={submitSearch} className="flex items-center">
-            <div className="relative">
+          <form onSubmit={submitSearch} className="flex w-full items-center sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:flex-none">
               <svg
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -245,22 +245,23 @@ const AdminOrders = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search orders"
-                className="w-56 rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-64"
+                className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-64"
               />
             </div>
             <button
               type="submit"
-              className="rounded-r-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-primary-700"
+              className="flex-shrink-0 rounded-r-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50 hover:text-primary-700"
             >
               Search
             </button>
           </form>
 
+          <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center">
           {/* Primary CTA — the one action that should visually stand out */}
           <button
             type="button"
             onClick={() => navigate('/admin/orders/create')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 py-2.5 sm:px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -279,7 +280,7 @@ const AdminOrders = () => {
               setDraftEnd(endDate);
               setFilterOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+            className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3 py-2.5 sm:px-3.5 text-sm font-medium text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-.553.894l-3 1.5A1 1 0 0010 20.5V14.414L3.293 6.707A1 1 0 013 6V4z" />
@@ -294,6 +295,7 @@ const AdminOrders = () => {
               ) : null;
             })()}
           </button>
+          </div>
         </div>
       </div>
 
@@ -311,13 +313,13 @@ const AdminOrders = () => {
           </div>
 
           <div className="fixed inset-0 z-50 flex items-end justify-center md:items-start md:justify-end">
-            <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="orders-filter-title" className="w-full max-w-md md:w-96 bg-white shadow-lg rounded-t-lg md:rounded-none md:h-full">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between" id="orders-filter-title">
+            <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="orders-filter-title" className="flex max-h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white pb-safe shadow-2xl animate-slide-up md:h-full md:max-h-none md:w-96 md:rounded-none">
+              <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 flex items-center justify-between" id="orders-filter-title">
                 <h3 className="text-lg font-semibold">Filters</h3>
-                <button type="button" onClick={() => setFilterOpen(false)} className="text-sm text-gray-600 hover:underline">Close</button>
+                <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
 
-              <div className="p-4 space-y-4 overflow-auto">
+              <div className="flex-1 space-y-4 overflow-y-auto p-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                   <select value={draftStatus} onChange={(e) => setDraftStatus(e.target.value)} className="input-field w-full" aria-label="Filter by status">
@@ -340,15 +342,14 @@ const AdminOrders = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-                  <div className="flex items-center gap-2">
-                    <input type="date" value={draftStart} onChange={(e) => setDraftStart(e.target.value)} className="input-field w-full" />
-                    <span className="text-sm text-gray-400">to</span>
-                    <input type="date" value={draftEnd} onChange={(e) => setDraftEnd(e.target.value)} className="input-field w-full" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="date" value={draftStart} onChange={(e) => setDraftStart(e.target.value)} className="input-field w-full min-w-0" />
+                    <input type="date" value={draftEnd} onChange={(e) => setDraftEnd(e.target.value)} className="input-field w-full min-w-0" />
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 border-t border-gray-100 flex items-center gap-3">
+              <div className="flex-shrink-0 p-4 border-t border-gray-100 flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -360,7 +361,7 @@ const AdminOrders = () => {
                     setPage(1);
                     setFilterOpen(false);
                   }}
-                  className="btn-primary"
+                  className="btn-primary flex-1"
                 >
                   Apply Filters
                 </button>
@@ -381,7 +382,7 @@ const AdminOrders = () => {
                     setPage(1);
                     setFilterOpen(false);
                   }}
-                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Clear All
                 </button>

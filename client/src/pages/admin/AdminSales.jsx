@@ -180,28 +180,28 @@ const AdminSales = () => {
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); load(); }}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <label className="text-xs font-medium uppercase tracking-wide text-gray-500">From</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
+                  className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <label className="text-xs font-medium uppercase tracking-wide text-gray-500">To</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
+                  className="w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 sm:w-44"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
                 <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Group By</label>
                 <select
                   value={groupBy}
@@ -215,10 +215,10 @@ const AdminSales = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
               <button
                 type="submit"
-                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
+                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm sm:px-4 font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 12a8 8 0 10-8 8" />
@@ -230,20 +230,20 @@ const AdminSales = () => {
               <button
                 type="button"
                 onClick={csvExport}
-                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+                className="inline-flex h-[38px] items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm sm:px-4 font-medium text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                   <path d="M7 10l5 5 5-5" />
                   <path d="M12 15V3" />
                 </svg>
-                Export CSV
+                <span className="sm:hidden">CSV</span><span className="hidden sm:inline">Export CSV</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setStartDate(''); setEndDate(''); setData([]); setLoading(false); }}
-                className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
+                className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-sm sm:px-3.5 font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-100"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 6l12 12M6 18L18 6" />
@@ -253,8 +253,8 @@ const AdminSales = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-            <span className="text-xs font-medium uppercase tracking-wide text-gray-400">Quick range</span>
+          <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-0.5 sm:mx-0 sm:flex-wrap sm:px-0 border-t border-gray-100 pt-3">
+            <span className="flex-shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400">Quick range</span>
             {[
               { label: 'Today', onClick: () => { const t = new Date(); setEndDate(t.toISOString().slice(0, 10)); setStartDate(t.toISOString().slice(0, 10)); } },
               { label: '7 days', onClick: () => { const t = new Date(); const s = new Date(); s.setDate(t.getDate() - 6); setEndDate(t.toISOString().slice(0, 10)); setStartDate(s.toISOString().slice(0, 10)); } },
@@ -266,7 +266,7 @@ const AdminSales = () => {
                 key={r.label}
                 type="button"
                 onClick={r.onClick}
-                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
+                className="flex-shrink-0 whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700"
               >
                 {r.label}
               </button>

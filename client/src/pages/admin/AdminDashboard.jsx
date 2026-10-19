@@ -6,13 +6,13 @@ import BrandLoader from '../../components/BrandLoader';
 const StatCard = ({ label, value, icon, to, color }) => (
   <Link
     to={to}
-    className="group flex items-center justify-between rounded-xl border border-gray-100 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover"
+    className="group flex items-center justify-between rounded-xl border border-gray-100 bg-white p-3.5 shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover sm:p-5"
   >
-    <div>
-      <p className="mb-1 text-sm text-gray-500">{label}</p>
-      <p className={`text-3xl font-extrabold ${color}`}>{value}</p>
+    <div className="min-w-0">
+      <p className="mb-0.5 text-xs text-gray-500 sm:mb-1 sm:text-sm">{label}</p>
+      <p className={`text-2xl font-extrabold sm:text-3xl ${color}`}>{value}</p>
     </div>
-    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-50 text-2xl transition group-hover:bg-primary-50">
+    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50 text-xl transition group-hover:bg-primary-50 sm:h-11 sm:w-11 sm:text-2xl">
       {icon}
     </span>
   </Link>
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
         <p className="mt-0.5 text-sm text-gray-500">Welcome to AHM Mart admin panel</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Products" value={stats.products} icon="📦" to="/admin/products" color="text-primary" />
         <StatCard label="Categories" value={stats.categories} icon="🏷️" to="/admin/categories" color="text-blue-600" />
         <StatCard label="Orders" value={stats.orders} icon="🛒" to="/admin/orders" color="text-accent-dark" />
@@ -87,39 +87,59 @@ const AdminDashboard = () => {
         {recentOrders.length === 0 ? (
           <p className="text-sm text-gray-500">No orders yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-left text-gray-500">
-                  <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Order #</th>
-                  <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Status</th>
-                  <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Payment</th>
-                  <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order, idx) => (
-                  <tr
-                    key={order.id}
-                    className={`border-b border-gray-50 transition hover:bg-primary-50/40 ${idx % 2 === 1 ? 'bg-gray-50/40' : ''}`}
-                  >
-                    <td className="py-3 font-semibold text-gray-900">
-                      <Link to={`/orders/${order.id}`} className="text-primary hover:underline">
-                        #{order.display_order_id || order.id}
-                      </Link>
-                    </td>
-                    <td className="py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_BADGE_CLASSES[order.status?.toLowerCase?.()] || STATUS_BADGE_CLASSES.default}`}>
+          <>
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {recentOrders.map((order) => (
+                <li key={order.id}>
+                  <Link to={`/orders/${order.id}`} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-primary">#{order.display_order_id || order.id}</p>
+                      <p className="mt-0.5 text-xs capitalize text-gray-500">{order.payment_status}</p>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-sm font-semibold text-gray-900">Rs. {Number(order.total_price).toLocaleString()}</p>
+                      <span className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${STATUS_BADGE_CLASSES[order.status?.toLowerCase?.()] || STATUS_BADGE_CLASSES.default}`}>
                         {order.status}
                       </span>
-                    </td>
-                    <td className="py-3 capitalize text-gray-600">{order.payment_status}</td>
-                    <td className="py-3 font-semibold text-gray-900">Rs. {Number(order.total_price).toLocaleString()}</td>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-left text-gray-500">
+                    <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Order #</th>
+                    <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Status</th>
+                    <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Payment</th>
+                    <th className="pb-2.5 text-xs font-semibold uppercase tracking-wide">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recentOrders.map((order, idx) => (
+                    <tr
+                      key={order.id}
+                      className={`border-b border-gray-50 transition hover:bg-primary-50/40 ${idx % 2 === 1 ? 'bg-gray-50/40' : ''}`}
+                    >
+                      <td className="py-3 font-semibold text-gray-900">
+                        <Link to={`/orders/${order.id}`} className="text-primary hover:underline">
+                          #{order.display_order_id || order.id}
+                        </Link>
+                      </td>
+                      <td className="py-3">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_BADGE_CLASSES[order.status?.toLowerCase?.()] || STATUS_BADGE_CLASSES.default}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="py-3 capitalize text-gray-600">{order.payment_status}</td>
+                      <td className="py-3 font-semibold text-gray-900">Rs. {Number(order.total_price).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
