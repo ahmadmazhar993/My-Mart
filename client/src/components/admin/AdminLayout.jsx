@@ -7,6 +7,7 @@ const navItems = [
   { to: '/admin', label: 'Dashboard', end: true, icon: '📊' },
   { to: '/admin/products', label: 'Products', icon: '📦' },
   { to: '/admin/categories', label: 'Categories', icon: '🏷️' },
+  { to: '/admin/brands', label: 'Brands', icon: '🔖' },
   { to: '/admin/sales', label: 'Sales', icon: '💰' },
   { to: '/admin/orders', label: 'Orders', icon: '🛒' },
   { to: '/admin/users', label: 'Users', icon: '👥' },
@@ -25,6 +26,7 @@ const bottomNavItems = [
   { to: '/admin/orders', label: 'Orders', icon: svg('M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4') },
   { to: '/admin/sales', label: 'Sales', icon: svg('M3 17l6-6 4 4 8-8M14 7h7v7') },
   { to: '/admin/categories', label: 'Category', icon: svg('M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z') },
+  { to: '/admin/brands', label: 'Brands', icon: svg('M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01') },
   { to: '/admin/users', label: 'Users', icon: svg('M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75') },
 ];
 

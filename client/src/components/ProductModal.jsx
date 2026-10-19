@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../services/api";
+import { productService } from "../services";
 import { parseProductImages } from "../utils/product";
 import ImageCropModal from "./ImageCropModal";
 import ImageUploader from "./ImageUploader";
@@ -19,6 +20,7 @@ const createEmptyVariant = () => ({
 const initialForm = {
     name: "",
     sku: "",
+    brand: "",
     price: "",
     purchase_price: "",
     discount_price: "",
@@ -43,6 +45,16 @@ const ProductModal = ({
     const [variantCropFile, setVariantCropFile] = useState(null);
     const [pendingVariantIndex, setPendingVariantIndex] = useState(null);
     const fileInputRefs = useRef({});
+    const [brandOptions, setBrandOptions] = useState([]);
+
+    // All brands (including ones added on the Brands page that have no products yet) feed the
+    // autocomplete so the same brand is spelled the same way every time.
+    useEffect(() => {
+        if (!isOpen) return;
+        productService.getBrandsAdmin()
+            .then((res) => setBrandOptions((res.data?.data || []).map((b) => b.name)))
+            .catch(() => {});
+    }, [isOpen]);
 
     useEffect(() => {
         if (product) {
@@ -64,6 +76,7 @@ const ProductModal = ({
             setForm({
                 name: product.name || "",
                 sku: product.sku || "",
+                brand: product.brand || "",
                 price: product.price ?? "",
                 purchase_price: product.purchase_price ?? product.purchasePrice ?? "",
                 discount_price: product.discount_price ?? "",
@@ -252,6 +265,27 @@ const ProductModal = ({
                                 placeholder="Enter SKU"
                                 className="input-field w-full"
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Brand
+                            </label>
+                            <input
+                                name="brand"
+                                value={form.brand}
+                                onChange={handleChange}
+                                list="product-brand-options"
+                                maxLength={120}
+                                autoComplete="off"
+                                placeholder="e.g. Olivia, Aquafina"
+                                className="input-field w-full"
+                            />
+                            <datalist id="product-brand-options">
+                                {brandOptions.map((name) => (
+                                    <option key={name} value={name} />
+                                ))}
+                            </datalist>
                         </div>
 
                         <div>

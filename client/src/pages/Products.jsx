@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { productService, categoryService } from '../services';
 import BrandLoader from '../components/BrandLoader';
+import BrandLogo from '../components/BrandLogo';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
 
 const SORT_OPTIONS = [
@@ -14,9 +15,10 @@ const SORT_OPTIONS = [
 ];
 
 const Products = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('search') || '';
   const category = searchParams.get('category') || '';
+  const brand = searchParams.get('brand') || '';
   const saleOnly = searchParams.get('sale') === 'true';
 
   // Back/forward navigation (e.g. returning from a product page) restores the list, loaded
@@ -76,6 +78,27 @@ const Products = () => {
     };
   }, [sortOpen]);
 
+  const [brands, setBrands] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    productService.getBrands()
+      .then((res) => { if (!cancelled) setBrands(res.data?.data || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const selectBrand = (name) => {
+    const next = new URLSearchParams(searchParams);
+    if (name) next.set('brand', name);
+    else next.delete('brand');
+    setSearchParams(next);
+  };
+
+  // Show the canonical spelling from the brand list when the URL differs only by case.
+  const brandInfo = brand ? brands.find((b) => b.name.toLowerCase() === brand.toLowerCase()) || { name: brand } : null;
+  const brandLabel = brandInfo?.name || brand;
+
   const categoryMatch = categories.find((c) => c.slug === category);
   const categoryId = categoryMatch?.id;
 
@@ -95,7 +118,7 @@ const Products = () => {
 
   // Infinite scroll: `page` is the highest page loaded so far. Page 1 replaces the list (filters
   // changed or first visit); later pages are appended as the sentinel below the grid scrolls into view.
-  const filterKey = `${search}|${categoryId || ''}|${saleOnly}|${priceRange}|${sort}`;
+  const filterKey = `${search}|${categoryId || ''}|${brand}|${saleOnly}|${priceRange}|${sort}`;
 
   snapshotRef.current = { products, categories, sort, priceRange, page, pagination, filterKey, loading };
 
@@ -146,6 +169,7 @@ const Products = () => {
       limit: 24,
       search: search || undefined,
       category_id: categoryId || undefined,
+      brand: brand || undefined,
       sale: saleOnly || undefined,
       priceRange,
       sort, // ordering is done by the server so it applies to every page, not just the loaded ones
@@ -238,6 +262,7 @@ const Products = () => {
     .filter((p) => {
       if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
       if (categoryId && p.category_id !== categoryId) return false;
+      if (brand && (p.brand || '').toLowerCase() !== brand.toLowerCase()) return false;
       if (saleOnly && !p.discount_price) return false;
       if (priceRange === 'under-500' && (p.discount_price || p.price) >= 500) return false;
       if (priceRange === '500-2000') {
@@ -252,9 +277,41 @@ const Products = () => {
     ? 'Flash Sale'
     : search
       ? `Results for "${search}"`
-      : category
-        ? categoryMatch?.name || category.charAt(0).toUpperCase() + category.slice(1)
-        : 'All Products';
+      : brand
+        ? brandLabel
+        : category
+          ? categoryMatch?.name || category.charAt(0).toUpperCase() + category.slice(1)
+          : 'All Products';
+
+  // Brand picker shared by the desktop sidebar and the mobile filter sheet.
+  const renderBrandFilter = (groupName, itemPadding) => (brands.length === 0 ? null : (
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Brand</p>
+      <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+        {[{ name: '', label: 'All Brands' }, ...brands.map((b) => ({ name: b.name, label: b.name, count: b.count }))].map((opt) => {
+          const selected = opt.name.toLowerCase() === brand.toLowerCase();
+          return (
+            <label
+              key={opt.name || 'all'}
+              className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 ${itemPadding} text-sm transition ${
+                selected ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name={groupName}
+                checked={selected}
+                onChange={() => selectBrand(opt.name)}
+                className="accent-primary"
+              />
+              <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+              {opt.count != null && <span className="text-xs text-gray-400">{opt.count}</span>}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  ));
 
   const priceOptions = [
     { value: 'all', label: 'All Prices' },
@@ -276,6 +333,7 @@ const Products = () => {
           <div className="sticky top-36 rounded-xl border border-gray-100 bg-white p-4 shadow-card">
             <h3 className="mb-3 text-sm font-bold text-dark">Filters</h3>
             <div className="space-y-4">
+              {renderBrandFilter('brand', 'py-1.5')}
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Price Range</p>
                 <div className="space-y-1">
@@ -306,8 +364,13 @@ const Products = () => {
         <div className="flex-1">
           {/* Results header card */}
           <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
-            <div>
+            <div className={brandInfo ? 'flex items-center gap-3' : ''}>
+              {brandInfo && <BrandLogo brand={brandInfo} className="h-14 w-14 rounded-xl sm:h-16 sm:w-16" textClass="text-2xl" />}
+              <div className="min-w-0">
               <h1 className="text-xl font-bold tracking-tight text-dark">{pageTitle}</h1>
+              {brandInfo?.description && (
+                <p className="mt-0.5 line-clamp-2 text-sm text-gray-600">{brandInfo.description}</p>
+              )}
               <p className="mt-0.5 text-sm text-gray-500">
                 {(() => {
                   if (showLoading) return 'Loading products…';
@@ -315,6 +378,7 @@ const Products = () => {
                   return count === 1 ? '1 product found' : `${count} products found`;
                 })()}
               </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -327,7 +391,7 @@ const Products = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-.553.894l-3 1.5A1 1 0 0010 20.5V14.414L3.293 6.707A1 1 0 013 6V4z" />
                 </svg>
                 Filters
-                {priceRange !== 'all' && (
+                {(priceRange !== 'all' || brand) && (
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">1</span>
                 )}
               </button>
@@ -447,7 +511,9 @@ const Products = () => {
               </button>
             </div>
 
-            <div className="p-5">
+            <div className="space-y-5 p-5">
+              {renderBrandFilter('brand-mobile', 'py-2.5')}
+              <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Price Range</p>
               <div className="space-y-1">
                 {priceOptions.map((opt) => (
@@ -469,12 +535,13 @@ const Products = () => {
                   </label>
                 ))}
               </div>
+              </div>
             </div>
 
             <div className="flex gap-3 border-t border-gray-100 p-5">
               <button
                 type="button"
-                onClick={() => setPriceRange('all')}
+                onClick={() => { setPriceRange('all'); selectBrand(''); }}
                 className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
               >
                 Reset

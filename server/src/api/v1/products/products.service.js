@@ -77,6 +77,12 @@ const normalizeImagesPayload = (images) => {
   return [String(normalized)];
 };
 
+// Trimmed brand name, or null to clear it.
+const normalizeBrand = (value) => {
+  const brand = String(value ?? '').trim().replace(/\s+/g, ' ');
+  return brand ? brand.slice(0, 120) : null;
+};
+
 const toNumberOrNull = (value) => (value == null || value === '' ? null : Number(value));
 
 const normalizeVariantsPayload = (variants) => {
@@ -196,6 +202,7 @@ async function buildProductList(req, res, { admin }) {
     const search = String(req.query.search || '').trim();
     const forOrder = req.query.forOrder === 'true';
     const categoryId = req.query.category_id;
+    const brand = String(req.query.brand || '').trim();
     const saleOnly = req.query.sale === 'true';
     const priceRange = req.query.priceRange || 'all';
     // Optional sort: popular | price-asc | price-desc | rating. Omitted = newest first (legacy/admin).
@@ -208,12 +215,17 @@ async function buildProductList(req, res, { admin }) {
       const pattern = `%${escapeLike(search)}%`;
       baseQuery.where((builder) => {
         builder.whereRaw('name ILIKE ?', [pattern])
-          .orWhereRaw('sku ILIKE ?', [pattern]);
+          .orWhereRaw('sku ILIKE ?', [pattern])
+          .orWhereRaw('brand ILIKE ?', [pattern]);
       });
     }
 
     if (categoryId) {
       baseQuery.where('category_id', categoryId);
+    }
+
+    if (brand) {
+      baseQuery.whereRaw('LOWER(brand) = ?', [brand.toLowerCase()]);
     }
 
     if (saleOnly) {
@@ -645,6 +657,7 @@ async function createProduct(req, res) {
       seller_id: sellerId,
       category_id: categoryId,
       sku: req.body.sku,
+      brand: normalizeBrand(req.body.brand),
       imageUrl: req.body.image_url ?? req.body.imageUrl,
       images: req.body.images == null
         ? null : JSON.stringify(normalizeImagesPayload(req.body.images)),
@@ -699,6 +712,7 @@ async function updateProduct(req, res) {
       payload.stockQuantity = req.body.stock_quantity ?? req.body.stockQuantity;
     }
     if (req.body.sku != null) payload.sku = req.body.sku;
+    if (req.body.brand !== undefined) payload.brand = normalizeBrand(req.body.brand);
     if (req.body.images != null) {
       payload.images = JSON.stringify(normalizeImagesPayload(req.body.images));
     }
@@ -915,6 +929,7 @@ const googleProductFeed = async (req, res) => {
       <g:availability>${availability}</g:availability>
       <g:condition>new</g:condition>
       <g:price>${finalPrice.toFixed(2)} PKR</g:price>
+      ${product.brand ? `<g:brand>${escapeXml(product.brand)}</g:brand>` : ''}
       ${product.sku ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>` : ''}
     </item>`;
       })

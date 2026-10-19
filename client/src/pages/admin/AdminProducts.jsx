@@ -136,6 +136,7 @@ const AdminProducts = () => {
       category_id: selectedCategory?.id || form.category_id,
       seller_id: selectedSeller || form.seller_id || null,
       sku: form.sku,
+      brand: (form.brand || '').trim(),
       images: form.images || [],
       variants: form.variants || [],
       is_active: true,

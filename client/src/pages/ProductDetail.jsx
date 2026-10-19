@@ -378,6 +378,14 @@ const ProductDetail = () => {
             )}
 
             <div className="space-y-3 mb-6 text-sm">
+              {product.brand && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-24">Brand:</span>
+                  <Link to={`/products?brand=${encodeURIComponent(product.brand)}`} className="font-medium text-primary hover:underline">
+                    {product.brand}
+                  </Link>
+                </div>
+              )}
               <div className="flex gap-2">
                 <span className="text-gray-500 w-24">SKU:</span>
                 <span className="font-medium">{product.sku || 'N/A'}</span>

@@ -16,6 +16,12 @@ const {
   checkProductPurchased,
   googleProductFeed,
 } = require('./products.service');
+const {
+  listBrands,
+  listBrandsAdmin,
+  upsertBrand,
+  uploadBrandLogo,
+} = require('./brands.service');
 const { validateCreateProduct, validateUpdateProduct } = require('./products.validation');
 const { isAuthenticated, isAdmin } = require('../auth/auth.service');
 
@@ -26,11 +32,13 @@ const { isAuthenticated, isAdmin } = require('../auth/auth.service');
 // ---------------------------------------------------------------------------
 router.get('/admin', isAuthenticated, isAdmin, listProductsAdmin);
 router.get('/admin/:identifier', isAuthenticated, isAdmin, getProductByIdAdmin);
+router.get('/brands/admin', isAuthenticated, isAdmin, listBrandsAdmin);
 
 // ---------------------------------------------------------------------------
 // Public (safe data only)
 // ---------------------------------------------------------------------------
 router.get('/', listProducts);
+router.get('/brands', listBrands);
 router.get('/google-feed.xml', googleProductFeed);
 router.get('/:identifier/reviews', getProductReviews);
 router.get('/:identifier/purchased', isAuthenticated, checkProductPurchased);
@@ -41,6 +49,8 @@ router.get('/:identifier', getProductById);
 // Admin writes (login + admin role required)
 // ---------------------------------------------------------------------------
 router.post('/upload-images', isAuthenticated, isAdmin, uploadProductImages);
+router.post('/brands/logo', isAuthenticated, isAdmin, uploadBrandLogo);
+router.put('/brands/:name', isAuthenticated, isAdmin, upsertBrand);
 router.post('/', isAuthenticated, isAdmin, validateCreateProduct, createProduct);
 router.put('/:identifier', isAuthenticated, isAdmin, validateUpdateProduct, updateProduct);
 router.delete('/:identifier', isAuthenticated, isAdmin, deleteProduct);

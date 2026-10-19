@@ -59,6 +59,7 @@ const mapProduct = (product) => {
 
     category_id: product.category_id,
     sku: product.sku,
+    brand: product.brand || null,
     rating: Number(product.rating || 0),
     review_count: product.reviewCount || 0,
     image_url: product.imageUrl,

@@ -168,6 +168,9 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
         )}
       </div>
       <div className={`flex flex-col flex-1 ${compact ? 'p-2' : 'p-2.5 sm:p-3'} ${isOutOfStock ? 'opacity-70' : ''}`}>
+        {product.brand && (
+          <p className="mb-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 sm:text-[11px]">{product.brand}</p>
+        )}
         <h3 className={`font-medium text-dark line-clamp-2 ${compact ? 'text-xs' : 'text-[13px] sm:text-sm'} leading-snug mb-1.5 min-h-[2.5em]`}>
           {product.name}
         </h3>

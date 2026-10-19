@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
+import ShopByBrand from '../components/ShopByBrand';
 import FlashSale from '../components/FlashSale';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services';
@@ -61,6 +62,7 @@ const Home = () => {
     <div className="animate-fade-in">
       <HeroBanner />
       <CategoryGrid />
+      <ShopByBrand />
       {!loading && products.length > 0 && <FlashSale products={products} />}
 
       {/* Just For You */}

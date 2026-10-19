@@ -11,6 +11,7 @@ const shouldCheckForUpdates = typeof window !== 'undefined';
 
 const Home = lazy(() => import('./pages/Home'));
 const Products = lazy(() => import('./pages/Products'));
+const Brands = lazy(() => import('./pages/Brands'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -33,6 +34,7 @@ const BlogArticle = lazy(() => import('./pages/BlogArticle'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'));
+const AdminBrands = lazy(() => import('./pages/admin/AdminBrands'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
 const AdminCreateOrder = lazy(() => import('./pages/admin/AdminCreateOrder'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
@@ -132,6 +134,7 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="categories" element={<AdminCategories />} />
+              <Route path="brands" element={<AdminBrands />} />
               <Route path="sales" element={<AdminSales />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="orders/create" element={<AdminCreateOrder />} />
@@ -142,6 +145,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/brands" element={<Brands />} />
             <Route path="/products/:identifier" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
