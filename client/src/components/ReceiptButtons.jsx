@@ -5,7 +5,7 @@ import { Eye, Download, Printer, Loader2 } from 'lucide-react';
 import { useToast } from './ToastProvider';
 
 const PRINT_STYLES = `
-  body { margin: 0; padding: 16px; background: #F3F4F6; display: flex; justify-content: center; }
+  body { margin: 0; padding: 16px; background: #F3F4F6; display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box; }
   @media print {
     body { background: #fff; padding: 0; }
   }
@@ -23,9 +23,10 @@ const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
         const win = window.open('', '_blank', 'width=860,height=1000');
         if (!win) return null;
 
-        win.document.write(`
+        win.document.write(`<!DOCTYPE html>
   <html>
     <head>
+      <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Receipt${order?.orderCode ? ' - ' + order.orderCode : ''}</title>
       <script src="https://cdn.tailwindcss.com"></script>
