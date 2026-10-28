@@ -6,7 +6,10 @@ const db = require('../db');
 const logger = require('../config/winston');
 const { decryptPassword } = require('../libs/passEncryption');
 
-const { NODE_ENV = 'development', HOST_PATH = 'http://10.36.13.15:5173' } = process.env;
+const { NODE_ENV = 'development', HOST_PATH = 'http://10.36.13.15:5173', EMAIL_LOGO_URL = '' } = process.env;
+
+const LOGO_CID = 'ahmmart-logo';
+const LOGO_PATH = path.resolve(__dirname, 'assets/logo.png');
 
 let mailConCount = 0;
 const maxConLimit = 2;
@@ -25,6 +28,9 @@ async function warpedSendMail(mailOptions, smtpObj) {
         product: {
           name: 'AHM Mart',
           link: HOST_PATH,
+          logo: EMAIL_LOGO_URL || `cid:${LOGO_CID}`,
+          logoHeight: '48px',
+          tagline: 'Shop smart, live better',
           copyright: `© ${new Date().getFullYear()} AHM Mart. All rights reserved.`,
         }
       });
@@ -45,7 +51,11 @@ async function warpedSendMail(mailOptions, smtpObj) {
         subject: `${mailOptions.subjectPrefix && !mailOptions.subject.startsWith('[') ? `${mailOptions.subjectPrefix} ` : ''}${mailOptions.subject}`,
         html: emailBody,
         text: emailText,
-        attachments: mailOptions.attachments
+        attachments: [
+          // Only embed the logo when there is no public URL to link to
+          ...(EMAIL_LOGO_URL ? [] : [{ filename: 'logo.png', path: LOGO_PATH, cid: LOGO_CID, contentDisposition: 'inline' }]),
+          ...(mailOptions.attachments || [])
+        ]
       }, (error, info) => {
         if (error) {
           console.error('Message sent failed::', error);

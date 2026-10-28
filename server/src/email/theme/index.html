@@ -55,17 +55,21 @@ if (locals.action) {
     .email-wrapper {
       width: 100%;
       margin: 0;
-      padding: 0;
+      padding: 24px 0;
+      background-color: #F3F5F7;
     }
     .email-content {
       width: 100%;
-      margin: 0;
+      max-width: 600px;
+      margin: 0 auto;
       padding: 0;
+      background-color: #FFFFFF;
     }
 
     /* Masthead ----------------------- */
     .email-masthead {
-      padding: 25px 0;
+      padding: 28px 0 22px;
+      border-top: 4px solid #059669;
       text-align: center;
       background-color: #FFFFFF;
     }
@@ -94,7 +98,7 @@ if (locals.action) {
       background-color: #FFF;
     }
     .email-body_inner {
-      max-width: 780px;
+      max-width: 600px;
       margin: 0 auto;
       padding: 0;
     }
@@ -148,7 +152,7 @@ if (locals.action) {
       border-top: 1px solid #EDEFF2;
     }
     .content-cell {
-      padding: 60px 35px;
+      padding: 32px 35px 40px;
     }
     .align-right {
       text-align: right;
@@ -256,21 +260,27 @@ if (locals.action) {
   <table class="email-wrapper" width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td align="center">
-        <table class="email-content" width="100%" cellpadding="0" cellspacing="0">
+        <table class="email-content" align="center" width="600" style="width:100%;max-width:600px;" cellpadding="0" cellspacing="0">
           <!-- Logo -->
           <tr>
             <td class="email-masthead">
-              <a class="email-masthead_name" href="<%- product.link %>" target="_blank">
-                <% if (locals.product.logo) { %>
-                  <% if (product.logoHeight) { %> 
-                    <img src="<%- product.logo %>" style="height: <%- product.logoHeight %>;" alt="" />
-                  <% } else { %>
-                    <img src="<%- product.logo %>" class="email-logo" alt="" />
+              <a class="email-masthead_name" href="<%- product.link %>" target="_blank" style="text-decoration:none;">
+                <table align="center" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto;">
+                  <tr>
+                    <% if (locals.product.logo) { %>
+                    <td style="padding-right:12px;vertical-align:middle;">
+                      <img src="<%- product.logo %>" alt="<%- product.name %>" height="<%- parseInt(product.logoHeight) || 48 %>" style="height:<%- product.logoHeight || '48px' %>;width:auto;display:block;border:0;" />
+                    </td>
                     <% } %>
-                <% } else { %>
-                  <%- product.name %>
-                <% } %>
-                </a>
+                    <td style="vertical-align:middle;text-align:left;">
+                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:28px;line-height:30px;font-weight:800;letter-spacing:0.5px;color:#059669;">AHM <span style="color:#1F2937;">Mart</span></div>
+                      <% if (locals.product.tagline) { %>
+                      <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin-top:2px;"><%- product.tagline %></div>
+                      <% } %>
+                    </td>
+                  </tr>
+                </table>
+              </a>
             </td>
           </tr>
           <!-- Email Body -->
