@@ -62,10 +62,11 @@ axiosClient.interceptors.request.use((config) => {
   }
 
   if (isTokenExpired(token)) {
+    // Notify first: the listener checks localStorage for a token to decide whether to show the modal
+    window.dispatchEvent(new CustomEvent('api:unauthorized'));
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setAuthToken(null);
-    window.dispatchEvent(new CustomEvent('api:unauthorized'));
     return Promise.reject(new Error('Token expired'));
   }
 
