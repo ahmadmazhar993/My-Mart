@@ -53,7 +53,42 @@ const parseProductVariants = (value) => {
   return [];
 };
 
-const uploadPaymentProofMiddleware = (req, res, next) => {
+const findOrderVariant = (variants, ref) => variants.find((variant) => (
+  (ref.variant_sku && variant.sku && String(variant.sku) === String(ref.variant_sku))
+  || (ref.variant_name && String(variant.name || '') === String(ref.variant_name))
+  || (ref.variant_label && String(variant.label || '') === String(ref.variant_label))
+));
+
+// Sum of variant stock, or null if any variant doesn't track stock.
+const sumVariantStock = (variants) => (
+  variants.length > 0 && variants.every((variant) => variant.stock_quantity != null)
+    ? variants.reduce((sum, variant) => sum + Number(variant.stock_quantity), 0)
+    : null
+);
+
+// Returns stock of cancelled order lines to the product and, when tracked, the variant.
+// Must run inside a transaction.
+const restockOrderItems = async (trx, orderId) => {
+  const items = await trx('order_items').where({ order_id: orderId });
+  for (const item of items) {
+    const product = await trx('products').where({ productID: item.product_id }).forUpdate().first();
+    if (!product) continue;
+
+    const variants = parseProductVariants(product.variants);
+    const payload = {};
+    const variant = (item.variant_name || item.variant_label) ? findOrderVariant(variants, item) : null;
+    if (variant && variant.stock_quantity != null) {
+      variant.stock_quantity = Number(variant.stock_quantity) + item.quantity;
+      payload.variants = JSON.stringify(variants);
+      payload.stockQuantity = sumVariantStock(variants) ?? Number(product.stockQuantity || 0) + item.quantity;
+    } else {
+      payload.stockQuantity = Number(product.stockQuantity || 0) + item.quantity;
+    }
+    await trx('products').where({ productID: item.product_id }).update(payload);
+  }
+};
+
+const uploadPaymentProofMiddleware =(req, res, next) => {
   const upload = multer({
     storage: paymentProofStorage,
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -401,19 +436,14 @@ async function createOrder(req, res) {
       const lineItems = [];
 
       for (const item of items) {
-        const product = await trx('products').where({ productID: item.product_id }).first();
+        // Row lock: concurrent orders for the same product wait here, so stock can't be oversold.
+        const product = await trx('products').where({ productID: item.product_id }).forUpdate().first();
         if (!product) {
           throw new Error(`Product ${item.product_id} not found`);
         }
         const requestedVariant = item.variant_sku || item.variant_name || item.variant_label;
         const variants = parseProductVariants(product.variants);
-        const selectedVariant = requestedVariant
-          ? variants.find((variant) => (
-            (item.variant_sku && String(variant.sku || '') === String(item.variant_sku))
-            || (item.variant_name && String(variant.name || '') === String(item.variant_name))
-            || (item.variant_label && String(variant.label || '') === String(item.variant_label))
-          ))
-          : null;
+        const selectedVariant = requestedVariant ? findOrderVariant(variants, item) : null;
 
         if (requestedVariant && !selectedVariant) {
           throw new Error(`Variant for ${product.name} is no longer available`);
@@ -423,6 +453,19 @@ async function createOrder(req, res) {
         if (availableStock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
+
+        // Deduct immediately (not after the loop) so a second line for the same
+        // product/variant in this order is validated against the reduced stock.
+        const stockPayload = {};
+        if (selectedVariant && selectedVariant.stock_quantity != null) {
+          selectedVariant.stock_quantity = Number(selectedVariant.stock_quantity) - item.quantity;
+          stockPayload.variants = JSON.stringify(variants);
+          // Product total is always the sum of its variants' stock.
+          stockPayload.stockQuantity = sumVariantStock(variants) ?? product.stockQuantity;
+        } else {
+          stockPayload.stockQuantity = trx.raw('GREATEST("stockQuantity" - ?, 0)', [item.quantity]);
+        }
+        await trx('products').where({ productID: product.productID }).update(stockPayload);
 
         const unitPrice = Number(
           selectedVariant?.discount_price ?? selectedVariant?.price
@@ -483,9 +526,6 @@ async function createOrder(req, res) {
           variant_label: line.variant_label,
           variant_sku: line.variant_sku,
         });
-        await trx('products')
-          .where({ productID: line.product_id })
-          .decrement('stockQuantity', line.quantity);
       }));
 
       await trx('payments').insert({
@@ -736,9 +776,24 @@ async function updateOrderStatus(req, res) {
       updatePayload.paymentStatus = 'paid';
     }
 
-    const [updatedOrder] = await db('orders')
-      .where({ orderID: id })
-      .update(updatePayload, '*');
+    const finalStatus = updatePayload.status || order.status;
+    if (order.status === 'cancelled' && finalStatus !== 'cancelled') {
+      // Stock was returned on cancel; reopening would need it deducted again.
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'This order was cancelled and cannot be reopened. Create a new order instead.',
+      });
+    }
+
+    const updatedOrder = await db.transaction(async (trx) => {
+      // Lock the order so two concurrent cancels can't both restock.
+      const current = await trx('orders').where({ orderID: id }).forUpdate().first();
+      if (finalStatus === 'cancelled' && current.status !== 'cancelled') {
+        await restockOrderItems(trx, id);
+      }
+      const [row] = await trx('orders').where({ orderID: id }).update(updatePayload, '*');
+      return row;
+    });
 
     orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: id });
 

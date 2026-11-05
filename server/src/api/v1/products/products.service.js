@@ -122,6 +122,18 @@ const normalizeVariantsPayload = (variants) => {
     .filter(Boolean);
 };
 
+// With variants, stock is tracked per variant and the product total is their sum.
+// Returns null when there are no variants (product-level stock applies).
+const totalVariantStock = (variants) => {
+  if (!Array.isArray(variants) || variants.length === 0) return null;
+  const missing = variants.find((variant) => variant.stock_quantity == null
+    || Number.isNaN(variant.stock_quantity) || variant.stock_quantity < 0);
+  if (missing) {
+    throw new Error(`Enter a stock quantity (0 or more) for variant "${missing.name}"`);
+  }
+  return variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
+};
+
 const resolveFallbackUuid = async (value, table, column, options = {}) => {
   if (value != null && value !== '' && isUuid(value)) {
     return String(value);
@@ -645,6 +657,9 @@ async function createProduct(req, res) {
       { where: {} }
     );
 
+    const createVariants = req.body.variants == null ? null : normalizeVariantsPayload(req.body.variants);
+    const variantStockTotal = totalVariantStock(createVariants);
+
     const payload = {
       name: req.body.name,
       slug: await generateUniqueSlug(req.body.name),
@@ -653,7 +668,7 @@ async function createProduct(req, res) {
       purchasePrice: req.body.purchase_price ?? req.body.purchasePrice,
       discountPrice: req.body.discount_price ?? req.body.discountPrice,
       discountPercentage: req.body.discount_percentage ?? req.body.discountPercentage,
-      stockQuantity: req.body.stock_quantity ?? req.body.stockQuantity ?? 0,
+      stockQuantity: variantStockTotal ?? req.body.stock_quantity ?? req.body.stockQuantity ?? 0,
       seller_id: sellerId,
       category_id: categoryId,
       sku: req.body.sku,
@@ -661,8 +676,7 @@ async function createProduct(req, res) {
       imageUrl: req.body.image_url ?? req.body.imageUrl,
       images: req.body.images == null
         ? null : JSON.stringify(normalizeImagesPayload(req.body.images)),
-      variants: req.body.variants == null
-        ? null : JSON.stringify(normalizeVariantsPayload(req.body.variants)),
+      variants: createVariants == null ? null : JSON.stringify(createVariants),
       isActive: req.body.is_active ?? true,
     };
 
@@ -717,7 +731,14 @@ async function updateProduct(req, res) {
       payload.images = JSON.stringify(normalizeImagesPayload(req.body.images));
     }
     if (req.body.variants != null) {
-      payload.variants = JSON.stringify(normalizeVariantsPayload(req.body.variants));
+      const updatedVariants = normalizeVariantsPayload(req.body.variants);
+      payload.variants = JSON.stringify(updatedVariants);
+      const variantStockTotal = totalVariantStock(updatedVariants);
+      if (variantStockTotal != null) payload.stockQuantity = variantStockTotal;
+    } else if (payload.stockQuantity != null) {
+      // Stock of a product with variants is derived from them; ignore manual overrides.
+      const existing = Array.isArray(product.variants) ? product.variants : [];
+      if (existing.length > 0) delete payload.stockQuantity;
     }
     if (req.body.image_url != null || req.body.imageUrl != null) {
       payload.imageUrl = req.body.image_url ?? req.body.imageUrl;

@@ -95,6 +95,11 @@ const ProductModal = ({
         }
     }, [product, isOpen]);
 
+    const namedVariants = (form.variants || []).filter((variant) => String(variant.name || variant.label || '').trim());
+    const variantStockTotal = namedVariants.length > 0
+        ? namedVariants.reduce((sum, variant) => sum + (Number(variant.stock_quantity) || 0), 0)
+        : null;
+
     const handleChange = (e) => {
         const { name, value } = e.target;
 
@@ -131,9 +136,18 @@ const ProductModal = ({
                 alert('Variant purchase price must be a non-negative number');
                 return;
             }
+            if (v.stock_quantity == null || Number.isNaN(v.stock_quantity) || v.stock_quantity < 0) {
+                alert(`Enter a stock quantity (0 or more) for variant "${v.name || v.label}"`);
+                return;
+            }
         }
 
-        onSubmit({ ...form, variants: normalizedVariants }, product?.id);
+        // Product stock is the sum of its variants' stock when variants exist.
+        const stockQuantity = normalizedVariants.length > 0
+            ? normalizedVariants.reduce((sum, v) => sum + v.stock_quantity, 0)
+            : form.stock_quantity;
+
+        onSubmit({ ...form, stock_quantity: stockQuantity, variants: normalizedVariants }, product?.id);
     };
 
     const handleVariantChange = (index, field, value) => {
@@ -340,12 +354,16 @@ const ProductModal = ({
                             <input
                                 type="number"
                                 name="stock_quantity"
-                                value={form.stock_quantity}
+                                value={variantStockTotal ?? form.stock_quantity}
                                 onChange={handleChange}
                                 required
+                                readOnly={variantStockTotal != null}
                                 placeholder="Enter stock quantity"
-                                className="input-field w-full"
+                                className={`input-field w-full ${variantStockTotal != null ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             />
+                            {variantStockTotal != null && (
+                                <p className="mt-1 text-xs text-gray-500">Total of all variant stock. Edit stock on each variant below.</p>
+                            )}
                         </div>
 
                         <div>
