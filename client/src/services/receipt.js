@@ -23,6 +23,8 @@ async downloadPdfFromElement(el, filename = 'receipt.pdf', format = 'a4') {
   // The receipt lives in an off-screen wrapper (left: -9999). Capture a fixed-width clone that is
   // moved back into view so the PDF is laid out exactly like the on-screen receipt.
   const width = Math.min(el.offsetWidth || 720, 720);
+  // Vertical ranges (canvas px) of blocks that must not be split across PDF pages.
+  const blocks = [];
   const canvas = await html2canvas(el, {
     scale: SCALE,
     useCORS: true,
@@ -51,6 +53,11 @@ async downloadPdfFromElement(el, filename = 'receipt.pdf', format = 'a4') {
         p.style.width = 'auto';
         p.style.zIndex = 'auto';
       }
+      const rootTop = clone.getBoundingClientRect().top;
+      clone.querySelectorAll('tr, .rc-head, .rc-info-row, .rc-totals, .rc-pay, .rc-foot').forEach((b) => {
+        const r = b.getBoundingClientRect();
+        blocks.push({ top: (r.top - rootTop) * SCALE, bottom: (r.bottom - rootTop) * SCALE });
+      });
     },
   });
 
@@ -88,14 +95,26 @@ async downloadPdfFromElement(el, filename = 'receipt.pdf', format = 'a4') {
 
   // Long receipts: slice the canvas into page-sized strips so every page keeps its margin.
   const sliceHpx = Math.floor((maxH * canvas.width) / imgW);
-  for (let y = 0, page = 0; y < canvas.height; y += sliceHpx, page += 1) {
-    const h = Math.min(sliceHpx, canvas.height - y);
+  // Break before any block that would otherwise be cut in half by the page boundary.
+  const breakFor = (y) => {
+    const limit = y + sliceHpx;
+    if (limit >= canvas.height) return canvas.height;
+    let end = limit;
+    blocks.forEach((b) => {
+      if (b.top > y + 1 && b.top < limit && b.bottom > limit && b.top < end) end = Math.floor(b.top);
+    });
+    return end;
+  };
+  for (let y = 0, page = 0; y < canvas.height; page += 1) {
+    const end = breakFor(y);
+    const h = end - y;
     const slice = document.createElement('canvas');
     slice.width = canvas.width;
     slice.height = h;
     slice.getContext('2d').drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
     if (page > 0) pdf.addPage();
     pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, margin, imgW, (h * imgW) / canvas.width);
+    y = end;
   }
   pdf.save(filename);
   },
