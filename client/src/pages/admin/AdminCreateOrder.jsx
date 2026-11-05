@@ -97,6 +97,14 @@ const AdminCreateOrder = () => {
     return () => clearTimeout(timer);
   }, [productSearch]);
 
+  useEffect(() => {
+    document.getElementById(`customer-option-${selectedCustomerIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [selectedCustomerIndex]);
+
+  useEffect(() => {
+    document.getElementById(`product-option-${selectedProductIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [selectedProductIndex]);
+
   const updateForm = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const selectCustomer = (user) => {
@@ -365,9 +373,9 @@ const AdminCreateOrder = () => {
             <div className="mt-5 space-y-4 border-y border-gray-100 py-4 text-sm">
               <div className="flex justify-between gap-4"><span className="text-gray-500">Customer</span><span className="text-right font-semibold text-gray-800">{selectedUser?.fullName || 'Not selected'}</span></div>
               <div className="flex justify-between gap-4"><span className="text-gray-500">Products</span><span className="text-right font-semibold text-gray-800">{orderItems.length || 'None selected'}</span></div>
-              <div className="space-y-2">{orderItems.map((item) => <div key={item.lineKey} className="flex justify-between gap-4 text-xs"><span className="max-w-[190px] text-gray-500">{item.name}{item.variant_label ? ` - ${item.variant_label}` : ''} × {item.quantity}</span><span className="font-semibold text-gray-800">Rs. {(item.unitPrice * item.quantity).toLocaleString()}</span></div>)}</div>
+              <div className="space-y-2">{orderItems.map((item) => <div key={item.lineKey} className="flex justify-between gap-4 text-xs"><span className="min-w-0 max-w-[190px] break-words text-gray-500">{item.name}{item.variant_label ? ` - ${item.variant_label}` : ''} × {item.quantity}</span><span className="font-semibold text-gray-800">Rs. {(item.unitPrice * item.quantity).toLocaleString()}</span></div>)}</div>
               <div className="flex justify-between gap-4"><span className="text-gray-500">Payment</span><span className="font-semibold text-gray-800">{PAYMENT_METHOD_LABELS[form.payment_method]}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-gray-500">Shipping</span><span className="max-w-[190px] text-right font-semibold text-gray-800">{form.shipping_address || 'Not entered'}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-gray-500">Shipping</span><span className="min-w-0 max-w-[190px] break-words text-right font-semibold text-gray-800 [overflow-wrap:anywhere]">{form.shipping_address || 'Not entered'}</span></div>
             </div>
             <div className="flex items-end justify-between py-4"><span className="font-semibold text-gray-600">Estimated total</span><span className="text-2xl font-bold text-dark">Rs. {total.toLocaleString()}</span></div>
             <button type="submit" disabled={saving || !selectedUser || !orderItems.length} className="btn-primary w-full py-3 disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Creating order...' : 'Create order and notify customer'}</button>
