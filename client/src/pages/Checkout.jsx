@@ -284,7 +284,7 @@ const Checkout = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    setErrors((prev) => validateField(name, value));
+    setErrors(() => validateField(name, value));
   };
 
   const validateForm = () => {

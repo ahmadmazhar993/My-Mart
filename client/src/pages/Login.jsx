@@ -103,7 +103,7 @@ const Login = () => {
       setPassword(value);
     }
 
-    setErrors((prev) => validateField(field, value));
+    setErrors(() => validateField(field, value));
   };
 
   const handleSubmit = async (e) => {

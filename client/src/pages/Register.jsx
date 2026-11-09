@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services';
 import { API_BASE, API_VERSION } from '../services/api';
-import { useAuthStore } from '../store';
 import BrandLoader from '../components/BrandLoader';
 
 const UserFieldIcon = () => (
@@ -50,7 +49,6 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuthStore();
 
   const validateField = (name, value) => {
     const nextErrors = { ...errors };
@@ -109,7 +107,7 @@ const Register = () => {
     const { name, value } = e.target;
     const nextForm = { ...form, [name]: value };
     setForm(nextForm);
-    setErrors((prev) => validateField(name, value));
+    setErrors(() => validateField(name, value));
   };
 
   const validateForm = () => {
@@ -162,7 +160,7 @@ const Register = () => {
     setError('');
     setLoading(true);
     try {
-      const response = await authService.register({
+      await authService.register({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
@@ -170,7 +168,6 @@ const Register = () => {
         confirm_password: form.confirmPassword,
       });
 
-      const data = response.data?.data || response.data;
       setError('');
       setErrors({});
       navigate('/login', { state: { message: 'Registration successful. Please check your email to verify your account.' } });

@@ -38,7 +38,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { cart } = useCartStore();
 
   useEffect(() => {

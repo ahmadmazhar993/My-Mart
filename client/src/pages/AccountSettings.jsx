@@ -26,6 +26,7 @@ const AccountSettings = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -98,8 +99,6 @@ const AccountSettings = () => {
       postalCode: updatedUser.postal_code || updatedUser.postalCode,
     };
   };
-
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

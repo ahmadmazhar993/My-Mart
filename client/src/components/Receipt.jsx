@@ -403,4 +403,6 @@ const Receipt = forwardRef(({ data, martInfo = {} }, ref) => {
     );
 });
 
+Receipt.displayName = 'Receipt';
+
 export default Receipt;

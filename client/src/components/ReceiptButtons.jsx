@@ -83,20 +83,6 @@ const ReceiptButtons = ({ order, martInfo = {}, receipt = null }) => {
         }
     };
 
-    const handleShareWhatsApp = () => {
-        const url = window.location.href;
-        const text = `Your receipt for order ${order.orderCode || order.orderID}: ${url}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    };
-
-    const handleEmail = () => {
-        const subject = `Receipt for order ${order.orderCode || order.orderID}`;
-        const body = `Please find your receipt for order ${order.orderCode || order.orderID}.`;
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-            body
-        )}`;
-    };
-
     const baseBtn =
         'inline-flex items-center gap-2 rounded-lg text-sm font-medium px-4 py-2.5 transition-colors duration-150 border';
 

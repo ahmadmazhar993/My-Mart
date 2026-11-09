@@ -77,7 +77,6 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   const stockValue = firstVariant?.stock_quantity ?? product.stock_quantity;
   const availableStock = stockValue == null ? Number.MAX_SAFE_INTEGER : Number(stockValue);
   const isOutOfStock = availableStock <= 0;
-  const isLowStock = !isOutOfStock && availableStock <= LOW_STOCK_THRESHOLD;
   const effectivePrice = firstVariant?.discount_price != null
     ? Number(firstVariant.discount_price)
     : getEffectivePrice(product);

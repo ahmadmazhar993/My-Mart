@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import api, { API_BASE, API_VERSION } from '../services/api';
+import api, { API_BASE } from '../services/api';
 import ImageCropModal from './ImageCropModal';
 import ImagePreviewGrid from './ImagePreviewGrid';
 
