@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
@@ -50,13 +50,66 @@ const TRUST_FEATURES = [
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const sentinelRef = useRef(null);
+  const busyRef = useRef(false);
 
   useEffect(() => {
-    productService.getAllProducts({ limit: 30 })
-      .then((res) => setProducts(res.data?.data || []))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    const isFirstPage = page === 1;
+    busyRef.current = true;
+    if (!isFirstPage) setLoadingMore(true);
+    setLoadMoreError(false);
+
+    productService.getAllProducts({ page, limit: 24 })
+      .then((res) => {
+        if (cancelled) return;
+        const incoming = res.data?.data || [];
+        setProducts((current) => {
+          if (isFirstPage) return incoming;
+          const seen = new Set(current.map((product) => product.id));
+          return [...current, ...incoming.filter((product) => !seen.has(product.id))];
+        });
+        setPagination(res.data?.pagination || null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (isFirstPage) setProducts([]);
+        else setLoadMoreError(true);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        busyRef.current = false;
+        setLoading(false);
+        setLoadingMore(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [page, retryKey]);
+
+  const hasNextPage = Boolean(pagination?.hasNextPage);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || loading || loadingMore || loadMoreError || !hasNextPage) return undefined;
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !busyRef.current) {
+          busyRef.current = true;
+          setPage((current) => current + 1);
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, loadMoreError, hasNextPage, products.length]);
 
   return (
     <div className="animate-fade-in">
@@ -89,15 +142,37 @@ const Home = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5">
-              {products.map((product, index) => (
-                // On phones (2 columns) drop a trailing odd item so the last row is never half empty
-                <div
-                  key={product.id}
-                  className={index === products.length - 1 && products.length % 2 === 1 ? 'hidden sm:block' : ''}
-                >
+              {products.map((product) => (
+                <div key={product.id}>
                   <ProductCard product={product} />
                 </div>
               ))}
+            </div>
+          )}
+
+          {!loading && products.length > 0 && (
+            <div className="mt-6">
+              {loadingMore && <BrandLoader minHeight={96} size="sm" text="Loading more products" />}
+              {loadMoreError && (
+                <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-center">
+                  <p className="text-sm text-red-700">We couldn&apos;t load more products.</p>
+                  <button
+                    type="button"
+                    onClick={() => { setLoadMoreError(false); setRetryKey((current) => current + 1); }}
+                    className="btn-outline mt-3 bg-white text-sm"
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+              {!loadingMore && !loadMoreError && hasNextPage && (
+                <div ref={sentinelRef} className="h-10" aria-hidden="true" />
+              )}
+              {!hasNextPage && !loadingMore && (
+                <p className="text-center text-sm text-gray-500">
+                  You&apos;ve seen all {pagination?.total || products.length} products
+                </p>
+              )}
             </div>
           )}
         </div>
