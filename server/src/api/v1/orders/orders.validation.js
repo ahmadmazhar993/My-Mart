@@ -23,11 +23,19 @@ function validateCreateOrder(req, res, next) {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'user_id must be a valid user ID' });
   }
 
+  if (!Array.isArray(items) || items.length > 100) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: 'items must be a list of at most 100 entries',
+    });
+  }
+
   for (const item of items) {
-    if (!item.product_id || !item.quantity || item.quantity < 1) {
+    if (!item || !item.product_id || !Number.isInteger(item.quantity)
+      || item.quantity < 1 || item.quantity > 1000) {
       return res.status(StatusCodes.BAD_REQUEST).json({
         success: false,
-        message: 'Each item requires product_id and quantity',
+        message: 'Each item requires product_id and a whole-number quantity between 1 and 1000',
       });
     }
   }

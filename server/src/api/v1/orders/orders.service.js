@@ -10,6 +10,7 @@ const {
   sendOrderConfirmationEmail, sendAdminCreatedOrderEmail, sendOrderStatusEmail, sendAdminNewOrderEmail,
 } = require('../../../email/templates');
 const orderEvents = require('../../../libs/orderEvents');
+const { getShippingCost } = require('../../../config/shipping');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_METHODS = ['cod', 'online'];
@@ -59,6 +60,16 @@ const findOrderVariant = (variants, ref) => variants.find((variant) => (
   || (ref.variant_label && String(variant.label || '') === String(ref.variant_label))
 ));
 
+// Per-line profit helpers (null when the purchase price wasn't recorded).
+const itemProfitTotal = (item) => (item.purchasePrice != null
+  ? (Number(item.unitPrice) - Number(item.purchasePrice)) * Number(item.quantity)
+  : null);
+const itemProfitPercent = (item) => {
+  if (item.purchasePrice == null || Number(item.unitPrice) === 0) return null;
+  return ((Number(item.unitPrice) - Number(item.purchasePrice)) / Number(item.unitPrice)) * 100;
+};
+const roundTo2 = (value) => (value != null ? Number(Number(value).toFixed(2)) : null);
+
 // Sum of variant stock, or null if any variant doesn't track stock.
 const sumVariantStock = (variants) => (
   variants.length > 0 && variants.every((variant) => variant.stock_quantity != null)
@@ -68,27 +79,32 @@ const sumVariantStock = (variants) => (
 
 // Returns stock of cancelled order lines to the product and, when tracked, the variant.
 // Must run inside a transaction.
+const restockOrderItem = async (trx, item) => {
+  const product = await trx('products').where({ productID: item.product_id }).forUpdate().first();
+  if (!product) return;
+
+  const variants = parseProductVariants(product.variants);
+  const payload = {};
+  const variant = (item.variant_name || item.variant_label) ? findOrderVariant(variants, item) : null;
+  if (variant && variant.stock_quantity != null) {
+    variant.stock_quantity = Number(variant.stock_quantity) + item.quantity;
+    payload.variants = JSON.stringify(variants);
+    payload.stockQuantity = sumVariantStock(variants)
+      ?? Number(product.stockQuantity || 0) + item.quantity;
+  } else {
+    payload.stockQuantity = Number(product.stockQuantity || 0) + item.quantity;
+  }
+  await trx('products').where({ productID: item.product_id }).update(payload);
+};
+
 const restockOrderItems = async (trx, orderId) => {
   const items = await trx('order_items').where({ order_id: orderId });
   for (const item of items) {
-    const product = await trx('products').where({ productID: item.product_id }).forUpdate().first();
-    if (!product) continue;
-
-    const variants = parseProductVariants(product.variants);
-    const payload = {};
-    const variant = (item.variant_name || item.variant_label) ? findOrderVariant(variants, item) : null;
-    if (variant && variant.stock_quantity != null) {
-      variant.stock_quantity = Number(variant.stock_quantity) + item.quantity;
-      payload.variants = JSON.stringify(variants);
-      payload.stockQuantity = sumVariantStock(variants) ?? Number(product.stockQuantity || 0) + item.quantity;
-    } else {
-      payload.stockQuantity = Number(product.stockQuantity || 0) + item.quantity;
-    }
-    await trx('products').where({ productID: item.product_id }).update(payload);
+    await restockOrderItem(trx, item);
   }
 };
 
-const uploadPaymentProofMiddleware =(req, res, next) => {
+const uploadPaymentProofMiddleware = (req, res, next) => {
   const upload = multer({
     storage: paymentProofStorage,
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -251,8 +267,8 @@ async function listOrders(req, res) {
         purchase_price: item.purchasePrice != null ? Number(item.purchasePrice) : null,
         profit_per_unit: item.purchasePrice != null ? Number(item.unitPrice) - Number(item.purchasePrice) : null,
         total_price: Number(item.totalPrice),
-        profit_total: item.purchasePrice != null ? (Number(item.unitPrice) - Number(item.purchasePrice)) * Number(item.quantity) : null,
-        profit_percent: item.purchasePrice != null && Number(item.unitPrice) !== 0 ? ((Number(item.unitPrice) - Number(item.purchasePrice)) / Number(item.unitPrice)) * 100 : null,
+        profit_total: itemProfitTotal(item),
+        profit_percent: itemProfitPercent(item),
       });
       return acc;
     }, {});
@@ -273,7 +289,7 @@ async function listOrders(req, res) {
           userName: order.userName,
           userEmail: order.userEmail,
           profit_total: Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total),
-          profit_percent: profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null,
+          profit_percent: roundTo2(profit_percent),
         };
         return roleRow?.type === 'Admin' ? full : stripOrderCosts(full);
       }),
@@ -347,16 +363,18 @@ async function getOrderById(req, res) {
       purchase_price: item.purchasePrice != null ? Number(item.purchasePrice) : null,
       profit_per_unit: item.purchasePrice != null ? Number(item.unitPrice) - Number(item.purchasePrice) : null,
       total_price: Number(item.totalPrice),
-      profit_total: item.purchasePrice != null ? (Number(item.unitPrice) - Number(item.purchasePrice)) * Number(item.quantity) : null,
-      profit_percent: item.purchasePrice != null && Number(item.unitPrice) !== 0 ? ((Number(item.unitPrice) - Number(item.purchasePrice)) / Number(item.unitPrice)) * 100 : null,
+      profit_total: itemProfitTotal(item),
+      profit_percent: itemProfitPercent(item),
     }));
 
     // Compute order-level profit summary
-    const profit_total = mappedOrder.items.reduce((s, it) => s + (it.profit_total != null ? Number(it.profit_total) : 0), 0);
-    const revenue = mappedOrder.items.reduce((s, it) => s + (it.total_price != null ? Number(it.total_price) : 0), 0);
+    const sumOf = (field) => mappedOrder.items
+      .reduce((sum, it) => sum + (it[field] != null ? Number(it[field]) : 0), 0);
+    const profit_total = sumOf('profit_total');
+    const revenue = sumOf('total_price');
     const profit_percent = revenue ? (profit_total / revenue) * 100 : null;
-    mappedOrder.profit_total = Number(profit_total.toFixed ? profit_total.toFixed(2) : profit_total);
-    mappedOrder.profit_percent = profit_percent != null ? Number(profit_percent.toFixed ? profit_percent.toFixed(2) : profit_percent) : null;
+    mappedOrder.profit_total = roundTo2(profit_total);
+    mappedOrder.profit_percent = roundTo2(profit_percent);
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -472,9 +490,9 @@ async function createOrder(req, res) {
             ?? product.discountPrice ?? product.price
         );
         // Prefer variant-level purchase price if available, otherwise fallback to product.purchasePrice
-        const purchasePriceSnapshot = (selectedVariant && (selectedVariant.purchase_price != null))
-          ? Number(selectedVariant.purchase_price)
-          : (product.purchasePrice != null ? Number(product.purchasePrice) : null);
+        const purchasePriceSnapshot = [selectedVariant?.purchase_price, product.purchasePrice]
+          .map((value) => (value != null ? Number(value) : null))
+          .find((value) => value != null) ?? null;
         const lineTotal = unitPrice * item.quantity;
         subtotal += lineTotal;
 
@@ -486,7 +504,8 @@ async function createOrder(req, res) {
           purchasePrice: purchasePriceSnapshot,
           totalPrice: lineTotal,
           variant_name: selectedVariant?.name || item.variant_name || null,
-          variant_label: selectedVariant?.label || item.variant_label || selectedVariant?.name || item.variant_name || null,
+          variant_label: selectedVariant?.label || item.variant_label
+            || selectedVariant?.name || item.variant_name || null,
           // Prefer variant SKU, then product SKU, then any provided SKU
           variant_sku: selectedVariant?.sku || product.sku || item.variant_sku || null,
         });
@@ -496,7 +515,12 @@ async function createOrder(req, res) {
       //   throw new Error(`Minimum order amount is Rs. ${MINIMUM_ORDER_SUBTOTAL}. Please add more items to your cart.`);
       // }
 
-      const shipping = Number(shipping_cost) || 0;
+      // Customers never choose their own shipping cost: it is derived from the
+      // server-calculated subtotal. Admins may override it (never negative).
+      const requestedShipping = Number(shipping_cost);
+      const shipping = isAdminRequest
+        ? Math.max(0, Number.isFinite(requestedShipping) ? requestedShipping : 0)
+        : getShippingCost(subtotal);
       const totalPrice = subtotal + shipping;
       const orderCode = await createUniqueOrderReferenceCode(trx);
 
@@ -547,7 +571,7 @@ async function createOrder(req, res) {
         cashier_name: req.activeUser ? `${req.activeUser.firstName || ''} ${req.activeUser.lastName || ''}`.trim() : null,
         data: JSON.stringify({
           subtotal,
-          shipping: shipping,
+          shipping,
           totalPrice,
           items: lineItems,
           paymentMethod: normalizedPaymentMethod,
@@ -587,7 +611,9 @@ async function createOrder(req, res) {
 
     // Notify admin clients (SSE/Web UI) that orders have been updated/created
     try {
-      orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: result.orderID });
+      orderEvents.emit('orders-updated', {
+        type: 'orders-updated', orderId: result.orderID, userId: result.user_id,
+      });
     } catch (evErr) {
       logger.error('[ORDERS][createOrder]::Failed to emit order event', evErr);
     }
@@ -672,14 +698,13 @@ async function submitPaymentProof(req, res) {
       proof_uploaded_at: new Date().toISOString(),
     };
 
-    // Update payment record with metadata and mark as completed
+    // Store the proof only. The payment stays "pending" until an admin verifies
+    // it and marks the order paid (updateOrderStatus), so a fake upload can't self-approve.
     await db('payments')
       .where({ order_id: id })
       .update({
         transactionID: transaction_id || payment?.transactionID || null,
         metadata,
-        status: 'completed',
-        processedOn: db.fn.now(),
         updatedOn: db.fn.now(),
       });
 
@@ -756,11 +781,15 @@ async function updateOrderStatus(req, res) {
       updatePayload.paymentStatus = normalizedPaymentStatus;
     }
 
-    if (normalizedPaymentStatus === 'paid') {
+    // Confirming payment moves a pending order forward; it must never pull a
+    // shipped/delivered/cancelled order back to "processing".
+    if (normalizedPaymentStatus === 'paid' && !normalizedStatus
+      && ['pending', 'confirmed'].includes(order.status)) {
       updatePayload.status = 'processing';
     }
 
-    if (normalizedPaymentStatus === 'unpaid' && !normalizedStatus) {
+    if (normalizedPaymentStatus === 'unpaid' && !normalizedStatus
+      && ['confirmed', 'processing'].includes(order.status)) {
       updatePayload.status = 'pending';
     }
 
@@ -795,7 +824,9 @@ async function updateOrderStatus(req, res) {
       return row;
     });
 
-    orderEvents.emit('orders-updated', { type: 'orders-updated', orderId: id });
+    orderEvents.emit('orders-updated', {
+      type: 'orders-updated', orderId: id, userId: order.user_id,
+    });
 
     const paymentUpdate = {};
     if (normalizedPaymentStatus === 'paid') {

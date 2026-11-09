@@ -11,7 +11,7 @@ async function getReceiptByOrderId(req, res) {
 
     const receipt = await db('receipts').where({ order_id: order.orderID }).first();
 
-    let items = await db('order_items')
+    const items = await db('order_items')
       .select('order_items.*', 'products.name as product_name', 'products.images')
       .leftJoin('products', 'products.productID', 'order_items.product_id')
       .where('order_items.order_id', order.orderID);
@@ -71,7 +71,6 @@ async function getPublicReceiptByInvoice(req, res) {
     const logoPath = (receipt.data && receipt.data.logoUrl) || '/logo.png';
     const logoUrl = logoPath.indexOf('http') === 0 ? logoPath : `${base}${logoPath.startsWith('/') ? '' : '/'}${logoPath}`;
     const fmt = (v) => (Number(v || 0)).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    console.log('Rendering receipt for invoice:', invoice, 'logoUrl:', logoUrl, 'receipt:', receipt);
     const html = `<!doctype html>
     <html>
     <head>
@@ -130,7 +129,7 @@ async function getPublicReceiptByInvoice(req, res) {
               <tr><th>SKU</th><th>Product</th><th>Qty</th><th style="text-align:right">Unit</th><th style="text-align:right">Total</th></tr>
             </thead>
             <tbody>
-              ${items.map(it => `<tr><td style="color:#6B7280">${it.variant_sku || it.product_id}</td><td style="font-weight:600">${it.product_name}</td><td>${it.quantity}</td><td style="text-align:right">${fmt(it.unitPrice)}</td><td style="text-align:right;font-weight:700">${fmt(it.totalPrice)}</td></tr>`).join('')}
+              ${items.map((it) => `<tr><td style="color:#6B7280">${it.variant_sku || it.product_id}</td><td style="font-weight:600">${it.product_name}</td><td>${it.quantity}</td><td style="text-align:right">${fmt(it.unitPrice)}</td><td style="text-align:right;font-weight:700">${fmt(it.totalPrice)}</td></tr>`).join('')}
             </tbody>
           </table>
 
@@ -139,8 +138,8 @@ async function getPublicReceiptByInvoice(req, res) {
               <!-- optional notes -->
             </div>
             <div class="totals">
-              <div class="row"><div class="muted">Subtotal</div><div>${fmt(order.totalPrice - (order.shippingCost||0))}</div></div>
-              <div class="row"><div class="muted">Shipping</div><div>${fmt(order.shippingCost||0)}</div></div>
+              <div class="row"><div class="muted">Subtotal</div><div>${fmt(order.totalPrice - (order.shippingCost || 0))}</div></div>
+              <div class="row"><div class="muted">Shipping</div><div>${fmt(order.shippingCost || 0)}</div></div>
               <div style="border-top:1px dashed #D1D5DB;padding-top:10px;margin-top:8px;font-weight:700;display:flex;justify-content:space-between"> <div>Grand Total</div><div style="color:#4F46E5">${fmt(order.totalPrice)}</div></div>
               <div style="margin-top:8px;font-size:13px;color:#6B7280">${(order.paymentMethod || order.payment_method || '—').toUpperCase()} • ${(order.paymentStatus || order.payment_status || '—')}</div>
             </div>
@@ -167,4 +166,3 @@ async function getPublicReceiptByInvoice(req, res) {
 }
 
 module.exports = { getReceiptByOrderId, getPublicReceiptByInvoice };
-

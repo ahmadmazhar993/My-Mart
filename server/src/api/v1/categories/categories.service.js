@@ -55,12 +55,28 @@ async function getCategoryById(req, res) {
   }
 }
 
+const slugify = (value) => String(value || '')
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)/g, '');
+
+// Builds a unique slug from the name when the caller didn't provide one.
+const uniqueCategorySlug = async (name, requested) => {
+  const root = slugify(requested || name) || 'category';
+  let candidate = root;
+  for (let i = 2; await db('categories').where({ slug: candidate }).first(); i += 1) {
+    candidate = `${root}-${i}`;
+  }
+  return candidate;
+};
+
 async function createCategory(req, res) {
   try {
     const payload = {
       name: req.body.name,
       description: req.body.description,
-      slug: req.body.slug,
+      slug: await uniqueCategorySlug(req.body.name, req.body.slug),
       imageUrl: req.body.image_url ?? req.body.imageUrl,
       displayOrder: req.body.display_order ?? req.body.displayOrder ?? 0,
       isActive: req.body.is_active ?? true,

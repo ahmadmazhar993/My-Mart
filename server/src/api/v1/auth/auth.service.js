@@ -1,4 +1,5 @@
 const { StatusCodes } = require('http-status-codes');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 
@@ -24,7 +25,7 @@ const getTokenCookieOptions = () => ({
 const clearTokenCookie = (res) => res.clearCookie('token', getTokenCookieOptions());
 const isSseRequest = (req) => req.headers.accept?.includes('text/event-stream') || req.path.includes('/events');
 
-const isApiRequest = (req) => req.path?.startsWith('/api/') || req.headers.accept?.includes('application/json') || req.headers['x-requested-with'] === 'XMLHttpRequest';
+const isApiRequest = (req) => req.originalUrl?.startsWith('/api/') || req.headers.accept?.includes('application/json') || req.headers['x-requested-with'] === 'XMLHttpRequest';
 
 const sendAuthFailure = (req, res, message = 'Authentication failed') => {
   if (isSseRequest(req) || isApiRequest(req)) {
@@ -270,6 +271,19 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
+// Allows the request when the caller is an admin or is acting on their own record (:userID).
+const isSelfOrAdmin = async (req, res, next) => {
+  try {
+    if (req.params.userID && req.params.userID === req.activeUser.userID) return next();
+    return isAdmin(req, res, next);
+  } catch (e) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: e.message || e,
+    });
+  }
+};
+
 const logout = (req, res) => {
   activityLogger({
     targetEntity: 'Auth',
@@ -298,11 +312,9 @@ const createRecoverUserPasswordToken = async (req, res, next) => {
       .whereRaw('lower("email") = ?', email.toLowerCase());
 
     if (!user) {
-      logger.log('info', `[AUTH][Function::createRecoverUserPasswordToken][Path::${req.path}][Method::${req.method}]::Error::No such user`, user);
-      return res.status(StatusCodes.NOT_FOUND).json({
-        error: true,
-        message: 'No such user found'
-      });
+      // Respond exactly like a success so the endpoint can't be used to discover which emails have accounts.
+      logger.log('info', `[AUTH][Function::createRecoverUserPasswordToken][Path::${req.path}][Method::${req.method}]::No such user (not disclosed to caller)`);
+      return next();
     }
 
     const updateRecoverPasswordToken = await db('user').update({ resetPasswordToken: db.raw('uuid_generate_v4()') }, '*')
@@ -367,7 +379,7 @@ const verifyEmail = async (req, res, next) => {
 
 const verifyEmailCheck = async (req, res) => {
   try {
-    const token = req.query.token;
+    const { token } = req.query;
     if (!token) {
       return res.status(StatusCodes.BAD_REQUEST).json({ error: true, message: 'Please provide a valid token' });
     }
@@ -508,7 +520,7 @@ const sendAuthResponse = (req, res) => {
   let tokenFromHeader = null;
   if (req.headers.authorization) {
     const parts = req.headers.authorization.split(' ');
-    if (parts.length === 2) tokenFromHeader = parts[1];
+    if (parts.length === 2) [, tokenFromHeader] = parts;
   }
   const token = tokenFromCookie || tokenFromHeader || null;
 
@@ -549,18 +561,40 @@ const sendAuthResponse = (req, res) => {
       message: 'Your password is updated successfully'
     });
   }
-    const baseResponse = {};
-    if (token) baseResponse.token = token;
-    return res.status(StatusCodes.OK).json(baseResponse);
+  const baseResponse = {};
+  if (token) baseResponse.token = token;
+  return res.status(StatusCodes.OK).json(baseResponse);
 };
 
 // --- Google OAuth handlers ---
+const OAUTH_NONCE_COOKIE = 'oauth_nonce';
+
+// Only same-site relative paths or the configured client origin(s) are valid redirect targets.
+const resolveSafeRedirect = (target, clientUrl) => {
+  const fallback = clientUrl.split(',')[0].trim();
+  if (!target) return fallback;
+  if (/^\/(?![/\\])/.test(target)) return `${fallback.replace(/\/+$/, '')}${target}`;
+  try {
+    const allowed = clientUrl.split(',').map((u) => new URL(u.trim()).origin);
+    return allowed.includes(new URL(target).origin) ? target : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 const googleRedirect = (req, res) => {
-  const { GOOGLE_CLIENT_ID, HOST_PATH = 'http://localhost:5000', CLIENT_URL = 'http://localhost:5173' } = process.env;
+  const { GOOGLE_CLIENT_ID, HOST_PATH = 'http://localhost:5000' } = process.env;
   if (!GOOGLE_CLIENT_ID) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Google client ID not configured' });
 
   const redirectUri = `${HOST_PATH.replace(/\/+$/, '')}/api/v1/auth/google/callback`;
-  const state = req.query.redirect ? encodeURIComponent(req.query.redirect) : '';
+  // state = <random nonce>.<redirect target>; the nonce is also kept in a cookie so the
+  // callback can prove this browser started the login (CSRF protection).
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const redirectTarget = req.query.redirect ? String(req.query.redirect) : '';
+  const state = `${nonce}.${encodeURIComponent(redirectTarget)}`;
+  res.cookie(OAUTH_NONCE_COOKIE, nonce, {
+    httpOnly: true, sameSite: 'lax', secure: NODE_ENV.toLowerCase() === 'production', maxAge: 10 * 60 * 1000,
+  });
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: redirectUri,
@@ -577,8 +611,14 @@ const googleRedirect = (req, res) => {
 
 const googleCallback = async (req, res) => {
   try {
-    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, HOST_PATH = 'http://localhost:5000', CLIENT_URL = 'http://localhost:5173', TOKEN_SECRET_KEY = 'TokenSecretKey' } = process.env;
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, HOST_PATH = 'http://localhost:5000' } = process.env;
     const { code, state } = req.query;
+    const [stateNonce, ...stateRest] = String(state || '').split('.');
+    const expectedNonce = req.cookies?.[OAUTH_NONCE_COOKIE];
+    res.clearCookie(OAUTH_NONCE_COOKIE);
+    if (!stateNonce || !expectedNonce || stateNonce !== expectedNonce) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Invalid OAuth state' });
+    }
     if (!code) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Missing code' });
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Google OAuth not configured' });
 
@@ -634,11 +674,9 @@ const googleCallback = async (req, res) => {
       };
       const rows = await db('user').insert(createObj, '*');
       user = rows && rows[0] ? rows[0] : null;
-    } else {
+    } else if (!user.isActive) {
       // ensure active
-      if (!user.isActive) {
-        await db('user').where({ userID: user.userID }).update({ isActive: true, status: 'Active', updatedOn: db.fn.now() });
-      }
+      await db('user').where({ userID: user.userID }).update({ isActive: true, status: 'Active', updatedOn: db.fn.now() });
     }
 
     if (!user) return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Unable to create or find user' });
@@ -655,7 +693,7 @@ const googleCallback = async (req, res) => {
 
     // set cookie and either return a backend JSON response (when state==='backend')
     // or redirect to client (optionally include state as redirect path)
-    const decodedState = state ? decodeURIComponent(state) : '';
+    const decodedState = decodeURIComponent(stateRest.join('.'));
     // set token cookie
     res.cookie('token', token, getTokenCookieOptions());
 
@@ -663,8 +701,7 @@ const googleCallback = async (req, res) => {
       return res.status(StatusCodes.OK).json({ message: 'Welcome to AHM-Mart API Server' });
     }
 
-    const redirectTo = decodedState || CLIENT_URL;
-    return res.redirect(redirectTo || CLIENT_URL);
+    return res.redirect(resolveSafeRedirect(decodedState, CLIENT_URL));
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message || 'Google OAuth failed' });
   }
@@ -675,6 +712,7 @@ module.exports = {
   register,
   login,
   isAdmin,
+  isSelfOrAdmin,
   logout,
   createRecoverUserPasswordToken,
   validateRecoverPasswordToken,

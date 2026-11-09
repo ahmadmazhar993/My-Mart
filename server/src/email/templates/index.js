@@ -166,7 +166,6 @@ async function sendAdminNewOrderEmail({
   shippingCost,
   totalPrice,
 }) {
-  const site = require('./siteConstants');
   return sendEmail({
     to: site.contactToEmail,
     subject: `New order received — #${orderId}`,

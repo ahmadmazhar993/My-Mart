@@ -25,7 +25,7 @@ async function salesSummary(req, res) {
     if (groupBy === 'date') {
       const rows = await baseQuery
         .select(
-          db.raw("DATE(orders.\"createdOn\") as date"),
+          db.raw('DATE(orders."createdOn") as date'),
           db.raw('SUM(order_items.quantity) as quantity_sold'),
           db.raw('SUM(order_items."unitPrice" * order_items.quantity) as revenue'),
           // cost: only count when there is a purchase price (order item or product fallback)

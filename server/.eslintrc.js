@@ -20,5 +20,7 @@ module.exports = {
         'object-curly-newline': 0,
         'linebreak-style': 0,
         'no-unused-expressions': 0,
+        // The codebase uses long SQL / message strings; keep a sane cap but don't force wrapping them.
+        'max-len': ['error', { code: 120, ignoreStrings: true, ignoreTemplateLiterals: true, ignoreUrls: true, ignoreComments: true, ignoreRegExpLiterals: true }],
     }
 };

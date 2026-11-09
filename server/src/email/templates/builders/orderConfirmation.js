@@ -4,9 +4,7 @@ const {
   getOnlinePaymentInstructions,
 } = require('../../../libs/paymentMethods');
 
-const formatPrice = (amount) => {
-  return `Rs. ${Number(amount).toLocaleString('en-PK')}`;
-};
+const formatPrice = (amount) => `Rs. ${Number(amount).toLocaleString('en-PK')}`;
 
 const buildOrderConfirmationBody = ({
   firstName,
@@ -26,7 +24,7 @@ const buildOrderConfirmationBody = ({
   intro: [
     `Hi ${firstName},`,
     `Thank you for shopping with ${site.brandName}! We've successfully received your order and it's now being processed.`,
-    `We'll keep you updated by email as your order moves through each stage.`,
+    'We\'ll keep you updated by email as your order moves through each stage.',
   ],
 
   dictionary: {

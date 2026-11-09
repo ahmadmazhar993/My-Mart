@@ -45,7 +45,7 @@ async function addToCart(req, res) {
       [cart] = await db('carts').insert({ user_id: userId }).returning('*');
     }
 
-    const { product_id, quantity, price, variant_sku } = req.body;
+    const { product_id, quantity, variant_sku } = req.body;
     const product = await db('products').where({ productID: product_id }).first();
 
     if (!product) {
@@ -58,7 +58,8 @@ async function addToCart(req, res) {
       return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: 'Product has variants; include variant_sku when adding to cart' });
     }
 
-    const unitPrice = price ?? Number(product.discountPrice ?? product.price);
+    // Never trust a client-supplied price; always use the catalog price.
+    const unitPrice = Number(product.discountPrice ?? product.price);
     const existingItem = await db('cart_items')
       .where({ cart_id: cart.cartID, product_id })
       .first();
@@ -102,9 +103,16 @@ async function updateCartItem(req, res) {
     const { itemId } = req.params;
     const { quantity } = req.body;
 
-    await db('cart_items')
-      .where({ cartItemID: itemId })
-      .update({ quantity, updatedOn: db.fn.now() });
+    // Only touch items that belong to the caller's own cart.
+    const cart = await db('carts').where({ user_id: req.activeUser.userID }).first();
+    const updated = cart
+      ? await db('cart_items')
+        .where({ cartItemID: itemId, cart_id: cart.cartID })
+        .update({ quantity, updatedOn: db.fn.now() })
+      : 0;
+    if (!updated) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Cart item not found' });
+    }
 
     return res.status(StatusCodes.OK).json({ success: true, message: 'Cart item updated' });
   } catch (err) {
@@ -118,7 +126,13 @@ async function updateCartItem(req, res) {
 async function removeFromCart(req, res) {
   try {
     const { itemId } = req.params;
-    await db('cart_items').where({ cartItemID: itemId }).del();
+    const cart = await db('carts').where({ user_id: req.activeUser.userID }).first();
+    const removed = cart
+      ? await db('cart_items').where({ cartItemID: itemId, cart_id: cart.cartID }).del()
+      : 0;
+    if (!removed) {
+      return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: 'Cart item not found' });
+    }
     return res.status(StatusCodes.OK).json({ success: true, message: 'Item removed' });
   } catch (err) {
     return res.status(StatusCodes.BAD_REQUEST).json({

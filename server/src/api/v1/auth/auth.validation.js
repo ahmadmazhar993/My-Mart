@@ -221,4 +221,3 @@ module.exports = {
   validateEmailVerificationForm,
   validateResendVerificationForm,
 };
-

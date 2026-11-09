@@ -143,7 +143,7 @@ const resolveFallbackUuid = async (value, table, column, options = {}) => {
     const normalized = String(value).trim();
     const row = await db(table)
       .first(`${column} as id`)
-      .where(function (builder) {
+      .where((builder) => {
         if (Array.isArray(options.matchBy) && options.matchBy.length > 0) {
           options.matchBy.forEach((field, index) => {
             if (index === 0) {

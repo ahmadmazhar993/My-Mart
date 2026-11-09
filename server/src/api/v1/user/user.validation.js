@@ -179,6 +179,11 @@ const validateCreateUserForm = (req, res, next) => {
   }
 };
 
+const statusFromActiveFlag = (isActive) => {
+  if (typeof isActive !== 'boolean') return null;
+  return isActive ? 'active' : 'inactive';
+};
+
 const normalizeUserStatus = (value) => {
   if (typeof value !== 'string') {
     return null;
@@ -213,7 +218,7 @@ const validateUserStatusWithAdminForm = (req, res, next) => {
       });
     }
 
-    const finalStatus = providedStatus || (typeof is_active === 'boolean' ? (is_active ? 'active' : 'inactive') : null);
+    const finalStatus = providedStatus || statusFromActiveFlag(is_active);
 
     if (!finalStatus) {
       return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({
@@ -271,7 +276,7 @@ const validateUpdateUserWithAdminForm = (req, res, next) => {
 
     const normalizedStatus = normalizeUserStatus(status);
     if (typeof status !== 'undefined' || typeof is_active !== 'undefined') {
-      const finalStatus = normalizedStatus || (typeof is_active === 'boolean' ? (is_active ? 'active' : 'inactive') : null);
+      const finalStatus = normalizedStatus || statusFromActiveFlag(is_active);
 
       if (!finalStatus) {
         return res.status(HttpStatus.StatusCodes.BAD_REQUEST).json({

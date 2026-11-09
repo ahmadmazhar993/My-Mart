@@ -2,8 +2,12 @@ const express = require('express');
 
 const router = express.Router();
 
+const { isAuthenticated, isAdmin } = require('../auth/auth.service');
 const { listSellers, getSellerById, createSeller, updateSeller, deleteSeller } = require('./sellers.service');
 const { validateCreateSeller, validateUpdateSeller } = require('./sellers.validation');
+
+// Seller records are back-office data: admin only.
+router.use(isAuthenticated, isAdmin);
 
 router.get('/', listSellers);
 router.get('/:id', getSellerById);

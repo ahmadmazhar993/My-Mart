@@ -124,7 +124,7 @@ const getAllUsers = async (req, res, next) => {
         total,
         perPage,
         pageNum: page,
-        page: page,
+        page,
         limit: perPage,
         totalPages,
         hasNextPage: page < totalPages,

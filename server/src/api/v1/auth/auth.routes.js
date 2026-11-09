@@ -21,6 +21,9 @@ const {
   validateResendVerificationForm,
 } = require('./auth.validation');
 const { getActiveUser, getUserByEmail } = require('../user/user.service');
+const {
+  loginLimiter, registerLimiter, passwordResetLimiter, verificationLimiter,
+} = require('../../../libs/rateLimiters');
 
 router
   .route('/')
@@ -28,7 +31,7 @@ router
 
 router
   .route('/login')
-  .post(validateLoginForm, login);
+  .post(loginLimiter, validateLoginForm, login);
 
 // Google OAuth
 router.get('/google', googleRedirect);
@@ -36,11 +39,11 @@ router.get('/google/callback', googleCallback);
 
 router
   .route('/register')
-  .post(validateRegisterForm, getUserByEmail, register);
+  .post(registerLimiter, validateRegisterForm, getUserByEmail, register);
 
 router
   .route('/verify-email')
-  .post(validateEmailVerificationForm, verifyEmail, sendAuthResponse);
+  .post(verificationLimiter, validateEmailVerificationForm, verifyEmail, sendAuthResponse);
 
 router
   .route('/verify-email/check')
@@ -48,7 +51,7 @@ router
 
 router
   .route('/resend-verification')
-  .post(validateResendVerificationForm, resendVerification);
+  .post(verificationLimiter, validateResendVerificationForm, resendVerification);
 
 router
   .route('/logout')
@@ -57,16 +60,26 @@ router
 // Create a password forgot request
 router
   .route('/forgot-password')
-  .post(validateRecoverPasswordForm, createRecoverUserPasswordToken, sendAuthResponse);
+  .post(
+    passwordResetLimiter,
+    validateRecoverPasswordForm,
+    createRecoverUserPasswordToken,
+    sendAuthResponse,
+  );
 
 // Verify the password set/forgot token
 router
   .route('/validate-token')
-  .post(validateResetPasswordTokenValidationForm, validateRecoverPasswordToken, sendAuthResponse);
+  .post(
+    passwordResetLimiter,
+    validateResetPasswordTokenValidationForm,
+    validateRecoverPasswordToken,
+    sendAuthResponse,
+  );
 
 // Update user password with set/rest password token
 router
   .route('/update-password')
-  .post(validateResetPasswordForm, updateNewPassword, sendAuthResponse);
+  .post(passwordResetLimiter, validateResetPasswordForm, updateNewPassword, sendAuthResponse);
 
 module.exports = router;

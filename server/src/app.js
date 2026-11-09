@@ -4,15 +4,40 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
-const { notFound, genericErrorHandler } = require('./libs/errorHandler');
+const { notFound, genericErrorHandler, hideDatabaseErrors } = require('./libs/errorHandler');
 const requestLogger = require('./libs/requestLogger');
 const apiV1Routes = require('./api/v1');
 const { isAuthenticated } = require('./api/v1/auth/auth.service');
 const orderEvents = require('./libs/orderEvents');
+const db = require('./db');
 
 const app = express();
 
-const { EXPRESS_SESSION_SECRET = 'ExpressSessionSecret', APP_VERSION = '1.0.0' } = process.env;
+const {
+  EXPRESS_SESSION_SECRET = 'ExpressSessionSecret',
+  APP_VERSION = '1.0.0',
+  NODE_ENV = 'development',
+  CLIENT_URL,
+} = process.env;
+const isProduction = NODE_ENV.toLowerCase() === 'production';
+
+if (isProduction && (!CLIENT_URL || EXPRESS_SESSION_SECRET === 'ExpressSessionSecret')) {
+  throw new Error('CLIENT_URL and EXPRESS_SESSION_SECRET must be set in production');
+}
+
+// CLIENT_URL may hold several comma-separated origins. Without it (development only)
+// any origin is reflected so local tools keep working.
+const allowedOrigins = (CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+const isAdminUser = async (user) => {
+  const role = await db('accessTemplate')
+    .first('type')
+    .where('accessTemplateID', user.accessTemplateID);
+  return role?.type === 'Admin';
+};
 app.locals.appVersion = APP_VERSION;
 
 app.set('view engine', 'ejs');
@@ -20,21 +45,43 @@ app.set('trust proxy', 1);
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-const { CLIENT_URL } = process.env;
 app.use(cors({
-  origin: CLIENT_URL || true,
+  origin: allowedOrigins.length ? allowedOrigins : !isProduction,
   credentials: true,
 }));
 app.use(cookieParser());
 
 app.use(session({
   secret: EXPRESS_SESSION_SECRET,
-  resave: true,
-  saveUninitialized: true
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: isProduction },
 }));
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Payment proofs are private: only the order owner or an admin may open them.
+app.get('/uploads/payments/:file', isAuthenticated, async (req, res, next) => {
+  try {
+    const file = path.basename(req.params.file);
+    const payment = await db('payments')
+      .whereRaw("metadata->>'receipt_url' = ?", [`uploads/payments/${file}`])
+      .first('order_id');
+    if (!payment) return res.status(404).json({ success: false, message: 'File not found' });
+
+    if (!(await isAdminUser(req.activeUser))) {
+      const order = await db('orders').where({ orderID: payment.order_id }).first('user_id');
+      if (!order || order.user_id !== req.activeUser.userID) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+    }
+    return res.sendFile(path.join(__dirname, '../uploads/payments', file));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'deny' }));
 app.use(requestLogger);
+app.use(hideDatabaseErrors);
 
 app.get('/', (req, res) => {
   const { error } = req.query;
@@ -64,13 +111,18 @@ app.get('/logo.png', (req, res) => {
   res.sendFile(path.join(__dirname, '../../client/public/logo.png'));
 });
 
-app.get('/api/v1/orders/events', isAuthenticated, (req, res) => {
+app.get('/api/v1/orders/events', isAuthenticated, async (req, res) => {
+  const viewerIsAdmin = await isAdminUser(req.activeUser).catch(() => false);
+
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  const { origin } = req.headers;
+  if (origin && (allowedOrigins.length ? allowedOrigins.includes(origin) : !isProduction)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.flushHeaders?.();
 
   const sendEvent = (payload) => {
@@ -83,7 +135,11 @@ app.get('/api/v1/orders/events', isAuthenticated, (req, res) => {
     res.write(': keepalive\n\n');
   }, 15000);
 
-  const onOrderUpdated = (payload) => sendEvent(payload || { type: 'orders-updated' });
+  // Customers only hear about their own orders; admins hear about all of them.
+  const onOrderUpdated = (payload) => {
+    if (!viewerIsAdmin && payload?.userId !== req.activeUser.userID) return;
+    sendEvent({ type: 'orders-updated', orderId: payload?.orderId });
+  };
   orderEvents.on('orders-updated', onOrderUpdated);
 
   req.on('close', () => {
