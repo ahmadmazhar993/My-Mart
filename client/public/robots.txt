@@ -1,4 +1,19 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /profile
+Disallow: /orders
+Disallow: /wishlist
+Disallow: /reviews
+Disallow: /settings
+
+# /api/ and /uploads/ are intentionally NOT blocked: Googlebot needs them to render product pages.
 
 Sitemap: https://ahmmart.store/sitemap.xml

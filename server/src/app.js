@@ -10,6 +10,7 @@ const apiV1Routes = require('./api/v1');
 const { isAuthenticated } = require('./api/v1/auth/auth.service');
 const orderEvents = require('./libs/orderEvents');
 const db = require('./db');
+const { sitemapHandler } = require('./libs/sitemap');
 
 const app = express();
 
@@ -89,6 +90,9 @@ app.get('/', (req, res) => {
     message: error || 'Welcome to AHM-Mart API Server'
   });
 });
+
+// Authoritative sitemap (Nginx proxies exactly /sitemap.xml here). Replaces client/public/sitemap.xml.
+app.get('/sitemap.xml', sitemapHandler);
 
 app.get('/api/v1/app-version', (req, res) => {
   res.json({

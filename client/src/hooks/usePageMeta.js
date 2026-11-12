@@ -17,7 +17,7 @@ const upsertMeta = (attr, key, content) => {
 // Sets title, description, canonical URL and Open Graph/Twitter tags for the current page, and
 // restores the previous values on unmount. `jsonLd` (optional) is injected as a JSON-LD script.
 // This is client-side only: crawlers that do not run JavaScript will see the defaults in index.html.
-const usePageMeta = ({ title, description, path, image, type = 'website', jsonLd } = {}) => {
+const usePageMeta = ({ title, description, path, image, type = 'website', jsonLd, noindex = false } = {}) => {
   useEffect(() => {
     const cleanups = [];
     const fullTitle = title ? `${title} | ${SITE_NAME}` : document.title;
@@ -55,6 +55,8 @@ const usePageMeta = ({ title, description, path, image, type = 'website', jsonLd
       else canonical.remove();
     });
 
+    if (noindex) cleanups.push(upsertMeta('name', 'robots', 'noindex, follow'));
+
     if (jsonLd) {
       const script = document.createElement('script');
       script.type = 'application/ld+json';
@@ -64,7 +66,7 @@ const usePageMeta = ({ title, description, path, image, type = 'website', jsonLd
     }
 
     return () => cleanups.forEach((fn) => fn());
-  }, [title, description, path, image, type, jsonLd]);
+  }, [title, description, path, image, type, jsonLd, noindex]);
 };
 
 export default usePageMeta;

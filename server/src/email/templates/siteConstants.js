@@ -1,4 +1,4 @@
-const { CLIENT_URL = 'http://10.36.13.15:5173', CONTACT_TO_EMAIL = 'admin@ahmmart.store' } = process.env;
+const { CLIENT_URL = 'https://ahmmart.store', CONTACT_TO_EMAIL = 'admin@ahmmart.store' } = process.env;
 
 module.exports = {
   brandName: 'AHM Mart',

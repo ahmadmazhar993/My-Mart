@@ -91,7 +91,8 @@ export function slugify(value) {
 }
 
 export function getProductSlug(product) {
-  return slugify(product?.name || product?.slug || 'product');
+  // Prefer the stored slug: it is unique, whereas slugify(name) collides for same-named products.
+  return product?.slug || slugify(product?.name || 'product');
 }
 
 export function buildProductPath(product) {

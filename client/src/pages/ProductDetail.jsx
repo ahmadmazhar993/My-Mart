@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ProductImage from '../components/ProductImage';
 import { Breadcrumb } from '../components/ui';
@@ -9,6 +9,7 @@ import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl } from '../utils/product';
 import SoldOutBanner from '../components/SoldOutBanner';
 import BrandLoader from '../components/BrandLoader';
+import usePageMeta from '../hooks/usePageMeta';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -108,6 +109,76 @@ const ProductDetail = () => {
       return variants[0];
     });
   }, [product]);
+
+  // Product structured data. Only real stored values are used: no reviews, brand or
+  // identifiers are invented, and rating data is emitted only when real reviews exist.
+  const productJsonLd = useMemo(() => {
+    if (!product) return null;
+    const origin = window.location.origin;
+    const url = `${origin}${buildProductPath(product)}`;
+    const variants = parseProductVariants(product);
+    const prices = (variants.length ? variants.map((v) => getProductVariantPrice(product, v)) : [getEffectivePrice(product)])
+      .filter((n) => Number.isFinite(n) && n > 0);
+    const inStock = variants.length
+      ? variants.some((v) => Number(getProductVariantStock(product, v)) > 0)
+      : Number(product.stock_quantity ?? 0) > 0;
+    const images = [...new Set(parseProductImages(product).map((img) => normalizeProductImageUrl(img)).filter(Boolean))];
+
+    const offer = {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'PKR',
+      availability: `https://schema.org/${inStock ? 'InStock' : 'OutOfStock'}`,
+      itemCondition: 'https://schema.org/NewCondition',
+    };
+    const offers = prices.length === 0 ? undefined
+      : (variants.length > 1 && Math.min(...prices) !== Math.max(...prices))
+        ? {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'PKR',
+          lowPrice: Math.min(...prices).toFixed(2),
+          highPrice: Math.max(...prices).toFixed(2),
+          offerCount: variants.length,
+          availability: offer.availability,
+          itemCondition: offer.itemCondition,
+        }
+        : { ...offer, price: Math.min(...prices).toFixed(2) };
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: product.description || undefined,
+      image: images.length ? images : undefined,
+      sku: product.sku || undefined,
+      brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+      url,
+      offers,
+      aggregateRating: product.rating > 0 && product.review_count > 0
+        ? {
+          '@type': 'AggregateRating',
+          ratingValue: Number(product.rating),
+          reviewCount: Number(product.review_count),
+        }
+        : undefined,
+    };
+  }, [product]);
+
+  const metaDescription = product
+    ? (String(product.description || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+      || `Buy ${product.name} online at AHM Mart with delivery across Pakistan.`)
+    : undefined;
+
+  usePageMeta({
+    title: product ? product.name : (loading ? undefined : 'Product not found'),
+    description: metaDescription,
+    path: product ? buildProductPath(product) : undefined,
+    image: product ? getProductImageUrl(product) : undefined,
+    type: 'product',
+    jsonLd: productJsonLd,
+    // The server returns 200 for the SPA shell on unknown URLs, so mark missing products noindex.
+    noindex: !loading && !product,
+  });
 
   if (loading) {
     return (

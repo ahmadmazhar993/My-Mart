@@ -9,7 +9,7 @@ export const MART_INFO = {
   address: 'AHM Mart (Pvt.) Ltd., Near Lahore General Hospital, Ismail Nagar, Lahore, Pakistan',
   phone: '+92 323 881 8508',
   email: 'support@ahmmart.store',
-  website: 'https://www.ahmmart.store',
+  website: 'https://ahmmart.store',
   support: 'support@ahmmart.store',
 };
 
