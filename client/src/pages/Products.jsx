@@ -6,6 +6,7 @@ import { productService, categoryService } from '../services';
 import BrandLoader from '../components/BrandLoader';
 import BrandLogo from '../components/BrandLogo';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
+import usePageMeta from '../hooks/usePageMeta';
 
 const SORT_OPTIONS = [
   { value: 'popular', label: 'Popularity' },
@@ -282,6 +283,31 @@ const Products = () => {
         : category
           ? categoryMatch?.name || category.charAt(0).toUpperCase() + category.slice(1)
           : 'All Products';
+
+  // Listing metadata. A single brand or category is a real landing page, so it gets its own title and a
+  // self-referencing canonical (the filter stays in the URL). Search, sale and price filters are
+  // combinations/duplicates of the main list: they canonicalise to the page they refine and, for
+  // search results, are marked noindex. Nothing is blocked or redirected.
+  const singleFilterOnly = !search && !saleOnly;
+  let listingPath = '/products';
+  if (singleFilterOnly && brand) listingPath = `/products?brand=${encodeURIComponent(brandLabel)}`;
+  else if (singleFilterOnly && category && categoryMatch) listingPath = `/products?category=${encodeURIComponent(category)}`;
+  const listingTitle = singleFilterOnly && (brand || categoryMatch)
+    ? `${pageTitle} Products`
+    : (saleOnly ? 'Flash Sale' : 'All Products');
+  let listingDescription = 'Browse all products at AHM Mart: groceries, electronics, fashion, beauty and home essentials with delivery across Pakistan.';
+  if (singleFilterOnly && brand) {
+    listingDescription = brandInfo?.description
+      || `Shop ${brandLabel} products online at AHM Mart with delivery across Pakistan.`;
+  } else if (singleFilterOnly && categoryMatch) {
+    listingDescription = `Shop ${categoryMatch.name} online at AHM Mart with delivery across Pakistan.`;
+  }
+  usePageMeta({
+    title: listingTitle,
+    description: listingDescription,
+    path: listingPath,
+    noindex: Boolean(search),
+  });
 
   // Brand picker shared by the desktop sidebar and the mobile filter sheet.
   const renderBrandFilter = (groupName, itemPadding) => (brands.length === 0 ? null : (

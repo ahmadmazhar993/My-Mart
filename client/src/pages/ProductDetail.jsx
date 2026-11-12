@@ -6,10 +6,11 @@ import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
-import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl } from '../utils/product';
+import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl, getProductDescription } from '../utils/product';
 import SoldOutBanner from '../components/SoldOutBanner';
 import BrandLoader from '../components/BrandLoader';
 import usePageMeta from '../hooks/usePageMeta';
+import { buildShippingDetails, buildReturnPolicy } from '../utils/storePolicySchema';
 
 const ProductDetail = () => {
   const { identifier } = useParams();
@@ -110,50 +111,43 @@ const ProductDetail = () => {
     });
   }, [product]);
 
-  // Product structured data. Only real stored values are used: no reviews, brand or
-  // identifiers are invented, and rating data is emitted only when real reviews exist.
+  // Product structured data. Only real stored values are used: no reviews, brand or identifiers are
+  // invented, and rating data is emitted only when real reviews exist. The Offer mirrors what the
+  // page currently shows: the selected variant's price, stock and SKU (or the product's own).
   const productJsonLd = useMemo(() => {
     if (!product) return null;
-    const origin = window.location.origin;
-    const url = `${origin}${buildProductPath(product)}`;
-    const variants = parseProductVariants(product);
-    const prices = (variants.length ? variants.map((v) => getProductVariantPrice(product, v)) : [getEffectivePrice(product)])
-      .filter((n) => Number.isFinite(n) && n > 0);
-    const inStock = variants.length
-      ? variants.some((v) => Number(getProductVariantStock(product, v)) > 0)
-      : Number(product.stock_quantity ?? 0) > 0;
-    const images = [...new Set(parseProductImages(product).map((img) => normalizeProductImageUrl(img)).filter(Boolean))];
-
-    const offer = {
-      '@type': 'Offer',
-      url,
-      priceCurrency: 'PKR',
-      availability: `https://schema.org/${inStock ? 'InStock' : 'OutOfStock'}`,
-      itemCondition: 'https://schema.org/NewCondition',
-    };
-    const offers = prices.length === 0 ? undefined
-      : (variants.length > 1 && Math.min(...prices) !== Math.max(...prices))
-        ? {
-          '@type': 'AggregateOffer',
-          priceCurrency: 'PKR',
-          lowPrice: Math.min(...prices).toFixed(2),
-          highPrice: Math.max(...prices).toFixed(2),
-          offerCount: variants.length,
-          availability: offer.availability,
-          itemCondition: offer.itemCondition,
-        }
-        : { ...offer, price: Math.min(...prices).toFixed(2) };
+    const url = `${window.location.origin}${buildProductPath(product)}`;
+    const hasVariants = parseProductVariants(product).length > 0;
+    const variant = hasVariants ? selectedVariant : null;
+    const price = Number(getProductVariantPrice(product, variant));
+    const stock = Number(getProductVariantStock(product, variant) ?? 0);
+    const mainImage = getProductImageUrl(product, variant);
+    const images = [...new Set([
+      mainImage,
+      ...parseProductImages(product).map((img) => normalizeProductImageUrl(img)),
+    ].filter(Boolean))];
 
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
       name: product.name,
-      description: product.description || undefined,
+      description: getProductDescription(product) || undefined,
       image: images.length ? images : undefined,
-      sku: product.sku || undefined,
+      sku: variant?.sku || product.sku || undefined,
       brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
       url,
-      offers,
+      offers: Number.isFinite(price) && price > 0
+        ? {
+          '@type': 'Offer',
+          url,
+          price: price.toFixed(2),
+          priceCurrency: 'PKR',
+          availability: `https://schema.org/${stock > 0 ? 'InStock' : 'OutOfStock'}`,
+          itemCondition: 'https://schema.org/NewCondition',
+          hasMerchantReturnPolicy: buildReturnPolicy(),
+          shippingDetails: buildShippingDetails(),
+        }
+        : undefined,
       aggregateRating: product.rating > 0 && product.review_count > 0
         ? {
           '@type': 'AggregateRating',
@@ -162,11 +156,11 @@ const ProductDetail = () => {
         }
         : undefined,
     };
-  }, [product]);
+  }, [product, selectedVariant]);
 
   const metaDescription = product
-    ? (String(product.description || '').replace(/\s+/g, ' ').trim().slice(0, 160)
-      || `Buy ${product.name} online at AHM Mart with delivery across Pakistan.`)
+    ? (String(getProductDescription(product)).replace(/\s+/g, ' ').trim().slice(0, 160)
+      || `Buy ${product.name} online at AHM Mart.`)
     : undefined;
 
   usePageMeta({
@@ -421,7 +415,7 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <p className="mb-5 text-sm leading-relaxed text-gray-600 sm:mb-6">{product.description}</p>
+            <p className="mb-5 text-sm leading-relaxed text-gray-600 sm:mb-6">{getProductDescription(product)}</p>
 
             {variantOptions.length > 0 && (
               <div className="mb-6">

@@ -12,6 +12,14 @@ export const POLICY = {
   returnWindowDays: 7,
   // e.g. '5–7 business days'
   refundTimeframe: null,
+  // Optional Google structured-data details. Leave null unless the business has confirmed them AND they
+  // are stated on the Returns / Shipping pages.
+  // How a customer sends an item back: 'ReturnByMail' | 'ReturnInStore' | 'ReturnAtKiosk'
+  returnMethod: 'ReturnInStore',
+  // Who pays for returns: 'FreeReturn' | 'ReturnFeesCustomerResponsibility' (Google-supported values)
+  returnFees: 'ReturnFeesCustomerResponsibility',
+  // Order processing time before dispatch, in days, e.g. { min: 0, max: 1 }
+  handlingDays: { min: 0, max: 2 },
   // e.g. 'Monday – Saturday, 9:00 AM – 9:00 PM PKT'
   supportHours: '9:00 AM – 9:00 PM',
 };

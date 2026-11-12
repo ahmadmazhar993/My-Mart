@@ -7,6 +7,7 @@ import FlashSale from '../components/FlashSale';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services';
 import BrandLoader from '../components/BrandLoader';
+import usePageMeta from '../hooks/usePageMeta';
 
 const TRUST_FEATURES = [
   {
@@ -46,6 +47,16 @@ const TRUST_FEATURES = [
     ),
   },
 ];
+
+// WebSite structured data (site name + canonical home URL). No SearchAction: that would need a
+// verified search URL template.
+const HOME_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': 'https://ahmmart.store/#website',
+  name: 'AHM Mart',
+  url: 'https://ahmmart.store/',
+};
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -110,6 +121,13 @@ const Home = () => {
     observer.observe(node);
     return () => observer.disconnect();
   }, [loading, loadingMore, loadMoreError, hasNextPage, products.length]);
+
+  usePageMeta({
+    title: undefined,
+    description: 'Shop electronics, fashion, groceries, beauty products, home essentials, and more at AHM Mart. Fast delivery across Pakistan with secure online shopping.',
+    path: '/',
+    jsonLd: HOME_JSON_LD,
+  });
 
   return (
     <div className="animate-fade-in">

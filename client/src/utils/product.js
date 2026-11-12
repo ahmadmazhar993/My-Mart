@@ -1,4 +1,5 @@
 import { API_BASE } from '../services/api';
+import { DELIVERY_CITIES, POLICY } from '../config/policies';
 
 export function parseProductImages(product) {
   if (!product?.images) return [];
@@ -142,4 +143,20 @@ export const CATEGORY_ICONS = {
 
 export function getCategoryIcon(slug) {
   return CATEGORY_ICONS[slug] || CATEGORY_ICONS.default;
+}
+
+// Description shown on the page, in meta tags and in Product JSON-LD. Uses the stored description when
+// there is one; otherwise a short sentence built only from real data (name, brand) and the published
+// payment/delivery policy. Keeping one source means the visible text and the structured data always match.
+export function getProductDescription(product) {
+  const own = String(product?.description || '').trim();
+  if (own) return own;
+  if (!product?.name) return '';
+
+  const parts = [`${product.name}${product.brand ? ` by ${product.brand}` : ''} is available to order online at AHM Mart.`];
+  parts.push('Pay with Cash on Delivery or by online bank transfer.');
+  if (POLICY.deliveryTimeframe && DELIVERY_CITIES.length) {
+    parts.push(`Delivery in ${DELIVERY_CITIES.join(', ')} is usually within ${POLICY.deliveryTimeframe}.`);
+  }
+  return parts.join(' ');
 }

@@ -101,7 +101,7 @@ export const INFO_PAGES = {
       {
         heading: 'Delivery time',
         body: POLICY.deliveryTimeframe
-          ? `Orders are usually delivered within ${POLICY.deliveryTimeframe}. Timing can be longer during sale periods or for out-of-stock items.`
+          ? `${POLICY.handlingDays ? `Orders are usually processed and dispatched within ${POLICY.handlingDays.max} day${POLICY.handlingDays.max === 1 ? '' : 's'}. ` : ''}Delivery then usually takes ${POLICY.deliveryTimeframe}. Timing can be longer during sale periods or for out-of-stock items.`
           : 'Delivery time depends on the product and your location. For an estimate on a specific order, contact our team through the contact page or WhatsApp.',
       },
       {
@@ -128,6 +128,10 @@ export const INFO_PAGES = {
         heading: 'How to contact us about a return',
         body: `1. Have your order number ready (find it in My Orders)\n2. Send us a message from the contact page, email ${MART_INFO.email}, or message us on WhatsApp\n3. Describe the issue and attach photos if the item is damaged\nOur team will reply with the next steps. At this time there is no automated "Request Return" button, so returns are handled by our support team.`,
       },
+      ...(POLICY.returnMethod === 'ReturnInStore' ? [{
+        heading: 'How to return an item',
+        body: `Approved returns are made in person at our store: ${MART_INFO.address}.${POLICY.returnFees === 'ReturnFeesCustomerResponsibility' ? ' Shipping costs are paid by the customer.' : ''}`,
+      }] : []),
       {
         heading: 'Return eligibility',
         body: POLICY.returnWindowDays
