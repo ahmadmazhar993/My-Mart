@@ -145,7 +145,13 @@ const Header = () => {
       {/* Main header row */}
       <div className="border-b border-gray-100 bg-white">
         <div className="container-main flex items-center gap-2 py-2 sm:py-3 lg:gap-5">
-          <Link to="/" className="flex-shrink-0" aria-label="AHM Mart home">
+          <Link
+            to="/"
+            className="flex-shrink-0"
+            aria-label="AHM Mart home"
+            // Already on the home page: the route does not change, so scroll to the top ourselves.
+            onClick={() => { if (location.pathname === '/') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          >
             {/* Mobile */}
             <div className="flex items-center gap-1.5 sm:hidden">
               <img src="/logo.png" alt="" className="h-8 w-8" />

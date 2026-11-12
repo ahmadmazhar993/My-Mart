@@ -217,7 +217,7 @@ async function buildProductList(req, res, { admin }) {
     const brand = String(req.query.brand || '').trim();
     const saleOnly = req.query.sale === 'true';
     const priceRange = req.query.priceRange || 'all';
-    // Optional sort: popular | price-asc | price-desc | rating. Omitted = newest first (legacy/admin).
+    // Optional sort: popular | name | price-asc | price-desc | rating. Omitted = newest first (legacy/admin).
     const sort = String(req.query.sort || '').trim();
 
     const baseQuery = db('products').where('isActive', true);
@@ -276,6 +276,9 @@ async function buildProductList(req, res, { admin }) {
           ))
           .orderByRaw('"unitsSold" DESC')
           .orderBy('createdOn', 'desc');
+        break;
+      case 'name':
+        listQuery.orderByRaw('LOWER(TRIM(name)) ASC').orderBy('createdOn', 'desc');
         break;
       case 'price-asc':
         listQuery.orderByRaw(`${effectivePrice} ASC`).orderBy('createdOn', 'desc');

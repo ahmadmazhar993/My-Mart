@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { productService, categoryService } from '../services';
 import BrandLoader from '../components/BrandLoader';
+import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import BrandLogo from '../components/BrandLogo';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
 import usePageMeta from '../hooks/usePageMeta';
@@ -36,7 +37,7 @@ const Products = () => {
   const [categories, setCategories] = useState(restored?.categories || []);
   const [categoriesReady, setCategoriesReady] = useState(Boolean(restored));
   const [loading, setLoading] = useState(!restored);
-  const [sort, setSort] = useState(restored?.sort || 'popular');
+  const [sort, setSort] = useState(restored?.sort || null); // null = automatic default for this view (see effectiveSort)
   const [sortOpen, setSortOpen] = useState(false);
   const sortButtonRef = useRef(null);
   const sortMenuRef = useRef(null);
@@ -119,7 +120,10 @@ const Products = () => {
 
   // Infinite scroll: `page` is the highest page loaded so far. Page 1 replaces the list (filters
   // changed or first visit); later pages are appended as the sentinel below the grid scrolls into view.
-  const filterKey = `${search}|${categoryId || ''}|${brand}|${saleOnly}|${priceRange}|${sort}`;
+  // Brand and category pages list A to Z by default (easy to scan); everything else keeps Popularity.
+  // A to Z is not offered in the sort menu; picking any menu option overrides this default.
+  const effectiveSort = sort || ((brand || category) && !search ? 'name' : 'popular');
+  const filterKey = `${search}|${categoryId || ''}|${brand}|${saleOnly}|${priceRange}|${effectiveSort}`;
 
   snapshotRef.current = { products, categories, sort, priceRange, page, pagination, filterKey, loading };
 
@@ -173,7 +177,7 @@ const Products = () => {
       brand: brand || undefined,
       sale: saleOnly || undefined,
       priceRange,
-      sort, // ordering is done by the server so it applies to every page, not just the loaded ones
+      sort: effectiveSort, // ordering is done by the server so it applies to every page, not just the loaded ones
     });
 
     productsRequest
@@ -220,9 +224,13 @@ const Products = () => {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !busyRef.current) setPage((current) => current + 1);
+        if (entries[0].isIntersecting && !busyRef.current) {
+          busyRef.current = true; // block a second trigger before the fetch effect runs (would skip a page)
+          setPage((current) => current + 1);
+        }
       },
-      { rootMargin: '600px 0px' },
+      // Start ~2.5 screens early: one page is ~3000px tall on mobile, so a fast flick must not outrun it.
+      { rootMargin: `${Math.round(window.innerHeight * 2.5)}px 0px` },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -431,7 +439,7 @@ const Products = () => {
                 aria-expanded={sortOpen}
                 className="inline-flex w-full items-center justify-center gap-2 sm:w-auto rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
               >
-                {SORT_OPTIONS.find((o) => o.value === sort)?.label || 'Sort'}
+                {SORT_OPTIONS.find((o) => o.value === effectiveSort)?.label || 'Sort'}
                 <svg
                   className={`h-4 w-4 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`}
                   fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -453,7 +461,7 @@ const Products = () => {
                         type="button"
                         onClick={() => { setSort(opt.value); setSortOpen(false); }}
                         className={`w-full px-3.5 py-2 text-left text-sm transition ${
-                          opt.value === sort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
+                          opt.value === effectiveSort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
                         {opt.label}
@@ -490,11 +498,13 @@ const Products = () => {
                 {filtered.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
+                {/* Reserve the space of the incoming page so the footer is not pulled up behind a small spinner. */}
+                {loadingMore && Array.from({ length: 12 }, (_, i) => <ProductCardSkeleton key={`skeleton-${i}`} />)}
               </div>
 
               {/* Infinite scroll footer */}
               <div className="mt-6">
-                {loadingMore && <BrandLoader minHeight={96} size="sm" text="Loading more products" />}
+                {loadingMore && <p className="sr-only" role="status">Loading more products</p>}
                 {loadMoreError && (
                   <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-center">
                     <p className="text-sm text-red-700">We couldn&apos;t load more products.</p>
@@ -503,7 +513,7 @@ const Products = () => {
                     </button>
                   </div>
                 )}
-                {!loadingMore && !loadMoreError && hasNextPage && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
+                {!loadMoreError && hasNextPage && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
                 {!hasNextPage && !loadingMore && products.length > 0 && (
                   <p className="text-center text-sm text-gray-500">
                     You&apos;ve seen all {pagination?.total || products.length} products

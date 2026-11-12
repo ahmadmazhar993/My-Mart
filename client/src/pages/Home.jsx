@@ -7,6 +7,7 @@ import FlashSale from '../components/FlashSale';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services';
 import BrandLoader from '../components/BrandLoader';
+import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import usePageMeta from '../hooks/usePageMeta';
 
 const TRUST_FEATURES = [
@@ -116,7 +117,8 @@ const Home = () => {
           setPage((current) => current + 1);
         }
       },
-      { rootMargin: '600px 0px' },
+      // Start ~2.5 screens early: one page is ~3000px tall on mobile, so a fast flick must not outrun it.
+      { rootMargin: `${Math.round(window.innerHeight * 2.5)}px 0px` },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -165,12 +167,14 @@ const Home = () => {
                   <ProductCard product={product} />
                 </div>
               ))}
+              {/* Reserve the space of the incoming page so the footer is not pulled up behind a small spinner. */}
+              {loadingMore && Array.from({ length: 12 }, (_, i) => <ProductCardSkeleton key={`skeleton-${i}`} />)}
             </div>
           )}
 
           {!loading && products.length > 0 && (
             <div className="mt-6">
-              {loadingMore && <BrandLoader minHeight={96} size="sm" text="Loading more products" />}
+              {loadingMore && <p className="sr-only" role="status">Loading more products</p>}
               {loadMoreError && (
                 <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-4 text-center">
                   <p className="text-sm text-red-700">We couldn&apos;t load more products.</p>
@@ -183,7 +187,7 @@ const Home = () => {
                   </button>
                 </div>
               )}
-              {!loadingMore && !loadMoreError && hasNextPage && (
+              {!loadMoreError && hasNextPage && (
                 <div ref={sentinelRef} className="h-10" aria-hidden="true" />
               )}
               {!hasNextPage && !loadingMore && (
