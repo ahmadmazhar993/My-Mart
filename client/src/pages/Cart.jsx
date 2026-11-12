@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, ShoppingCart, Trash2 } from 'lucide-react';
 import ProductImage from '../components/ProductImage';
+import QuantityStepper from '../components/product/QuantityStepper';
 import { EmptyState } from '../components/ui';
 import { useToast } from '../components/ToastProvider';
 import { getShippingInfo } from '../config/shipping';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
+import usePageMeta from '../hooks/usePageMeta';
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -14,11 +17,15 @@ const Cart = () => {
   const { cart, removeItem, updateQuantity, clearCart, clearBuyNowItems } = useCartStore();
   const { addToast } = useToast();
 
+  // Private page: keep it out of search results.
+  usePageMeta({ title: 'Shopping Cart', description: 'Review the items in your AHM Mart cart.', path: '/cart', noindex: true });
+
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingInfo = getShippingInfo(subtotal);
   const shipping = shippingInfo.cost;
   const total = subtotal + shipping;
   const totalItemCount = cart.reduce((n, item) => n + item.quantity, 0);
+  const itemsLabel = `${totalItemCount} ${totalItemCount === 1 ? 'item' : 'items'}`;
 
   const handleCheckout = () => {
     clearBuyNowItems();
@@ -44,12 +51,13 @@ const Cart = () => {
 
   return (
     <div className="container-main animate-fade-in py-4 pb-24 sm:py-6 lg:pb-6">
-      <h1 className="mb-4 text-lg sm:mb-6 sm:text-xl font-bold tracking-tight text-dark">
-        Shopping Cart {cart.length > 0 && <span className="font-normal text-gray-400">({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>}
-      </h1>
+      <div className="mb-4 flex items-baseline justify-between gap-3 sm:mb-6">
+        <h1 className="text-xl font-bold tracking-tight text-dark sm:text-2xl">Shopping cart</h1>
+        {cart.length > 0 && <p className="text-sm text-gray-500">{itemsLabel}</p>}
+      </div>
 
       {cart.length === 0 ? (
-        <div className="rounded-xl border border-gray-100 bg-white shadow-card">
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-card">
           <EmptyState
             icon="🛒"
             title="Your cart is empty"
@@ -57,179 +65,170 @@ const Cart = () => {
             action={
               <Link
                 to="/products"
-                className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+                className="inline-flex min-h-[44px] items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
               >
-                Start Shopping
+                Start shopping
               </Link>
             }
           />
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-          <div className="space-y-3 lg:col-span-2">
-            {cart.map((item) => (
-              <div
-                key={`${item.id}-${item.variant_sku || ''}`}
-                className="flex gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-card transition hover:shadow-card-hover sm:gap-4 sm:p-4"
-              >
-                <Link
-                  to={buildProductPath({ id: item.id, name: item.product_name || item.name })}
-                  className="block h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 sm:h-24 sm:w-24"
-                >
-                  <ProductImage product={item} variant={item.variant || null} className="h-full w-full object-cover" />
-                </Link>
+          <div className="lg:col-span-2">
+            <ul className="space-y-3">
+              {cart.map((item) => {
+                const path = buildProductPath({ id: item.id, name: item.product_name || item.name });
+                const availableStock = Number(item.stock_quantity ?? item.stock ?? 0);
+                const atMax = availableStock > 0 && item.quantity >= availableStock;
+                return (
+                  <li
+                    key={`${item.id}-${item.variant_sku || ''}`}
+                    className="rounded-2xl border border-gray-100 bg-white p-3 shadow-card sm:p-4"
+                  >
+                    <div className="flex gap-3 sm:gap-4">
+                      <Link
+                        to={path}
+                        aria-label={`View ${item.name}`}
+                        className="block h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white p-1.5 sm:h-24 sm:w-24"
+                      >
+                        <ProductImage product={item} variant={item.variant || null} className="h-full w-full" />
+                      </Link>
 
-                <div className="flex min-w-0 flex-1 flex-col justify-between">
-                  <div>
-                    <Link
-                      to={buildProductPath({ id: item.id, name: item.product_name || item.name })}
-                      className="line-clamp-2 text-sm font-medium text-dark transition hover:text-primary sm:text-base"
-                    >
-                      {item.name}
-                    </Link>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="text-sm font-bold text-primary">{formatPrice(item.price)}</p>
-                      {item.variant_label && (
-                        <>
-                          <span className="text-gray-300">•</span>
-                          <p className="text-xs text-gray-500">{item.variant_label}</p>
-                        </>
-                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <Link to={path} className="line-clamp-2 text-sm font-medium leading-snug text-dark transition hover:text-primary-700 sm:text-base">
+                            {item.name}
+                          </Link>
+                          <p className="flex-shrink-0 text-sm font-bold text-dark sm:text-base">{formatPrice(item.price * item.quantity)}</p>
+                        </div>
+                        {item.variant_label && <p className="mt-0.5 text-xs text-gray-500">{item.variant_label}</p>}
+                        <p className="mt-1 text-xs text-gray-500">{formatPrice(item.price)} each</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
-                    <div className="flex items-center rounded-full border border-gray-200 bg-gray-50">
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                      <QuantityStepper
+                        size="md"
+                        value={item.quantity}
+                        onDecrease={() => handleQuantityDecrease(item)}
+                        onIncrease={() => handleQuantityIncrease(item)}
+                        disableDecrease={item.quantity <= 1}
+                        disableIncrease={atMax}
+                      />
                       <button
                         type="button"
-                        onClick={() => handleQuantityDecrease(item)}
-                        disabled={item.quantity <= 1}
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-gray-500 transition hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
-                        aria-label="Decrease quantity"
+                        onClick={() => removeItem(item)}
+                        aria-label={`Remove ${item.name} from cart`}
+                        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600"
                       >
-                        −
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold text-gray-800" aria-live="polite">{item.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleQuantityIncrease(item)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-gray-500 transition hover:bg-white hover:text-primary"
-                        aria-label="Increase quantity"
-                      >
-                        +
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        Remove
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item)}
-                      aria-label={`Remove ${item.name} from cart`}
-                      className="min-h-[36px] rounded-md px-2 py-1 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
+                    {atMax && <p className="mt-2 text-xs text-amber-700">Maximum available quantity in your cart.</p>}
+                  </li>
+                );
+              })}
+            </ul>
 
-                <div className="flex flex-shrink-0 flex-col items-end justify-between text-right">
-                  <p className="text-sm font-bold text-dark sm:text-base">{formatPrice(item.price * item.quantity)}</p>
-                  {item.quantity > 1 && (
-                    <p className="text-[11px] text-gray-400">{formatPrice(item.price)} each</p>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            <div className="pt-2">
+            <div className="flex items-center justify-between gap-3 pt-3">
               <Link
                 to="/products"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary transition hover:underline"
+                className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-primary-700 transition hover:underline"
               >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Continue Shopping
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Continue shopping
               </Link>
+              <button
+                type="button"
+                onClick={clearCart}
+                className="inline-flex min-h-[44px] items-center px-2 text-sm font-medium text-gray-500 transition hover:text-red-600"
+              >
+                Clear cart
+              </button>
             </div>
           </div>
 
-          {/* Order Summary */}
-          <div className="h-fit rounded-xl border border-gray-100 bg-white p-4 shadow-card lg:sticky lg:top-36 sm:p-6">
-            <h2 className="mb-4 text-base font-bold text-dark sm:text-lg">Order Summary</h2>
+          {/* Order summary */}
+          <aside className="h-fit rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-6 lg:sticky lg:top-36" aria-labelledby="cart-summary-heading">
+            <h2 id="cart-summary-heading" className="mb-4 text-base font-bold text-dark sm:text-lg">Order summary</h2>
 
             {shippingInfo.nextTier ? (
-              <div className="mb-4 rounded-lg border border-primary-100 bg-primary-50/50 p-3">
-                <p className="mb-2 text-xs text-gray-600">
+              <div className="mb-4 rounded-xl border border-primary-100 bg-primary-50/60 p-3">
+                <p className="mb-2 text-xs text-gray-700">
                   {shippingInfo.nextTier.cost === 0 ? (
-                    <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more for <span className="font-semibold text-emerald-600">FREE delivery</span></>
+                    <>Add <span className="font-semibold text-primary-700">{formatPrice(shippingInfo.amountToNextTier)}</span> more for <span className="font-semibold text-primary-700">free delivery</span></>
                   ) : (
-                    <>Add <span className="font-semibold text-primary">{formatPrice(shippingInfo.amountToNextTier)}</span> more to cut delivery to <span className="font-semibold text-primary">{formatPrice(shippingInfo.nextTier.cost)}</span></>
+                    <>Add <span className="font-semibold text-primary-700">{formatPrice(shippingInfo.amountToNextTier)}</span> more to cut delivery to <span className="font-semibold text-primary-700">{formatPrice(shippingInfo.nextTier.cost)}</span></>
                   )}
                 </p>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
+                  role="progressbar"
+                  aria-label="Progress to the next delivery tier"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(Math.min(100, (subtotal / shippingInfo.nextTier.minSubtotal) * 100))}
+                >
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, (subtotal / shippingInfo.nextTier.minSubtotal) * 100)}%`,
-                    }}
+                    className="h-full rounded-full bg-primary-600 transition-all duration-500"
+                    style={{ width: `${Math.min(100, (subtotal / shippingInfo.nextTier.minSubtotal) * 100)}%` }}
                   />
                 </div>
               </div>
             ) : (
-              <div className="mb-4 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                You've unlocked FREE delivery!
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2.5 text-xs font-semibold text-primary-800">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                You&apos;ve unlocked free delivery
               </div>
             )}
 
-            <div className="mb-4 space-y-2 border-b border-gray-100 pb-4 text-sm sm:space-y-3">
+            <dl className="space-y-2.5 border-b border-gray-100 pb-4 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Subtotal ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</span>
-                <span className="font-medium text-gray-800">{formatPrice(subtotal)}</span>
+                <dt className="text-gray-500">Subtotal ({itemsLabel})</dt>
+                <dd className="font-medium text-gray-800">{formatPrice(subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Delivery</span>
-                <span className={shipping === 0 ? 'font-medium text-emerald-600' : 'font-medium text-amber-600'}>
-                  {shipping === 0 ? 'FREE' : formatPrice(shipping)}
-                </span>
+                <dt className="text-gray-500">Delivery</dt>
+                <dd className={shipping === 0 ? 'font-semibold text-primary-700' : 'font-medium text-gray-800'}>
+                  {shipping === 0 ? 'Free' : formatPrice(shipping)}
+                </dd>
               </div>
-            </div>
+            </dl>
 
-            <div className="mb-6 flex items-baseline justify-between text-base font-bold sm:text-lg">
-              <span>Total</span>
-              <span className="text-primary">{formatPrice(total)}</span>
+            <div className="my-4 flex items-baseline justify-between">
+              <span className="text-base font-bold text-dark">Total</span>
+              <span className="text-xl font-extrabold text-primary-700">{formatPrice(total)}</span>
             </div>
 
             <button
               type="button"
               onClick={handleCheckout}
-              className="mb-2 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 sm:py-3 sm:text-base"
+              className="hidden h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700 active:bg-primary-800 lg:flex"
             >
-              Proceed to Checkout
+              <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+              Proceed to checkout
             </button>
-            <button
-              type="button"
-              onClick={clearCart}
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 text-xs font-medium text-gray-600 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:py-2.5 sm:text-sm"
-            >
-              Clear Cart
-            </button>
-          </div>
+            <p className="text-xs text-gray-500 lg:mt-3 lg:text-center">Delivery and payment options are confirmed at checkout.</p>
+          </aside>
         </div>
       )}
 
       {cart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-14 z-40 border-t border-gray-200 bg-white px-3 py-2.5 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:bottom-0 lg:hidden">
+        <div
+          className="fixed inset-x-0 bottom-14 z-40 border-t border-gray-200 bg-white/95 px-3 py-2.5 backdrop-blur md:bottom-0 lg:hidden"
+          role="region"
+          aria-label="Checkout"
+        >
           <div className="mx-auto flex max-w-[1280px] items-center gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] text-gray-500">Total ({totalItemCount} {totalItemCount === 1 ? 'item' : 'items'})</p>
-              <p className="truncate text-lg font-extrabold leading-tight text-primary">{formatPrice(total)}</p>
+              <p className="text-[11px] font-medium text-gray-500">Total ({itemsLabel})</p>
+              <p className="truncate text-lg font-extrabold leading-tight text-primary-700">{formatPrice(total)}</p>
             </div>
             <button
               type="button"
               onClick={handleCheckout}
-              className="btn-primary ml-auto h-12 flex-1 text-sm sm:max-w-xs sm:flex-none sm:px-8"
+              className="ml-auto h-12 flex-1 rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white transition hover:bg-primary-700 active:bg-primary-800 sm:max-w-xs sm:flex-none sm:px-8"
             >
               Checkout
             </button>

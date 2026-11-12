@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
 import ProductImage from '../components/ProductImage';
+import QuantityStepper from '../components/product/QuantityStepper';
 import { Breadcrumb } from '../components/ui';
 import { useToast } from '../components/ToastProvider';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
@@ -109,6 +111,12 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const errorRef = useRef(null);
+
+  // The message sits above the form; after a failed submit the person is at the bottom, so bring it into view.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [error]);
   const [errors, setErrors] = useState({});
   const [senderAccount, setSenderAccount] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
@@ -430,7 +438,7 @@ const Checkout = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {error && (
-              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div ref={errorRef} role="alert" className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 flex-shrink-0">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 6a1 1 0 112 0v4a1 1 0 11-2 0V6zm1 8a1.25 1.25 0 100-2.5A1.25 1.25 0 0010 14z" clipRule="evenodd" />
                 </svg>
@@ -449,7 +457,7 @@ const Checkout = () => {
                 <div className="mb-5">
                   <div className="mb-2 flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Saved addresses</p>
-                    <button type="button" onClick={startNewAddress} className="text-xs font-semibold text-primary hover:underline">
+                    <button type="button" onClick={startNewAddress} className="inline-flex min-h-[44px] items-center px-1 text-xs font-semibold text-primary-700 hover:underline">
                       Add new address
                     </button>
                   </div>
@@ -797,7 +805,7 @@ const Checkout = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-primary py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base"
+              className="min-h-[52px] w-full rounded-xl bg-primary-600 px-4 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -849,8 +857,8 @@ const Checkout = () => {
           <div className="mb-4 max-h-80 space-y-3 overflow-y-auto pr-1">
             {checkoutItems.map((item) => (
               <div key={`${item.id}-${item.variant_sku || ''}`} className="flex gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
-                  <ProductImage product={item} className="h-full w-full object-cover" />
+                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white p-1">
+                  <ProductImage product={item} className="h-full w-full" />
                 </div>
 
                 <div className="flex min-w-0 flex-1 flex-col justify-between">
@@ -864,26 +872,13 @@ const Checkout = () => {
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {canEditQuantity ? (
-                        <div className="flex items-center rounded-full border border-gray-200 bg-gray-50">
-                          <button
-                            type="button"
-                            onClick={() => handleQuantityChange(item, -1)}
-                            disabled={item.quantity <= 1}
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-                            aria-label="Decrease quantity"
-                          >
-                            −
-                          </button>
-                          <span className="w-6 text-center text-xs font-semibold text-gray-800">{item.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleQuantityChange(item, 1)}
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-gray-500 transition hover:bg-white hover:text-primary"
-                            aria-label="Increase quantity"
-                          >
-                            +
-                          </button>
-                        </div>
+                        <QuantityStepper
+                          size="md"
+                          value={item.quantity}
+                          onDecrease={() => handleQuantityChange(item, -1)}
+                          onIncrease={() => handleQuantityChange(item, 1)}
+                          disableDecrease={item.quantity <= 1}
+                        />
                       ) : (
                         <span className="text-xs text-gray-500">Qty: {item.quantity}</span>
                       )}
@@ -891,9 +886,10 @@ const Checkout = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item)}
-                        className="rounded-md px-1 py-0.5 text-[11px] font-medium text-red-500 transition hover:bg-red-50 hover:text-red-600"
+                        aria-label={`Remove ${item.name}`}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition hover:bg-red-50 hover:text-red-600"
                       >
-                        Remove
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </div>
 

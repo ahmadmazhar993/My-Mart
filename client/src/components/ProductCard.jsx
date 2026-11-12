@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Heart } from 'lucide-react';
 import ProductImage from './ProductImage';
 import { useCartStore, useWishlistStore } from '../store';
 import { useToast } from './ToastProvider';
@@ -136,10 +137,10 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
 
   return (
     <Link to={buildProductPath(product)} className="product-card flex flex-col h-full group rounded-xl border border-gray-100 overflow-hidden bg-white hover:shadow-md hover:border-gray-200 transition-shadow active:scale-[0.99]">
-      <div className={`relative ${compact ? 'aspect-square' : 'aspect-[4/5]'} bg-gray-50 overflow-hidden`}>
+      <div className={`relative ${compact ? 'aspect-square' : 'aspect-[4/5]'} bg-white overflow-hidden`}>
         <ProductImage
           product={product}
-          className={`w-full h-full group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'opacity-60' : ''}`}
+          className={`w-full h-full p-2 group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'opacity-60' : ''}`}
         />
         {!isOutOfStock && discount && (
           <span className="absolute top-2 left-2 badge-sale shadow-sm">-{discount}%</span>
@@ -155,14 +156,14 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
           <button
             type="button"
             onClick={handleWishlist}
-            className={`absolute top-1.5 right-1.5 w-10 h-10 rounded-full shadow flex items-center justify-center text-base transition-colors ${
+            className={`absolute top-1.5 right-1.5 w-10 h-10 rounded-full shadow flex items-center justify-center transition-colors ${
               inWishlist ? 'bg-red-500 text-white' : 'bg-white/95 text-gray-500 hover:text-red-500'
             }`}
             aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
             aria-pressed={inWishlist}
             title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
           >
-            {inWishlist ? '♥' : '♡'}
+            <Heart className="h-[18px] w-[18px]" fill={inWishlist ? 'currentColor' : 'none'} aria-hidden="true" />
           </button>
         )}
       </div>

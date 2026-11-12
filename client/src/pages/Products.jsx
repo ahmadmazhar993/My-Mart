@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useSearchParams, Link, useLocation, useNavigationType } from 'react-router-dom';
+import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { productService, categoryService } from '../services';
@@ -55,6 +56,20 @@ const Products = () => {
   const busyRef = useRef(false); // true while a page request is in flight (prevents advancing mid-request)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const resultsRef = useRef(null);
+  const activeFilterCount = (priceRange !== 'all' ? 1 : 0) + (brand ? 1 : 0);
+
+  // The filter sheet closes on Escape and stops the page behind it from scrolling.
+  useEffect(() => {
+    if (!mobileFiltersOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setMobileFiltersOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileFiltersOpen]);
 
   useEffect(() => {
     if (!sortOpen) return undefined;
@@ -419,14 +434,12 @@ const Products = () => {
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
-                className="inline-flex w-full items-center justify-center gap-1.5 sm:w-auto rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 lg:hidden"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 sm:w-auto rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 lg:hidden"
               >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L15 14.414V19a1 1 0 01-.553.894l-3 1.5A1 1 0 0010 20.5V14.414L3.293 6.707A1 1 0 013 6V4z" />
-                </svg>
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 Filters
-                {(priceRange !== 'all' || brand) && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">1</span>
+                {activeFilterCount > 0 && (
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary-600 px-1 text-[11px] font-bold text-white">{activeFilterCount}</span>
                 )}
               </button>
 
@@ -437,15 +450,10 @@ const Products = () => {
                 onClick={() => setSortOpen((s) => !s)}
                 aria-haspopup="listbox"
                 aria-expanded={sortOpen}
-                className="inline-flex w-full items-center justify-center gap-2 sm:w-auto rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 sm:w-auto rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
               >
-                {SORT_OPTIONS.find((o) => o.value === effectiveSort)?.label || 'Sort'}
-                <svg
-                  className={`h-4 w-4 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <span className="truncate">{SORT_OPTIONS.find((o) => o.value === effectiveSort)?.label || 'Sort'}</span>
+                <ChevronDown className={`h-4 w-4 flex-shrink-0 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
 
               {sortOpen && (
@@ -456,11 +464,11 @@ const Products = () => {
                   className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-gray-100 bg-white py-1 shadow-lg"
                 >
                   {SORT_OPTIONS.map((opt) => (
-                    <li key={opt.value} role="option">
+                    <li key={opt.value} role="option" aria-selected={opt.value === effectiveSort}>
                       <button
                         type="button"
                         onClick={() => { setSort(opt.value); setSortOpen(false); }}
-                        className={`w-full px-3.5 py-2 text-left text-sm transition ${
+                        className={`min-h-[44px] w-full px-3.5 py-2 text-left text-sm transition ${
                           opt.value === effectiveSort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -527,27 +535,25 @@ const Products = () => {
 
       {/* Mobile filter drawer */}
       {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileFiltersOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl animate-slide-up">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-2xl bg-white shadow-2xl animate-slide-up">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-100 py-1 pl-5 pr-2">
               <h3 className="text-base font-bold text-dark">Filters</h3>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
                 aria-label="Close filters"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="space-y-5 p-5">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5">
               {renderBrandFilter('brand-mobile', 'py-2.5')}
               <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Price Range</p>
@@ -574,18 +580,18 @@ const Products = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 border-t border-gray-100 p-5">
+            <div className="flex flex-shrink-0 gap-3 border-t border-gray-100 px-5 pt-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
               <button
                 type="button"
                 onClick={() => { setPriceRange('all'); selectBrand(''); }}
-                className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-600 shadow-sm transition hover:bg-gray-50"
+                className="min-h-[48px] flex-1 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(false)}
-                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+                className="min-h-[48px] flex-1 rounded-xl bg-primary-600 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
               >
                 Show Results
               </button>

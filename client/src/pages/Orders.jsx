@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
+import { ChevronRight, X } from 'lucide-react';
 import { Breadcrumb, EmptyState } from '../components/ui';
 import { ONLINE_PAYMENT_ACCOUNTS, PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { orderService } from '../services';
@@ -148,10 +149,10 @@ const Orders = () => {
         { label: 'My Orders' },
       ]} />
 
-      <h1 className="mb-6 text-xl font-bold tracking-tight text-dark">My Orders</h1>
+      <h1 className="mb-4 text-xl font-bold tracking-tight text-dark sm:mb-6 sm:text-2xl">My Orders</h1>
 
       {showSuccess && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+        <div role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800 sm:px-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="flex items-center gap-1.5 font-semibold">
@@ -180,11 +181,9 @@ const Orders = () => {
               type="button"
               onClick={() => setShowSuccess(false)}
               aria-label="Dismiss"
-              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-100"
+              className="-mr-2 -mt-2 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-emerald-700 transition hover:bg-emerald-100"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -201,7 +200,7 @@ const Orders = () => {
             action={
               <Link
                 to="/products"
-                className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+                className="inline-flex min-h-[44px] items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
               >
                 Start Shopping
               </Link>
@@ -211,39 +210,39 @@ const Orders = () => {
       ) : (
         <div className="space-y-4">
           {orders.map((order) => (
-            <div key={order.id} className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-card">
-              <div className="flex flex-col gap-3 border-b border-gray-100 bg-gray-50/60 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-                  <span>
+            <div key={order.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-card">
+              <div className="flex flex-col gap-2 border-b border-gray-100 bg-gray-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="flex items-start justify-between gap-3 sm:contents">
+                  <p className="min-w-0 text-sm sm:order-1">
                     <span className="text-gray-500">Order #</span>{' '}
-                    <span className="font-semibold text-gray-900">{order.display_order_id || order.id}</span>
+                    <span className="break-all font-semibold text-gray-900">{order.display_order_id || order.id}</span>
+                  </p>
+                  <span className={`inline-flex w-fit flex-shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize sm:order-3 ${STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200'}`}>
+                    {order.status}
                   </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm sm:order-2 sm:flex-1 sm:px-6">
                   <span>
                     <span className="text-gray-500">Placed on</span>{' '}
                     <span className="font-medium text-gray-700">{formatDate(order.created_at)}</span>
                   </span>
                   <span>
                     <span className="text-gray-500">Total</span>{' '}
-                    <span className="font-bold text-primary">{formatPrice(order.total_price)}</span>
+                    <span className="font-bold text-primary-700">{formatPrice(order.total_price)}</span>
                   </span>
                 </div>
-                <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200'}`}>
-                  {order.status}
-                </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 p-5 text-sm sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 p-4 text-sm sm:grid-cols-2 sm:p-5">
                 <div>
                   <p className="mb-1 text-gray-500">Shipping Address</p>
                   <p className="font-medium text-gray-800">{order.shipping_address || '—'}</p>
                   <Link
                     to={`/orders/${order.id}`}
-                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:underline"
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-primary-200 bg-primary-50 px-4 text-sm font-semibold text-primary-800 transition hover:bg-primary-100"
                   >
                     View details
-                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                 </div>
                 <div className="space-y-2">
@@ -275,7 +274,7 @@ const Orders = () => {
               </div>
 
               {order.payment_method === 'online' && (
-                <div className="px-5 pb-5">
+                <div className="px-4 pb-4 sm:px-5 sm:pb-5">
                   <div
                     className={`rounded-xl border p-4 text-sm ${
                       order.payment_status === 'paid'
@@ -322,7 +321,7 @@ const Orders = () => {
                                 href={receiptUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                                className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-primary-700 hover:underline"
                               >
                                 View uploaded receipt
                                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,7 +331,7 @@ const Orders = () => {
                               <button
                                 type="button"
                                 onClick={() => toggleReplaceForm(order.id, true)}
-                                className="text-sm font-medium text-gray-500 transition hover:text-gray-700 hover:underline"
+                                className="min-h-[44px] text-sm font-medium text-gray-600 transition hover:text-gray-800 hover:underline"
                               >
                                 Upload a different receipt
                               </button>

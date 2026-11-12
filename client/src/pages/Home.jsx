@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation, useNavigationType } from 'react-router-dom';
+import { Truck, Wallet, Undo2, LifeBuoy, ChevronRight } from 'lucide-react';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
+import { SHIPPING_TIERS } from '../config/shipping';
+import { POLICY } from '../config/policies';
+import { formatPrice } from '../utils/format';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
 import ShopByBrand from '../components/ShopByBrand';
@@ -11,44 +15,36 @@ import BrandLoader from '../components/BrandLoader';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import usePageMeta from '../hooks/usePageMeta';
 
+const FREE_DELIVERY_TIER = SHIPPING_TIERS.find((tier) => tier.cost === 0);
+
+// Short promises shown under the product list. Every value comes from the same config the cart and
+// policy pages use, so this block cannot drift from what checkout actually does.
 const TRUST_FEATURES = [
-  {
-    title: 'Free Shipping',
-    desc: 'On orders over Rs. 2,000',
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
+  FREE_DELIVERY_TIER && {
+    title: 'Free delivery',
+    desc: `On orders over ${formatPrice(FREE_DELIVERY_TIER.minSubtotal)}`,
+    to: '/pages/shipping',
+    Icon: Truck,
   },
   {
-    title: 'Secure Payment',
-    desc: '100% protected payments',
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
+    title: 'Pay your way',
+    desc: 'Cash on delivery or bank transfer',
+    to: '/pages/cash-on-delivery',
+    Icon: Wallet,
+  },
+  POLICY.returnWindowDays && {
+    title: 'Easy returns',
+    desc: `${POLICY.returnWindowDays}-day return policy`,
+    to: '/pages/returns-refunds',
+    Icon: Undo2,
   },
   {
-    title: 'Easy Returns',
-    desc: '7-day return policy',
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h10a5 5 0 015 5v1M3 10l4-4M3 10l4 4" />
-      </svg>
-    ),
+    title: 'Help when you need it',
+    desc: 'Help center and contact options',
+    to: '/help',
+    Icon: LifeBuoy,
   },
-  {
-    title: '24/7 Support',
-    desc: "We're here whenever you need us",
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M5.636 5.636l3.536 3.536m0 5.656l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-];
+].filter(Boolean);
 
 // WebSite structured data (site name + canonical home URL). No SearchAction: that would need a
 // verified search URL template.
@@ -187,17 +183,15 @@ const Home = () => {
 
       {/* Just For You */}
       <section className="container-main py-4 pb-8">
-        <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-card sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Just For You</h2>
+        <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-card sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Just for you</h2>
             <Link
               to="/products"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-primary transition hover:underline"
+              className="inline-flex min-h-[44px] items-center gap-0.5 pl-2 text-sm font-semibold text-primary-700 transition hover:underline"
             >
-              See All
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              See all
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
 
@@ -250,19 +244,20 @@ const Home = () => {
       {/* Trust badges */}
       <section className="container-main pb-10">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {TRUST_FEATURES.map((feature) => (
-            <div
-              key={feature.title}
-              className="flex flex-col items-center gap-2 rounded-xl border border-gray-100 bg-white p-3 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover sm:flex-row sm:items-center sm:gap-4 sm:text-left"
+          {TRUST_FEATURES.map(({ title, desc, to, Icon }) => (
+            <Link
+              key={title}
+              to={to}
+              className="flex flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-3 text-center shadow-card transition hover:border-primary-200 hover:shadow-card-hover sm:flex-row sm:items-center sm:gap-4 sm:p-4 sm:text-left"
             >
-              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
-                {feature.icon}
+              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <h3 className="text-sm font-bold text-dark">{feature.title}</h3>
-                <p className="text-xs text-gray-500">{feature.desc}</p>
+                <h3 className="text-sm font-bold text-dark">{title}</h3>
+                <p className="text-xs text-gray-500">{desc}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
