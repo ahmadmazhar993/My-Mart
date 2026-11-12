@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Link, useLocation, useNavigationType } from 'react-router-dom';
+import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
 import ShopByBrand from '../components/ShopByBrand';
@@ -60,17 +61,63 @@ const HOME_JSON_LD = {
 };
 
 const Home = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Back/forward (e.g. returning from a product page) restores the loaded products and scroll
+  // position. Without this the list restarts at page 1 while the browser tries to return to the old,
+  // much lower scroll offset, which lands on the footer.
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const restoredRef = useRef(undefined);
+  if (restoredRef.current === undefined) {
+    restoredRef.current = navigationType === 'POP' ? getSnapshot(location.key) : null;
+  }
+  const restored = restoredRef.current;
+
+  const [products, setProducts] = useState(restored?.products || []);
+  const [loading, setLoading] = useState(!restored);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState(null);
+  const [page, setPage] = useState(restored?.page || 1);
+  const [pagination, setPagination] = useState(restored?.pagination || null);
   const sentinelRef = useRef(null);
   const busyRef = useRef(false);
+  const skipFetchRef = useRef(Boolean(restored));
+  const scrollYRef = useRef(0);
+  const snapshotRef = useRef(null);
+  snapshotRef.current = { products, page, pagination, loading };
+
+  useLayoutEffect(() => {
+    const timers = [];
+    let userMoved = false;
+    const markMoved = () => { userMoved = true; };
+    if (restored) {
+      const target = restored.scrollY || 0;
+      window.scrollTo(0, target);
+      scrollYRef.current = target;
+      // Sections above the list (banner, categories, brands) load their own data and can change the
+      // page height after this point, so re-apply the position briefly unless the user has scrolled.
+      [150, 400, 900].forEach((ms) => timers.push(setTimeout(() => {
+        if (!userMoved) window.scrollTo(0, target);
+      }, ms)));
+      ['touchstart', 'wheel', 'keydown'].forEach((evt) => window.addEventListener(evt, markMoved, { passive: true, once: true }));
+    }
+    const onScroll = () => { scrollYRef.current = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      timers.forEach(clearTimeout);
+      ['touchstart', 'wheel', 'keydown'].forEach((evt) => window.removeEventListener(evt, markMoved));
+      window.removeEventListener('scroll', onScroll);
+      if (snapshotRef.current && !snapshotRef.current.loading) {
+        saveSnapshot(location.key, { ...snapshotRef.current, scrollY: scrollYRef.current });
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (skipFetchRef.current) {
+      skipFetchRef.current = false;
+      return undefined;
+    }
     let cancelled = false;
     const isFirstPage = page === 1;
     busyRef.current = true;

@@ -4,30 +4,15 @@ import { useAuthStore, useCartStore } from '../store';
 import { authService } from '../services';
 import { NAV_CATEGORIES as categories } from '../config/categories';
 import { shouldShowBottomNav } from './BottomNav';
+import { Search, ShoppingCart, User, Truck } from 'lucide-react';
+import { SHIPPING_TIERS } from '../config/shipping';
 
-const SearchIcon = () => (
-  <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
+const SearchIcon = () => <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />;
+const SearchButtonIcon = () => <Search className="h-4 w-4" aria-hidden="true" />;
+const CartIcon = () => <ShoppingCart className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />;
+const UserIcon = () => <User className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />;
 
-const SearchButtonIcon = () => (
-  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
-
-const CartIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-  </svg>
-);
-
-const UserIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
+const FREE_SHIPPING_MIN = SHIPPING_TIERS.find((tier) => tier.cost === 0)?.minSubtotal;
 
 const Header = () => {
   const location = useLocation();
@@ -130,18 +115,60 @@ const Header = () => {
   const isAllCategoriesActive = !activeCategory;
   const shouldShowSearchBar = !['/help', '/pages'].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
 
-  return (
-    <header className="sticky top-0 z-50 shadow-header">
-      {/* Announcement bar */}
-      <div className="bg-primary text-xs text-white">
+  const renderAnnouncement = (className) => (
+      <div className={className}>
         <div className="container-main flex items-center justify-between py-1.5 text-[11px] sm:text-xs">
-          <span className="truncate">🚚 Free shipping on orders over Rs. 2,000</span>
+          {FREE_SHIPPING_MIN != null ? (
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+              <span className="truncate">Free delivery on orders of Rs. {FREE_SHIPPING_MIN.toLocaleString('en-PK')} and above</span>
+            </span>
+          ) : <span />}
           <div className="hidden items-center gap-4 sm:flex">
             <Link to="/help" className="hover:underline">Help Center</Link>
           </div>
         </div>
       </div>
+  );
 
+  const renderCategoryNav = (className) => (
+      <div className={className}>
+        <div className="container-main">
+          <nav aria-label="Categories" className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-1.5 sm:py-2">
+            <Link
+              to="/products"
+              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
+                isAllCategoriesActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+              }`}
+            >
+              All Categories
+            </Link>
+            {categories.map((cat) => {
+              const isActive = activeCategory === cat.slug;
+              return (
+                <Link
+                  key={cat.slug}
+                  to={`/products?category=${cat.slug}`}
+                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
+                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+                  }`}
+                >
+                  {cat.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+  );
+
+  return (
+    <>
+      {/* Phones: announcement and categories scroll away; only the logo / search row stays sticky,
+          so the product is visible sooner. From sm up the whole header stays sticky as before. */}
+      {renderAnnouncement('bg-primary-700 text-xs text-white sm:hidden')}
+      <header className="sticky top-0 z-50 shadow-header">
+        {renderAnnouncement('hidden bg-primary-700 text-xs text-white sm:block')}
       {/* Main header row */}
       <div className="border-b border-gray-100 bg-white">
         <div className="container-main flex items-center gap-2 py-2 sm:py-3 lg:gap-5">
@@ -180,12 +207,12 @@ const Header = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search in AHM Mart"
-                  className="w-full rounded-l-lg border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="w-full rounded-l-xl border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
               <button
                 type="submit"
-                className="flex items-center rounded-r-lg bg-primary px-5 text-white transition-colors hover:bg-primary-600"
+                className="flex items-center rounded-r-xl bg-primary-600 px-5 text-white transition-colors hover:bg-primary-700"
               >
                 <SearchButtonIcon />
               </button>
@@ -268,47 +295,20 @@ const Header = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search in AHM Mart"
-                  className="search-clear-red h-11 w-full rounded-l-lg border border-r-0 border-gray-200 bg-gray-50 pl-9 pr-3 text-sm transition focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  className="search-clear-red h-11 w-full rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 pl-9 pr-3 text-sm transition focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
-              <button type="submit" aria-label="Search" className="rounded-r-lg bg-primary px-4 text-white transition-colors hover:bg-primary-600">
+              <button type="submit" aria-label="Search" className="rounded-r-xl bg-primary-600 px-4 text-white transition-colors hover:bg-primary-700">
                 <SearchButtonIcon />
               </button>
             </form>
           </div>
         )}
       </div>
-
-      {/* Category nav */}
-      <div className="border-b border-gray-100 bg-white">
-        <div className="container-main">
-          <nav aria-label="Categories" className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-1.5 sm:py-2">
-            <Link
-              to="/products"
-              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
-                isAllCategoriesActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
-              }`}
-            >
-              All Categories
-            </Link>
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat.slug;
-              return (
-                <Link
-                  key={cat.slug}
-                  to={`/products?category=${cat.slug}`}
-                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
-                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
-                  }`}
-                >
-                  {cat.name}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-    </header>
+        {renderCategoryNav('hidden border-b border-gray-100 bg-white sm:block')}
+      </header>
+      {renderCategoryNav('border-b border-gray-100 bg-white sm:hidden')}
+    </>
   );
 };
 

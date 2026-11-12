@@ -16,6 +16,9 @@ const Layout = () => {
   const { pathname } = location;
   const isAuthPage = AUTH_PATHS.some((path) => matches(pathname, path));
   const showBottomNav = shouldShowBottomNav(pathname);
+  // Product pages have a fixed purchase bar on phones. Its space is reserved here, below the footer,
+  // so nothing is covered and no blank gap appears above the footer.
+  const hasPurchaseBar = pathname.startsWith('/products/') && pathname.length > '/products/'.length;
 
   return (
     <div className={`flex min-h-screen flex-col bg-surface ${showBottomNav ? (matches(pathname, '/cart') ? 'pb-32 md:pb-20 lg:pb-0' : 'pb-14 md:pb-0') : ''}`}>
@@ -24,7 +27,7 @@ const Layout = () => {
         <BackButton />
         <Outlet />
       </main>
-      <Footer />
+      <Footer reserveBottomBar={hasPurchaseBar} />
       {showBottomNav && <BottomNav />}
       <WhatsAppButton />
     </div>

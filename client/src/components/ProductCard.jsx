@@ -155,7 +155,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
           <button
             type="button"
             onClick={handleWishlist}
-            className={`absolute top-1.5 right-1.5 w-9 h-9 rounded-full shadow flex items-center justify-center text-base transition-colors ${
+            className={`absolute top-1.5 right-1.5 w-10 h-10 rounded-full shadow flex items-center justify-center text-base transition-colors ${
               inWishlist ? 'bg-red-500 text-white' : 'bg-white/95 text-gray-500 hover:text-red-500'
             }`}
             aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}

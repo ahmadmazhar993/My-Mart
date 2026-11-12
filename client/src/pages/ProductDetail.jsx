@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import ProductImage from '../components/ProductImage';
-import { Breadcrumb } from '../components/ui';
+import { ChevronRight, Check, Heart, ShoppingCart, PackageSearch } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
 import { useCartStore, useAuthStore, useWishlistStore } from '../store';
 import { formatPrice, getEffectivePrice } from '../utils/format';
 import { buildProductPath, parseProductImages, normalizeProductImageUrl, getProductSlug, parseProductVariants, getProductVariantPrice, getProductVariantStock, getProductImageUrl, getProductDescription } from '../utils/product';
-import SoldOutBanner from '../components/SoldOutBanner';
-import BrandLoader from '../components/BrandLoader';
 import usePageMeta from '../hooks/usePageMeta';
+import ProductGallery from '../components/product/ProductGallery';
+import QuantityStepper from '../components/product/QuantityStepper';
+import DeliveryInfo, { ShippingReturnsDetails } from '../components/product/DeliveryInfo';
+import ProductAccordion from '../components/product/ProductAccordion';
+import ProductReviews, { Stars } from '../components/product/ProductReviews';
+import RelatedProducts from '../components/product/RelatedProducts';
+import StickyPurchaseBar from '../components/product/StickyPurchaseBar';
 import { buildShippingDetails, buildReturnPolicy } from '../utils/storePolicySchema';
 
 const ProductDetail = () => {
@@ -27,7 +31,7 @@ const ProductDetail = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
-  const [activeImage, setActiveImage] = useState(null);
+  const [descriptionRequest, setDescriptionRequest] = useState({ id: null, n: 0 });
   const { addItem, cart, setBuyNowItems } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const currentUserId = user?.id || user?.userID;
@@ -107,7 +111,8 @@ const ProductDetail = () => {
       if (current && variants.some((variant) => variant.name === current.name)) {
         return current;
       }
-      return variants[0];
+      // Prefer a variant that can actually be bought; fall back to the first one.
+      return variants.find((variant) => Number(getProductVariantStock(product, variant)) > 0) || variants[0];
     });
   }, [product]);
 
@@ -176,17 +181,34 @@ const ProductDetail = () => {
 
   if (loading) {
     return (
-      <div className="container-main py-6">
-        <BrandLoader minHeight={420} text="Loading product" />
+      <div className="bg-white">
+        <div className="container-main py-4 md:py-8">
+          <div className="grid gap-6 md:grid-cols-2 md:gap-10" role="status" aria-busy="true" aria-label="Loading product">
+            <div className="aspect-square max-h-[52vh] animate-pulse rounded-2xl bg-gray-100 md:max-h-none" />
+            <div className="space-y-4">
+              <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
+              <div className="h-7 w-4/5 animate-pulse rounded bg-gray-100" />
+              <div className="h-9 w-40 animate-pulse rounded bg-gray-100" />
+              <div className="h-20 w-full animate-pulse rounded bg-gray-100" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-gray-100" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="container-main py-16 text-center">
-        <h2 className="text-xl font-bold mb-4">Product not found</h2>
-        <Link to="/products" className="btn-primary">Back to Products</Link>
+      <div className="bg-white">
+        <div className="container-main flex flex-col items-center py-16 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+            <PackageSearch className="h-7 w-7" aria-hidden="true" />
+          </span>
+          <h1 className="mt-4 text-xl font-bold text-gray-900">Product not found</h1>
+          <p className="mt-1 max-w-sm text-sm text-gray-600">This product may have been removed or is no longer available.</p>
+          <Link to="/products" className="mt-5 inline-flex min-h-[44px] items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white hover:bg-primary-700">Browse products</Link>
+        </div>
       </div>
     );
   }
@@ -302,7 +324,7 @@ const ProductDetail = () => {
       variants: variantOptions,
     });
     setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    setTimeout(() => setAdded(false), 4000);
   };
 
   const handleSubmitReview = async (e) => {
@@ -340,316 +362,262 @@ const ProductDetail = () => {
   const handleToggleWishlist = () => toggleItem({ ...product });
   const isOutOfStock = availableStock <= 0;
 
-  return (
-    <div className="container-main animate-fade-in py-3 pb-28 sm:py-6 md:pb-6">
-      <div className="hidden sm:block">
-        <Breadcrumb items={[
-          { label: 'Home', to: '/' },
-          { label: 'Products', to: '/products' },
-          { label: product.name },
-        ]} />
-      </div>
+  const description = getProductDescription(product);
+  const longDescription = description.length > 280; // shorter text is shown once, in the summary
+  const previousPrice = hasDiscount ? (selectedVariant?.price != null ? selectedVariant.price : product.price) : null;
+  const galleryImages = [...new Set([getProductImageUrl(product, selectedVariant), ...normalizedImages].filter(Boolean))];
+  const displaySku = selectedVariant?.sku || product.sku || null;
+  const hasRating = product.rating > 0 && product.review_count > 0;
 
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-card">
-        <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
-          <div className="flex flex-col items-center justify-center bg-gray-50 p-3 sm:p-6 md:min-h-[400px]">
-            <div className="relative aspect-square w-full max-w-[560px] md:aspect-auto">
-              <ProductImage
-                product={product}
-                variant={activeImage ? { image: activeImage } : selectedVariant}
-                eager
-                className="h-full max-h-[420px] w-full rounded-lg"
-              />
-              {!isOutOfStock && hasDiscount && discount != null && (
-                <span className="badge-sale absolute left-2 top-2 text-xs shadow-sm">-{discount}%</span>
-              )}
-              {isOutOfStock && (
-                <SoldOutBanner />
-              )}
-            </div>
-            {normalizedImages.length > 1 && (
-              <div className="scrollbar-hide mt-3 flex w-full max-w-[560px] gap-2 overflow-x-auto pb-1" role="list" aria-label="Product images">
-                {normalizedImages.map((img, i) => (
-                  <button
-                    key={img}
-                    type="button"
-                    role="listitem"
-                    onClick={() => setActiveImage(img)}
-                    aria-label={`View image ${i + 1}`}
-                    aria-current={(activeImage || primaryImage) === img}
-                    className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition ${
-                      (activeImage || primaryImage) === img ? 'border-primary' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
+  const handleIncreaseQuantity = () => {
+    if (remainingStock <= 0) {
+      addToast('You already have the full available stock in your cart.', 'error');
+      return;
+    }
+    if (quantity >= remainingStock) {
+      addToast(`Only ${remainingStock} item${remainingStock === 1 ? '' : 's'} left in stock.`, 'error');
+      return;
+    }
+    setQuantity((current) => current + 1);
+  };
+
+  const showFullDescription = () => {
+    setDescriptionRequest((current) => ({ id: 'description', n: current.n + 1 }));
+    setTimeout(() => document.getElementById('product-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
+  const accordionItems = [
+    longDescription && {
+      id: 'description',
+      title: 'Description',
+      defaultOpen: true,
+      content: <p className="whitespace-pre-line">{description}</p>,
+    },
+    {
+      id: 'information',
+      title: 'Product information',
+      defaultOpen: false,
+      content: (
+        <dl className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-2">
+          {product.brand && (
+            <>
+              <dt className="text-gray-500">Brand</dt>
+              <dd><Link to={`/products?brand=${encodeURIComponent(product.brand)}`} className="font-medium text-primary-700 underline-offset-2 hover:underline">{product.brand}</Link></dd>
+            </>
+          )}
+          {selectedVariant && (
+            <>
+              <dt className="text-gray-500">Option</dt>
+              <dd className="font-medium text-gray-900">{selectedVariant.label || selectedVariant.name}</dd>
+            </>
+          )}
+          {displaySku && (
+            <>
+              <dt className="text-gray-500">SKU</dt>
+              <dd className="break-all font-medium text-gray-900">{displaySku}</dd>
+            </>
+          )}
+          <dt className="text-gray-500">Availability</dt>
+          <dd className="font-medium text-gray-900">{isOutOfStock ? 'Out of stock' : 'In stock'}</dd>
+        </dl>
+      ),
+    },
+    {
+      id: 'shipping',
+      title: 'Shipping & returns',
+      defaultOpen: false,
+      content: <ShippingReturnsDetails />,
+    },
+  ].filter(Boolean);
+
+  return (
+    <div className="animate-fade-in bg-white">
+      <div className="container-main pb-10 pt-1 md:pt-5">
+        <nav aria-label="Breadcrumb" className="hidden pb-4 text-sm text-gray-500 md:block">
+          <ol className="flex min-w-0 items-center gap-1.5">
+            <li><Link to="/" className="hover:text-primary-700">Home</Link></li>
+            <li aria-hidden="true"><ChevronRight className="h-3.5 w-3.5 text-gray-400" /></li>
+            <li><Link to="/products" className="hover:text-primary-700">Products</Link></li>
+            <li aria-hidden="true"><ChevronRight className="h-3.5 w-3.5 text-gray-400" /></li>
+            <li aria-current="page" className="min-w-0 truncate font-medium text-gray-900">{product.name}</li>
+          </ol>
+        </nav>
+
+        <div className="grid gap-5 md:grid-cols-2 md:gap-8 lg:gap-12">
+          <div className="min-w-0 md:sticky md:top-28 md:self-start">
+            <ProductGallery
+              product={product}
+              images={galleryImages}
+              isOutOfStock={isOutOfStock}
+              discountLabel={hasDiscount && discount != null ? `-${discount}%` : null}
+            />
           </div>
 
-          <div className="p-4 sm:p-6 md:p-8">
-            <h1 className="mb-2 text-lg font-bold leading-snug text-dark sm:mb-3 sm:text-2xl">{product.name}</h1>
+          <div className="min-w-0">
+            {product.brand && (
+              <Link
+                to={`/products?brand=${encodeURIComponent(product.brand)}`}
+                className="text-xs font-bold uppercase tracking-wider text-primary-700 hover:underline"
+              >
+                {product.brand}
+              </Link>
+            )}
+            <h1 className="mt-1 text-[22px] font-bold leading-snug text-gray-900 sm:text-2xl lg:text-[28px]" style={{ overflowWrap: 'anywhere' }}>
+              {product.name}
+            </h1>
 
-            {product.rating > 0 && (
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex text-accent">
-                  {'★'.repeat(Math.round(product.rating))}
-                  {'☆'.repeat(5 - Math.round(product.rating))}
-                </div>
-                <span className="text-sm text-gray-500">
-                  {product.rating} ({product.review_count || 0} reviews)
-                </span>
-              </div>
+            {hasRating && (
+              <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-primary-700">
+                <Stars value={product.rating} />
+                <span>{Number(product.rating).toFixed(1)} &middot; {product.review_count} review{product.review_count === 1 ? '' : 's'}</span>
+              </a>
             )}
 
-            <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:mb-6">
-              <span className="text-2xl font-extrabold text-primary sm:text-3xl">{formatPrice(displayPrice)}</span>
-              {hasDiscount && (
-                <>
-                  <span className="text-base text-gray-400 line-through sm:text-lg">
-                    {selectedVariant?.price != null ? formatPrice(selectedVariant.price) : formatPrice(product.price)}
-                  </span>
-                  {discount != null && <span className="badge-sale text-sm">-{discount}%</span>}
-                </>
+            <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-3xl font-extrabold tracking-tight text-primary-700">{formatPrice(displayPrice)}</span>
+              {previousPrice != null && (
+                <span className="text-base text-gray-500 line-through">{formatPrice(previousPrice)}</span>
+              )}
+              {hasDiscount && discount != null && (
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">Save {discount}%</span>
               )}
             </div>
 
-            <p className="mb-5 text-sm leading-relaxed text-gray-600 sm:mb-6">{getProductDescription(product)}</p>
+            <p className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${isOutOfStock ? 'bg-gray-100 text-gray-600' : 'bg-primary-50 text-primary-800'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${isOutOfStock ? 'bg-gray-400' : 'bg-primary-600'}`} aria-hidden="true" />
+              {isOutOfStock ? 'Out of stock' : 'In stock'}
+            </p>
 
-            {variantOptions.length > 0 && (
-              <div className="mb-6">
-                <label className="block text-sm font-semibold mb-2">Choose Variant</label>
-                <div className="flex flex-wrap gap-2">
-                  {variantOptions.map((variant) => {
-                    const isSelected = selectedVariant?.name === variant.name;
-                    return (
-                      <button
-                        key={variant.name}
-                        type="button"
-                        onClick={() => { setSelectedVariant(variant); setActiveImage(null); }}
-                        aria-pressed={isSelected}
-                        className={`min-h-[40px] rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors ${isSelected ? 'border-primary bg-primary text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-primary'}`}
-                      >
-                        {variant.label || variant.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedVariant?.sku && (
-                  <p className="mt-2 text-xs text-gray-500">SKU: {selectedVariant.sku}</p>
+            {description && (
+              <div className="mt-4">
+                <p className={`text-[15px] leading-relaxed text-gray-700 ${longDescription ? 'line-clamp-3' : ''}`}>{description}</p>
+                {longDescription && (
+                  <button type="button" onClick={showFullDescription} className="mt-1 text-sm font-semibold text-primary-700 underline-offset-2 hover:underline">
+                    Read full description
+                  </button>
                 )}
               </div>
             )}
 
-            <div className="space-y-3 mb-6 text-sm">
-              {product.brand && (
-                <div className="flex gap-2">
-                  <span className="text-gray-500 w-24">Brand:</span>
-                  <Link to={`/products?brand=${encodeURIComponent(product.brand)}`} className="font-medium text-primary hover:underline">
-                    {product.brand}
-                  </Link>
+            {variantOptions.length > 0 && (
+              <fieldset className="mt-5">
+                <legend className="mb-2 text-sm font-semibold text-gray-900">
+                  Options{selectedVariant && <span className="ml-1.5 font-normal text-gray-600">{selectedVariant.label || selectedVariant.name}</span>}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {variantOptions.map((variant) => {
+                    const isSelected = selectedVariant?.name === variant.name;
+                    const soldOut = Number(getProductVariantStock(product, variant)) <= 0;
+                    return (
+                      <button
+                        key={variant.name}
+                        type="button"
+                        onClick={() => setSelectedVariant(variant)}
+                        aria-pressed={isSelected}
+                        className={`min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                          isSelected
+                            ? 'border-primary-600 bg-primary-50 text-primary-800 ring-1 ring-primary-600'
+                            : 'border-gray-300 bg-white text-gray-800 hover:border-gray-400'
+                        } ${soldOut ? 'text-gray-500' : ''}`}
+                      >
+                        {variant.label || variant.name}
+                        {soldOut && <span className="ml-1.5 text-xs font-normal">(sold out)</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-24">SKU:</span>
-                <span className="font-medium">{product.sku || 'N/A'}</span>
-              </div>
-              {availableStock > 0 && (
-                <div className="flex gap-2">
-                  <span className="text-gray-500 w-24">Availability:</span>
-                  <span className={`font-medium text-green-600`}>{`In Stock (${availableStock})`}</span>
-                </div>
-              )}
-            </div>
+              </fieldset>
+            )}
 
-            <div className="mb-6 flex items-center gap-4">
-              <span className="text-sm font-semibold">Quantity:</span>
-              <div className="flex items-center overflow-hidden rounded-lg border border-gray-300">
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="h-10 w-10 text-lg transition-colors hover:bg-gray-100"
-                >
-                  −
-                </button>
-                <span className="min-w-[48px] border-x border-gray-300 px-3 py-2 text-center font-semibold" aria-live="polite">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (remainingStock <= 0) {
-                      addToast('You already have the full available stock in your cart.', 'error');
-                      return;
-                    }
-                    if (quantity >= remainingStock) {
-                      addToast(`Only ${remainingStock} item${remainingStock === 1 ? '' : 's'} left in stock.`, 'error');
-                      return;
-                    }
-                    setQuantity((current) => current + 1);
-                  }}
-                  aria-label="Increase quantity"
-                  className="h-10 w-10 text-lg transition-colors hover:bg-gray-100 disabled:opacity-40"
-                  disabled={remainingStock <= 0}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {/* Desktop / tablet actions (phones use the sticky bar below) */}
-            <div className="hidden gap-3 md:flex">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-                className={`flex-1 rounded-lg py-3 font-bold transition-all ${
-                  added
-                    ? 'bg-green-500 text-white'
-                    : (isOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : 'btn-primary py-3')
-                }`}
-              >
-                {isOutOfStock ? 'Out of Stock' : (added ? '✓ Added to Cart' : 'Add to Cart')}
-              </button>
+            <div className="mt-5 flex items-center gap-3">
+              <QuantityStepper
+                value={quantity}
+                onDecrease={() => setQuantity(Math.max(1, quantity - 1))}
+                onIncrease={handleIncreaseQuantity}
+                disableDecrease={quantity <= 1 || isOutOfStock}
+                disableIncrease={remainingStock <= 0 || isOutOfStock}
+              />
               <button
                 type="button"
                 onClick={handleToggleWishlist}
                 aria-pressed={inWishlist}
-                className={`rounded-lg border-2 px-4 py-3 font-bold transition-all ${
-                  inWishlist
-                    ? 'border-red-400 bg-red-50 text-red-500'
-                    : 'border-gray-300 text-gray-600 hover:border-red-300 hover:text-red-500'
+                aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                className={`flex h-12 items-center justify-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition-colors sm:px-4 ${
+                  inWishlist ? 'border-red-200 bg-red-50 text-red-600' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                {inWishlist ? '♥ Saved' : '♡ Wishlist'}
+                <Heart className={`h-5 w-5 ${inWishlist ? 'fill-red-500 text-red-500' : ''}`} aria-hidden="true" />
+                <span className="hidden sm:inline">{inWishlist ? 'Saved' : 'Save'}</span>
+              </button>
+            </div>
+
+            {/* Tablet / desktop actions. Phones use the sticky bar at the bottom of the screen. */}
+            <div className="mt-3 hidden gap-3 md:flex">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className={`flex h-12 flex-[1.3] items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition active:scale-[0.99] ${
+                  isOutOfStock ? 'cursor-not-allowed bg-gray-200 text-gray-500' : added ? 'bg-primary-800' : 'bg-primary-600 hover:bg-primary-700'
+                }`}
+              >
+                {added ? <Check className="h-4 w-4" aria-hidden="true" /> : <ShoppingCart className="h-4 w-4" aria-hidden="true" />}
+                {isOutOfStock ? 'Out of stock' : added ? 'Added to cart' : 'Add to cart'}
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
                 disabled={isOutOfStock}
-                className="btn-outline flex-1 py-3 text-center"
+                className="h-12 flex-1 rounded-xl border border-primary-600 bg-white text-sm font-semibold text-primary-700 transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
-                Buy Now
+                Buy now
               </button>
             </div>
 
-            <ul className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center text-[11px] text-gray-600 sm:text-xs">
-              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">🚚</span>Fast delivery</li>
-              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">↩️</span>7-day returns</li>
-              <li className="flex flex-col items-center gap-1"><span className="text-lg" aria-hidden="true">🔒</span>Secure payment</li>
-            </ul>
+            <div role="status" aria-live="polite">
+              {added && (
+                <p className="mt-3 flex items-center gap-2 rounded-xl bg-primary-50 px-3 py-2.5 text-sm text-primary-800">
+                  <Check className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  <span>Added to your cart.</span>
+                  <Link to="/cart" className="ml-auto font-semibold underline-offset-2 hover:underline">View cart</Link>
+                </p>
+              )}
+            </div>
+
+            <div className="mt-6"><DeliveryInfo /></div>
+
+            <div className="mt-6">
+              <ProductAccordion items={accordionItems} openRequest={descriptionRequest} />
+            </div>
           </div>
         </div>
 
-        {/* Reviews section */}
-        <div className="border-t p-4 sm:p-6">
-          <h2 className="mb-4 text-lg font-bold text-dark">
-            Customer Reviews ({productReviews.length})
-          </h2>
-
-          {isAuthenticated ? (
-            canReview ? (
-              <form onSubmit={handleSubmitReview} className="bg-gray-50 rounded-sm p-4 mb-6">
-                <p className="text-sm font-semibold mb-2">Write a Review</p>
-                <div className="flex gap-1 mb-3">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewRating(star)}
-                      className={`text-xl ${star <= reviewRating ? 'text-accent' : 'text-gray-300'}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  required
-                  rows={3}
-                  placeholder="Share your experience with this product..."
-                  className="input-field mb-3"
-                />
-                {reviewError && (
-                  <p className="text-sm text-red-600 mb-3">{reviewError}</p>
-                )}
-                <button type="submit" className="btn-primary text-sm">
-                  {reviewSubmitted ? '✓ Review Submitted' : 'Submit Review'}
-                </button>
-              </form>
-            ) : (
-              <div className="mb-6 rounded-sm border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-                {reviewEligibilityMessage || 'Reviews will appear here once you purchase this product.'}
-              </div>
-            )
-          ) : (
-            <p className="text-sm text-gray-500 mb-4">
-              <Link to="/login" className="text-primary font-semibold hover:underline">Login</Link>
-              {' '}to write a review.
-            </p>
-          )}
-
-          {productReviews.length === 0 ? (
-            <p className="text-sm text-gray-500">No reviews yet. Be the first to review!</p>
-          ) : (
-            <div className="space-y-4">
-              {productReviews.map((review) => (
-                <div key={review.id} className="border-b border-gray-100 pb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm">{review.userName}</span>
-                    <span className="text-accent text-xs">{'★'.repeat(review.rating)}</span>
-                    <span className="text-xs text-gray-400">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">{review.comment}</p>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="mt-10 border-t border-gray-100 pt-8 lg:mt-14">
+          <ProductReviews
+            reviews={productReviews}
+            isAuthenticated={isAuthenticated}
+            canReview={canReview}
+            eligibilityMessage={reviewEligibilityMessage}
+            rating={reviewRating}
+            comment={reviewComment}
+            error={reviewError}
+            submitted={reviewSubmitted}
+            onRatingChange={setReviewRating}
+            onCommentChange={setReviewComment}
+            onSubmit={handleSubmitReview}
+          />
         </div>
 
+        <RelatedProducts product={product} />
       </div>
 
-      {/* Mobile sticky purchase bar */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-3 pt-2 pb-safe shadow-[0_-2px_12px_rgba(0,0,0,0.08)] md:hidden">
-        <div className="flex items-center gap-2 pb-2">
-          <button
-            type="button"
-            onClick={handleToggleWishlist}
-            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-            aria-pressed={inWishlist}
-            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border text-xl transition ${
-              inWishlist ? 'border-red-300 bg-red-50 text-red-500' : 'border-gray-300 text-gray-500'
-            }`}
-          >
-            {inWishlist ? '♥' : '♡'}
-          </button>
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isOutOfStock}
-            className={`h-12 flex-1 rounded-lg border-2 text-sm font-bold transition active:scale-[0.98] ${
-              added
-                ? 'border-green-500 bg-green-500 text-white'
-                : isOutOfStock
-                  ? 'cursor-not-allowed border-gray-200 bg-gray-200 text-gray-500'
-                  : 'border-primary text-primary'
-            }`}
-          >
-            {isOutOfStock ? 'Out of Stock' : (added ? '✓ Added' : 'Add to Cart')}
-          </button>
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            disabled={isOutOfStock}
-            className="btn-primary h-12 flex-1 px-2 text-sm"
-          >
-            Buy Now
-          </button>
-        </div>
-      </div>
+      <StickyPurchaseBar
+        total={displayPrice * quantity}
+        isOutOfStock={isOutOfStock}
+        added={added}
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+      />
     </div>
   );
 };
