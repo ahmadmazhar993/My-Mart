@@ -258,12 +258,10 @@ const Orders = () => {
                       {order.payment_status}
                     </span>
                   </div>
-                  {order.shipping_cost > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Shipping</span>
-                      <span className="text-gray-800">{formatPrice(order.shipping_cost)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Total</span>
+                    <span className="font-bold text-primary-700">{formatPrice(order.total_price)}</span>
+                  </div>
                   {order.tracking_number && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Tracking</span>
