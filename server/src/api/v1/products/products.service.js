@@ -4,6 +4,7 @@ const multer = require('multer');
 const { StatusCodes } = require('http-status-codes');
 const db = require('../../../db');
 const { mapProduct, mapProductAdmin } = require('../../../libs/serializers');
+const { optimizeProductImage } = require('../../../libs/imageOptimizer');
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -442,22 +443,34 @@ async function uploadProductImages(req, res) {
       }
 
       const slug = slugify(req.body.name || 'product') || 'product';
-      const renamedPaths = [];
 
-      files.forEach((file, index) => {
-        const extension = path.extname(file.filename);
-        const newFilename = `${slug}-${Date.now()}-${index + 1}${extension}`;
+      // Shrink and re-encode every photo (see libs/imageOptimizer.js), then answer with the stored paths.
+      return (async () => {
+        const storedPaths = [];
+        try {
+          // Sequential on purpose: sharp is CPU heavy and uploads are at most 10 files.
+          for (let index = 0; index < files.length; index += 1) {
+            const file = files[index];
+            const inputPath = path.join(productImageDir, file.filename);
+            const outputBase = path.join(productImageDir, `${slug}-${Date.now()}-${index + 1}`);
+            // eslint-disable-next-line no-await-in-loop
+            const result = await optimizeProductImage(inputPath, outputBase);
+            storedPaths.push(`uploads/products/${path.basename(result.filePath)}`);
+          }
+        } catch (imageErr) {
+          // Do not leave half-processed uploads behind.
+          storedPaths.forEach(deleteProductImageFile);
+          files.forEach((file) => deleteProductImageFile(`uploads/products/${file.filename}`));
+          return res.status(imageErr.isImageError ? StatusCodes.BAD_REQUEST : StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: imageErr.isImageError ? imageErr.message : 'Failed to process images',
+          });
+        }
 
-        const oldPath = path.join(productImageDir, file.filename);
-        const newPath = path.join(productImageDir, newFilename);
+        oldImagePaths.forEach(deleteProductImageFile);
 
-        fs.renameSync(oldPath, newPath);
-        renamedPaths.push(`uploads/products/${newFilename}`);
-      });
-
-      oldImagePaths.forEach(deleteProductImageFile);
-
-      return res.status(StatusCodes.OK).json({ success: true, data: renamedPaths });
+        return res.status(StatusCodes.OK).json({ success: true, data: storedPaths });
+      })();
     });
   } catch (err) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message || 'Failed to upload images' });

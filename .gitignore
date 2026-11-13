@@ -6,3 +6,5 @@ dist/
 .vscode
 .idea
 package-lock.json
+# local backups made by server/scripts
+server/backups/

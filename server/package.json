@@ -1,6 +1,6 @@
 {
   "name": "Ahm-Mart-backend",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Ahm Mart e-commerce backend API",
   "main": "src/index.js",
   "scripts": {
@@ -35,6 +35,7 @@
     "multer": "^2.0.2",
     "nodemailer": "^9.0.1",
     "pg": "^8.11.3",
+    "sharp": "^0.35.5",
     "uuid": "^9.0.0",
     "winston": "^3.11.0"
   },
