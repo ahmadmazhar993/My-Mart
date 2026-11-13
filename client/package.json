@@ -1,6 +1,6 @@
 {
   "name": "ahm-mart-website",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "Ahm Mart e-commerce website built with React and Vite",
   "type": "module",
   "scripts": {
