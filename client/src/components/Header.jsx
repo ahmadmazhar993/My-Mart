@@ -6,6 +6,8 @@ import { NAV_CATEGORIES as categories } from '../config/categories';
 import { shouldShowBottomNav } from './BottomNav';
 import { Heart, LogOut, Package, Search, ShieldCheck, ShoppingCart, User, UserRound, Truck } from 'lucide-react';
 import { SHIPPING_TIERS } from '../config/shipping';
+import { buildProductPath } from '../utils/product';
+import { SuggestionList, optionId, useSearchSuggestions } from './search/SearchSuggestions';
 
 const SearchIcon = () => <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />;
 const SearchButtonIcon = () => <Search className="h-4 w-4" aria-hidden="true" />;
@@ -21,6 +23,8 @@ const Header = () => {
   const urlSearch = location.pathname === '/products' ? (params.get('search') || '') : '';
 
   const [searchQuery, setSearchQuery] = useState(urlSearch);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
   const headerRef = useRef(null);
@@ -50,6 +54,8 @@ const Header = () => {
 
   useEffect(() => {
     setAccountMenuOpen(false);
+    setSuggestOpen(false);
+    setActiveIndex(-1);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -114,10 +120,6 @@ const Header = () => {
         if (trimmed !== current) {
           navigate(getProductsPath(trimmed), { replace: true, state: location.state });
         }
-      } else if (trimmed) {
-        navigate(getProductsPath(trimmed), {
-          state: { from: `${location.pathname}${location.search}` },
-        });
       }
     }, 350);
     return () => clearTimeout(timer);
@@ -125,6 +127,8 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    setSuggestOpen(false);
+    setActiveIndex(-1);
     const trimmed = searchQuery.trim();
     if (trimmed) {
       navigate(getProductsPath(trimmed), {
@@ -140,6 +144,54 @@ const Header = () => {
   const activeCategory = params.get('category') || '';
   const isAllCategoriesActive = !activeCategory;
   const shouldShowSearchBar = !['/help', '/pages'].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+
+  // Type-ahead suggestions (not on /products, where results already update as you type).
+  const suggestionsEnabled = shouldShowSearchBar && location.pathname !== '/products';
+  const suggest = useSearchSuggestions(searchQuery, suggestionsEnabled && suggestOpen);
+  const listVisible = suggestionsEnabled && suggestOpen && suggest.ready;
+  const closeSuggest = () => { setSuggestOpen(false); setActiveIndex(-1); };
+
+  const handleSearchKeyDown = (e) => {
+    if (!listVisible) return;
+    const seeAllIndex = suggest.items.length;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((i) => (i >= seeAllIndex ? 0 : i + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? seeAllIndex : i - 1));
+    } else if (e.key === 'Escape') {
+      closeSuggest();
+    } else if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < seeAllIndex) {
+      e.preventDefault();
+      navigate(buildProductPath(suggest.items[activeIndex]));
+      closeSuggest();
+    }
+  };
+
+  const comboProps = (listId) => ({
+    role: 'combobox',
+    autoComplete: 'off',
+    'aria-autocomplete': 'list',
+    'aria-expanded': listVisible,
+    'aria-controls': listVisible ? listId : undefined,
+    'aria-activedescendant': listVisible && activeIndex >= 0 ? optionId(listId, activeIndex) : undefined,
+    onFocus: () => setSuggestOpen(true),
+    onBlur: closeSuggest,
+    onKeyDown: handleSearchKeyDown,
+  });
+
+  const renderSuggestions = (listId) => listVisible && (
+    <SuggestionList
+      listId={listId}
+      items={suggest.items}
+      loading={suggest.loading}
+      query={searchQuery}
+      activeIndex={activeIndex}
+      onNavigate={closeSuggest}
+      onSeeAll={() => handleSearch({ preventDefault() {} })}
+    />
+  );
 
   const renderAnnouncement = (className) => (
       <div className={className}>
@@ -236,10 +288,12 @@ const Header = () => {
                   enterKeyHint="search"
                   aria-label="Search products"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setActiveIndex(-1); setSuggestOpen(true); }}
+                  {...comboProps('site-search-list')}
                   placeholder="Search products, brands and more"
                   className="search-clear-red h-12 w-full rounded-l-2xl border border-r-0 border-gray-200 bg-gray-50 pl-10 pr-3 text-sm shadow-inner transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
+                {renderSuggestions('site-search-list')}
               </div>
               <button
                 type="submit"
@@ -346,10 +400,12 @@ const Header = () => {
                   enterKeyHint="search"
                   aria-label="Search products"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setActiveIndex(-1); setSuggestOpen(true); }}
+                  {...comboProps('site-search-mobile-list')}
                   placeholder="Search in AHM Mart"
                   className="search-clear-red h-11 w-full rounded-l-xl border border-r-0 border-gray-200 bg-gray-50 pl-9 pr-3 text-sm transition focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
+                {renderSuggestions('site-search-mobile-list')}
               </div>
               <button type="submit" aria-label="Search" className="rounded-r-xl bg-primary-600 px-4 text-white transition-colors hover:bg-primary-700">
                 <SearchButtonIcon />
