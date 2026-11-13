@@ -13,6 +13,7 @@ const cart = require('./cart/cart.routes');
 const contact = require('./contact/contact.routes');
 const reports = require('./reports/reports.routes');
 const receipts = require('./receipts/receipts.routes');
+const wishlist = require('./wishlist/wishlist.routes');
 
 // Mount routes
 router.use('/auth', auth);
@@ -25,5 +26,6 @@ router.use('/cart', cart);
 router.use('/contact', contact);
 router.use('/reports', reports);
 router.use('/receipts', receipts);
+router.use('/wishlist', wishlist);
 
 module.exports = router;

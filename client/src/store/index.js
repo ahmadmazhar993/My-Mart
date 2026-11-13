@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setAuthToken } from '../services/api';
+import { wishlistService } from '../services';
 import { buildCartItemKey } from '../utils/product';
 
 const normalizeUser = (user) => {
@@ -22,8 +23,9 @@ export const useAuthStore = create((set) => ({
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(normalized));
     useCartStore.getState().clearCart();
-    useWishlistStore.getState().clearItems();
     set({ user: normalized, token, isAuthenticated: true });
+    // Items saved while logged out are added to the account, then the account's list is loaded.
+    useWishlistStore.getState().syncFromServer({ mergeGuestItems: true });
   },
 
   restoreSession: (user, token) => {
@@ -34,6 +36,7 @@ export const useAuthStore = create((set) => ({
     }
     localStorage.setItem('user', JSON.stringify(normalized));
     set({ user: normalized, token: token || null, isAuthenticated: true });
+    useWishlistStore.getState().syncFromServer();
   },
 
   logout: () => {
@@ -41,6 +44,8 @@ export const useAuthStore = create((set) => ({
     localStorage.removeItem('user');
     setAuthToken(null);
     set({ user: null, token: null, isAuthenticated: false });
+    // The saved list lives on the account; do not leave it on a shared device.
+    useWishlistStore.getState().clearItems();
   },
 
   setUser: (user) => {
@@ -131,21 +136,51 @@ export const useProductStore = create((set) => ({
   setError: (error) => set({ error }),
 }));
 
+const isLoggedIn = () => !!localStorage.getItem('token');
+
+// Saved products live on the user's account (server). While logged out the list is a local guest
+// list that is merged into the account at login.
 export const useWishlistStore = create(
   persist(
     (set, get) => ({
       items: [],
 
-      addItem: (product) => set((state) => {
-        if (state.items.some((i) => i.id === product.id)) return state;
-        return { items: [...state.items, product] };
-      }),
+      addItem: (product) => {
+        if (get().items.some((i) => i.id === product.id)) return;
+        set((state) => ({ items: [product, ...state.items] }));
+        if (isLoggedIn()) {
+          wishlistService.add(product.id).catch(() => {
+            // roll back so the heart never shows a save the server does not have
+            set((state) => ({ items: state.items.filter((i) => i.id !== product.id) }));
+          });
+        }
+      },
 
-      removeItem: (id) => set((state) => ({
-        items: state.items.filter((item) => item.id !== id),
-      })),
+      removeItem: (id) => {
+        const previous = get().items.find((i) => i.id === id);
+        set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
+        if (isLoggedIn()) {
+          wishlistService.remove(id).catch(() => {
+            if (previous) set((state) => (state.items.some((i) => i.id === id) ? state : { items: [previous, ...state.items] }));
+          });
+        }
+      },
 
       clearItems: () => set({ items: [] }),
+
+      // Replace the local list with the account's list (optionally merging guest items first).
+      syncFromServer: async ({ mergeGuestItems = false } = {}) => {
+        if (!isLoggedIn()) return;
+        try {
+          const res = mergeGuestItems
+            ? await wishlistService.merge(get().items.map((i) => i.id))
+            : await wishlistService.get();
+          const serverItems = res.data?.data;
+          if (Array.isArray(serverItems) && isLoggedIn()) set({ items: serverItems });
+        } catch {
+          // keep whatever is stored locally; the next sync will correct it
+        }
+      },
 
       isInWishlist: (id) => get().items.some((item) => item.id === id),
 

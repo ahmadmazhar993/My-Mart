@@ -84,6 +84,13 @@ export const cartService = {
   updateCartItem: (itemId, quantity) => api.put(`/cart/items/${itemId}`, { quantity }),
 };
 
+export const wishlistService = {
+  get: () => api.get('/wishlist'),
+  add: (productId) => api.put(`/wishlist/${productId}`),
+  remove: (productId) => api.delete(`/wishlist/${productId}`),
+  merge: (productIds) => api.post('/wishlist/merge', { product_ids: productIds }),
+};
+
 export const sellerService = {
   getAllSellers: () => api.get('/sellers'),
   getSellerById: (id) => api.get(`/sellers/${id}`),

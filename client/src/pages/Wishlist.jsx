@@ -5,7 +5,6 @@ import ProductCard from '../components/ProductCard';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import { Breadcrumb } from '../components/ui';
 import { useAuthStore, useWishlistStore } from '../store';
-import { productService } from '../services';
 import usePageMeta from '../hooks/usePageMeta';
 
 const Wishlist = () => {
@@ -16,29 +15,14 @@ const Wishlist = () => {
   // Private page: keep it out of search results.
   usePageMeta({ title: 'My Wishlist', description: 'Products you saved at AHM Mart.', path: '/wishlist', noindex: true });
 
-  // Saved items are a snapshot; reload each product so stock, price and variants are current.
+  // Load the account's saved list so it is current (stock, price) on every device.
   useEffect(() => {
-    const saved = useWishlistStore.getState().items;
-    if (!isAuthenticated || saved.length === 0) {
+    if (!isAuthenticated) {
       setRefreshing(false);
       return undefined;
     }
-
     let cancelled = false;
-    Promise.allSettled(saved.map((item) => productService.getProductById(item.id)))
-      .then((results) => {
-        if (cancelled) return;
-        const current = useWishlistStore.getState().items;
-        const merged = current.map((item) => {
-          const index = saved.findIndex((s) => s.id === item.id);
-          const result = index >= 0 ? results[index] : null;
-          const fresh = result?.status === 'fulfilled' ? result.value.data?.data : null;
-          return fresh ? { ...item, ...fresh } : item;
-        });
-        useWishlistStore.setState({ items: merged });
-      })
-      .finally(() => { if (!cancelled) setRefreshing(false); });
-
+    useWishlistStore.getState().syncFromServer().finally(() => { if (!cancelled) setRefreshing(false); });
     return () => { cancelled = true; };
   }, [isAuthenticated]);
 
