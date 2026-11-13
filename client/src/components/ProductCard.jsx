@@ -136,7 +136,7 @@ const ProductCard = ({ product, compact = false, showWishlist = true }) => {
   };
 
   return (
-    <Link to={buildProductPath(product)} className="product-card flex flex-col h-full group rounded-xl border border-gray-100 overflow-hidden bg-white hover:shadow-md hover:border-gray-200 transition-shadow active:scale-[0.99]">
+    <Link to={buildProductPath(product)} className="product-card flex flex-col h-full group rounded-2xl border border-gray-100 overflow-hidden bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-soft hover:border-primary-200 active:scale-[0.99]">
       <div className={`relative ${compact ? 'aspect-square' : 'aspect-[4/5]'} bg-white overflow-hidden`}>
         <ProductImage
           product={product}

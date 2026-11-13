@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useSearchParams, Link, useLocation, useNavigationType } from 'react-router-dom';
-import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, SearchX, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { Breadcrumb, EmptyState } from '../components/ui';
+import EndOfList from '../components/EndOfList';
+import { Breadcrumb } from '../components/ui';
 import { productService, categoryService } from '../services';
-import BrandLoader from '../components/BrandLoader';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import BrandLogo from '../components/BrandLogo';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
@@ -57,6 +57,16 @@ const Products = () => {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const resultsRef = useRef(null);
   const activeFilterCount = (priceRange !== 'all' ? 1 : 0) + (brand ? 1 : 0);
+
+  const removeParam = (key) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(key);
+    setSearchParams(next);
+  };
+  const clearAllFilters = () => {
+    setPriceRange('all');
+    setSearchParams(new URLSearchParams());
+  };
 
   // The filter sheet closes on Escape and stops the page behind it from scrolling.
   useEffect(() => {
@@ -298,7 +308,7 @@ const Products = () => {
     });
 
   const pageTitle = saleOnly
-    ? 'Flash Sale'
+    ? 'Deals'
     : search
       ? `Results for "${search}"`
       : brand
@@ -306,6 +316,22 @@ const Products = () => {
         : category
           ? categoryMatch?.name || category.charAt(0).toUpperCase() + category.slice(1)
           : 'All Products';
+
+  const priceOptions = [
+    { value: 'all', label: 'All Prices' },
+    { value: 'under-500', label: 'Under Rs. 500' },
+    { value: '500-2000', label: 'Rs. 500 - 2,000' },
+    { value: 'over-2000', label: 'Over Rs. 2,000' },
+  ];
+
+  const activeChips = [
+    search && { key: 'search', label: `Search: "${search}"`, remove: () => removeParam('search') },
+    category && { key: 'category', label: categoryMatch?.name || category, remove: () => removeParam('category') },
+    brand && { key: 'brand', label: brandLabel, remove: () => removeParam('brand') },
+    saleOnly && { key: 'sale', label: 'On sale', remove: () => removeParam('sale') },
+    priceRange !== 'all' && { key: 'price', label: priceOptions.find((o) => o.value === priceRange)?.label || 'Price', remove: () => setPriceRange('all') },
+  ].filter(Boolean);
+  const eyebrow = saleOnly ? 'Deals' : search ? 'Search results' : brand ? 'Brand' : category ? 'Category' : 'Catalogue';
 
   // Listing metadata. A single brand or category is a real landing page, so it gets its own title and a
   // self-referencing canonical (the filter stays in the URL). Search, sale and price filters are
@@ -317,7 +343,7 @@ const Products = () => {
   else if (singleFilterOnly && category && categoryMatch) listingPath = `/products?category=${encodeURIComponent(category)}`;
   const listingTitle = singleFilterOnly && (brand || categoryMatch)
     ? `${pageTitle} Products`
-    : (saleOnly ? 'Flash Sale' : 'All Products');
+    : (saleOnly ? 'Deals' : 'All Products');
   let listingDescription = 'Browse all products at AHM Mart: groceries, electronics, fashion, beauty and home essentials with delivery across Pakistan.';
   if (singleFilterOnly && brand) {
     listingDescription = brandInfo?.description
@@ -362,12 +388,6 @@ const Products = () => {
     </div>
   ));
 
-  const priceOptions = [
-    { value: 'all', label: 'All Prices' },
-    { value: 'under-500', label: 'Under Rs. 500' },
-    { value: '500-2000', label: 'Rs. 500 - 2,000' },
-    { value: 'over-2000', label: 'Over Rs. 2,000' },
-  ];
 
   return (
     <div className="container-main animate-fade-in py-6">
@@ -379,8 +399,13 @@ const Products = () => {
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Filters sidebar — desktop only */}
         <aside className="hidden flex-shrink-0 lg:block lg:w-56">
-          <div className="sticky top-36 rounded-xl border border-gray-100 bg-white p-4 shadow-card">
-            <h3 className="mb-3 text-sm font-bold text-dark">Filters</h3>
+          <div className="sticky top-[calc(var(--sticky-header-h,144px)+1rem)] rounded-2xl border border-gray-100 bg-white p-4 shadow-card">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-dark">Filters</h3>
+              {activeChips.length > 0 && (
+                <button type="button" onClick={clearAllFilters} className="min-h-[32px] text-xs font-semibold text-primary-700 hover:underline">Clear all</button>
+              )}
+            </div>
             <div className="space-y-4">
               {renderBrandFilter('brand', 'py-1.5')}
               <div>
@@ -411,30 +436,35 @@ const Products = () => {
         </aside>
 
         <div className="flex-1">
-          {/* Results header card */}
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
-            <div className={brandInfo ? 'flex items-center gap-3' : ''}>
-              {brandInfo && <BrandLogo brand={brandInfo} className="h-14 w-14 rounded-xl sm:h-16 sm:w-16" textClass="text-2xl" />}
+          {/* Results header */}
+          <div className="relative mb-3 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-600 p-4 text-white shadow-soft sm:p-6">
+            <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10" aria-hidden="true" />
+            <div className={`relative ${brandInfo ? 'flex items-center gap-3 sm:gap-4' : ''}`}>
+              {brandInfo && <BrandLogo brand={brandInfo} className="h-14 w-14 flex-shrink-0 rounded-xl bg-white sm:h-16 sm:w-16" textClass="text-2xl" />}
               <div className="min-w-0">
-              <h1 className="text-xl font-bold tracking-tight text-dark">{pageTitle}</h1>
-              {brandInfo?.description && (
-                <p className="mt-0.5 line-clamp-2 text-sm text-gray-600">{brandInfo.description}</p>
-              )}
-              <p className="mt-0.5 text-sm text-gray-500">
-                {(() => {
-                  if (showLoading) return 'Loading products…';
-                  const count = pagination?.total ?? filtered.length;
-                  return count === 1 ? '1 product found' : `${count} products found`;
-                })()}
-              </p>
+                <p className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-200">{eyebrow}</p>
+                <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{pageTitle}</h1>
+                {brandInfo?.description && (
+                  <p className="mt-1 line-clamp-2 max-w-2xl text-sm text-white/85">{brandInfo.description}</p>
+                )}
+                <p className="mt-1 text-sm text-primary-100" aria-live="polite">
+                  {(() => {
+                    if (showLoading) return 'Loading products…';
+                    const count = pagination?.total ?? filtered.length;
+                    return count === 1 ? '1 product' : `${count} products`;
+                  })()}
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          {/* Toolbar: sticky under the site header on phones so Filters and Sort stay in reach */}
+          <div className="sticky top-[var(--sticky-header-h,113px)] z-30 -mx-3 mb-3 bg-surface/95 px-3 py-2 backdrop-blur sm:mx-0 sm:px-0 lg:static lg:bg-transparent lg:py-0 lg:backdrop-blur-none">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 sm:w-auto rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 lg:hidden"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 sm:w-auto lg:hidden"
               >
                 <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                 Filters
@@ -444,61 +474,95 @@ const Products = () => {
               </button>
 
               <div className="relative">
-              <button
-                type="button"
-                ref={sortButtonRef}
-                onClick={() => setSortOpen((s) => !s)}
-                aria-haspopup="listbox"
-                aria-expanded={sortOpen}
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 sm:w-auto rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
-              >
-                <span className="truncate">{SORT_OPTIONS.find((o) => o.value === effectiveSort)?.label || 'Sort'}</span>
-                <ChevronDown className={`h-4 w-4 flex-shrink-0 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-              </button>
-
-              {sortOpen && (
-                <ul
-                  ref={sortMenuRef}
-                  role="listbox"
-                  aria-label="Sort options"
-                  className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-gray-100 bg-white py-1 shadow-lg"
+                <button
+                  type="button"
+                  ref={sortButtonRef}
+                  onClick={() => setSortOpen((s) => !s)}
+                  aria-haspopup="listbox"
+                  aria-expanded={sortOpen}
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 sm:w-auto"
                 >
-                  {SORT_OPTIONS.map((opt) => (
-                    <li key={opt.value} role="option" aria-selected={opt.value === effectiveSort}>
-                      <button
-                        type="button"
-                        onClick={() => { setSort(opt.value); setSortOpen(false); }}
-                        className={`min-h-[44px] w-full px-3.5 py-2 text-left text-sm transition ${
-                          opt.value === effectiveSort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                  <span className="truncate">{SORT_OPTIONS.find((o) => o.value === effectiveSort)?.label || 'Sort'}</span>
+                  <ChevronDown className={`h-4 w-4 flex-shrink-0 text-gray-500 transition-transform ${sortOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+
+                {sortOpen && (
+                  <ul
+                    ref={sortMenuRef}
+                    role="listbox"
+                    aria-label="Sort options"
+                    className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-gray-100 bg-white py-1 shadow-soft"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <li key={opt.value} role="option" aria-selected={opt.value === effectiveSort}>
+                        <button
+                          type="button"
+                          onClick={() => { setSort(opt.value); setSortOpen(false); }}
+                          className={`min-h-[44px] w-full px-4 py-2 text-left text-sm transition ${
+                            opt.value === effectiveSort ? 'bg-primary-50 font-semibold text-primary-700' : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
+
+            {activeChips.length > 0 && (
+              <ul className="scrollbar-hide mt-2 flex items-center gap-2 overflow-x-auto pb-0.5" aria-label="Active filters">
+                {activeChips.map((chip) => (
+                  <li key={chip.key} className="flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={chip.remove}
+                      aria-label={`Remove filter: ${chip.label}`}
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 pl-3 pr-2 text-xs font-semibold text-primary-800 transition hover:bg-primary-100"
+                    >
+                      <span className="max-w-[160px] truncate">{chip.label}</span>
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+                {activeChips.length > 1 && (
+                  <li className="flex-shrink-0">
+                    <button type="button" onClick={clearAllFilters} className="min-h-[36px] px-2 text-xs font-semibold text-gray-600 underline-offset-2 hover:text-primary-700 hover:underline">
+                      Clear all
+                    </button>
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
 
           {showLoading ? (
-            <BrandLoader minHeight={420} text="Loading products" />
+            <div aria-busy="true">
+              <p className="sr-only" role="status">Loading products</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {Array.from({ length: 8 }, (_, i) => <ProductCardSkeleton key={`first-skeleton-${i}`} />)}
+              </div>
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-xl border border-gray-100 bg-white shadow-card">
-              <EmptyState
-                icon="🔍"
-                title="No products found"
-                description="Try adjusting your filters or search terms."
-                action={
-                  <Link
-                    to="/products"
-                    className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
-                  >
-                    Browse All Products
-                  </Link>
-                }
-              />
+            <div className="rounded-2xl border border-gray-100 bg-white px-5 py-12 text-center shadow-card">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                <SearchX className="h-7 w-7" aria-hidden="true" />
+              </span>
+              <h2 className="mt-4 text-lg font-bold text-dark">No products found</h2>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                {search ? `Nothing matched "${search}". Check the spelling or try a shorter word.` : 'Try removing a filter or browsing another category.'}
+              </p>
+              <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                {activeChips.length > 0 && (
+                  <button type="button" onClick={clearAllFilters} className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
+                    Clear filters
+                  </button>
+                )}
+                <Link to="/products" className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-primary-200 bg-white px-5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50">
+                  Browse all products
+                </Link>
+              </div>
             </div>
           ) : (
             <>
@@ -523,9 +587,7 @@ const Products = () => {
                 )}
                 {!loadMoreError && hasNextPage && <div ref={sentinelRef} className="h-10" aria-hidden="true" />}
                 {!hasNextPage && !loadingMore && products.length > 0 && (
-                  <p className="text-center text-sm text-gray-500">
-                    You&apos;ve seen all {pagination?.total || products.length} products
-                  </p>
+                  <EndOfList total={pagination?.total || products.length} />
                 )}
               </div>
             </>

@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { authService } from '../services';
 import { useToast } from '../components/ToastProvider';
 import BrandLoader from '../components/BrandLoader';
+import AuthShell from '../components/auth/AuthShell';
+import AuthField from '../components/auth/AuthField';
+import usePageMeta from '../hooks/usePageMeta';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -16,6 +20,8 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const { addToast } = useToast();
+
+  usePageMeta({ title: 'Reset Password', description: 'Set a new AHM Mart password.', path: '/reset-password', noindex: true });
 
   useEffect(() => {
     const validateToken = async () => {
@@ -79,67 +85,76 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="container-main py-10 animate-fade-in">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-extrabold text-dark mb-2">Reset Password</h1>
-          <p className="text-gray-500 text-sm">Set a new password for your AHM Mart account</p>
+    <AuthShell
+      title="Reset your password"
+      subtitle="Set a new password for your AHM Mart account"
+      footer={<Link to="/login" className="inline-flex min-h-[44px] items-center font-semibold text-primary-700 hover:underline">Back to login</Link>}
+    >
+      {message && (
+        <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>{message}</span>
         </div>
-
-        <div className="bg-white rounded-sm shadow-card p-6 sm:p-8">
-          {message && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-sm mb-4 text-sm">{message}</div>
-          )}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm mb-4 text-sm">{error}</div>
-          )}
-
-          {validating ? (
-            <div className="text-center py-10 text-gray-600">Validating reset token...</div>
-          ) : isValidToken ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-1.5">New Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input-field"
-                  placeholder="Enter new password"
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1.5">Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="input-field"
-                  placeholder="Confirm new password"
-                  disabled={loading}
-                />
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary flex w-full items-center justify-center gap-2 py-3">
-                {loading && <BrandLoader variant="button" />}
-                {loading ? 'Updating...' : 'Save New Password'}
-              </button>
-            </form>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-sm text-gray-500 mb-4">Your reset token is invalid or has expired.</p>
-              <Link to="/forgot-password" className="text-primary font-semibold hover:underline">Request a new reset link</Link>
-            </div>
-          )}
-
-          <p className="text-center mt-6 text-sm text-gray-500">
-            <Link to="/login" className="text-primary font-semibold hover:underline">Back to login</Link>
-          </p>
+      )}
+      {error && (
+        <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>{error}</span>
         </div>
-      </div>
-    </div>
+      )}
+
+      {validating ? (
+        <div role="status" className="flex items-center justify-center gap-2 py-10 text-sm text-gray-600">
+          <BrandLoader variant="button" tone="brand" size={16} />
+          Validating reset link...
+        </div>
+      ) : isValidToken ? (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <AuthField
+            id="reset-password"
+            label="New password"
+            icon={Lock}
+            type="password"
+            name="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+            hint="At least 6 characters."
+            placeholder="Enter new password"
+          />
+          <AuthField
+            id="reset-confirm-password"
+            label="Confirm password"
+            icon={Lock}
+            type="password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            disabled={loading}
+            placeholder="Confirm new password"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary-600 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {loading && <BrandLoader variant="button" />}
+            {loading ? 'Updating...' : 'Save new password'}
+          </button>
+        </form>
+      ) : (
+        <div className="py-6 text-center">
+          <p className="mb-4 text-sm text-gray-500">Your reset link is invalid or has expired.</p>
+          <Link to="/forgot-password" className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
+            Request a new reset link
+          </Link>
+        </div>
+      )}
+    </AuthShell>
   );
 };
 

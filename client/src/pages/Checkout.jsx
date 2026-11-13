@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Truck } from 'lucide-react';
 import ProductImage from '../components/ProductImage';
 import QuantityStepper from '../components/product/QuantityStepper';
 import { Breadcrumb } from '../components/ui';
@@ -82,7 +82,7 @@ const FieldIcon = ({ name }) => {
 };
 
 const StepBadge = ({ n }) => (
-  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white shadow-sm">
     {n}
   </span>
 );
@@ -426,12 +426,18 @@ const Checkout = () => {
         { label: isBuyNow ? 'Buy Now Checkout' : 'Checkout' },
       ]} />
 
-      <div className="mb-1 mt-4 flex items-center gap-2">
-        <h1 className="text-xl font-bold tracking-tight text-dark sm:text-2xl">
-          {isBuyNow ? 'Buy Now Checkout' : 'Checkout'}
-        </h1>
+      <div className="relative mb-5 mt-2 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-600 p-5 text-white shadow-soft sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+            <Truck className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold tracking-tight">{isBuyNow ? 'Buy now checkout' : 'Checkout'}</h1>
+            <p className="text-sm text-primary-100">{totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in your order &middot; 2 quick steps</p>
+          </div>
+        </div>
       </div>
-      <p className="mb-6 text-sm text-gray-500">Secure checkout &middot; {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'} in your order</p>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="min-w-0 space-y-4 lg:col-span-2">
@@ -447,7 +453,7 @@ const Checkout = () => {
             )}
 
             {/* Shipping Information card */}
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-6">
               <div className="mb-5 flex items-center gap-2.5">
                 <StepBadge n={1} />
                 <h2 className="text-base font-bold text-dark sm:text-lg">Shipping Information</h2>
@@ -467,7 +473,8 @@ const Checkout = () => {
                         type="button"
                         key={savedAddress.id}
                         onClick={() => selectAddress(savedAddress)}
-                        className={`rounded-lg border p-3 text-left transition ${selectedAddressId === savedAddress.id ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'}`}
+                        aria-pressed={selectedAddressId === savedAddress.id}
+                        className={`min-h-[56px] rounded-xl border-2 p-3 text-left transition ${selectedAddressId === savedAddress.id ? 'border-primary-600 bg-primary-50/50' : 'border-gray-200 hover:border-gray-300'}`}
                       >
                         <span className="block text-sm font-semibold text-dark">{savedAddress.label}</span>
                         <span className="mt-0.5 block text-xs text-gray-500">{savedAddress.full_name} · {savedAddress.phone}</span>
@@ -480,7 +487,7 @@ const Checkout = () => {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <label htmlFor="co-full-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -489,7 +496,9 @@ const Checkout = () => {
                     </span>
                     <input
                       type="text"
+                      id="co-full-name"
                       name="fullName"
+                      autoComplete="name"
                       value={form.fullName}
                       onChange={handleChange}
                       className={`input-field pl-9 ${errors.fullName ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
@@ -500,7 +509,7 @@ const Checkout = () => {
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <label htmlFor="co-phone" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Phone Number <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -509,7 +518,9 @@ const Checkout = () => {
                     </span>
                     <input
                       type="tel"
+                      id="co-phone"
                       name="phone"
+                      autoComplete="tel"
                       value={form.phone}
                       inputMode="numeric"
                       pattern="[0-9]{11}"
@@ -528,7 +539,7 @@ const Checkout = () => {
               </div>
 
               <div className="mt-4">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <label htmlFor="co-address" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -536,7 +547,9 @@ const Checkout = () => {
                     <FieldIcon name="pin" />
                   </span>
                   <textarea
+                    id="co-address"
                     name="address"
+                    autoComplete="street-address"
                     value={form.address}
                     onChange={handleChange}
                     rows={3}
@@ -548,7 +561,7 @@ const Checkout = () => {
               </div>
 
               <div className="mt-4">
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <label htmlFor="co-city" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                   City <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -556,7 +569,9 @@ const Checkout = () => {
                     <FieldIcon name="city" />
                   </span>
                   <select
+                    id="co-city"
                     name="city"
+                    autoComplete="address-level2"
                     value={form.city}
                     onChange={handleChange}
                     className={`input-field appearance-none pl-9 ${errors.city ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : ''}`}
@@ -585,17 +600,17 @@ const Checkout = () => {
             </div>
 
             {/* Payment card */}
-            <div className="rounded-xl border border-gray-100 bg-white p-3.5 shadow-card sm:p-6">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-6">
               <div className="mb-1 flex items-center gap-2.5">
                 <StepBadge n={2} />
                 <h2 className="text-base font-bold text-dark sm:text-lg">Payment Method</h2>
               </div>
-              <p className="mb-5 ml-8 text-xs text-gray-500">All transactions are secure and encrypted.</p>
+              <p className="mb-5 ml-9 text-xs text-gray-500">Choose how you would like to pay.</p>
 
               <div className="space-y-3">
                 {/* Online payment option */}
                 <label
-                  className={`block min-w-0 cursor-pointer rounded-xl border-2 p-3 transition sm:p-4 ${paymentMethod === 'online' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
+                  className={`block min-w-0 cursor-pointer rounded-2xl border-2 p-3 transition focus-within:ring-2 focus-within:ring-primary-200 sm:p-4 ${paymentMethod === 'online' ? 'border-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <div className="flex items-start gap-3">
@@ -777,7 +792,7 @@ const Checkout = () => {
 
                 {/* Cash on Delivery option */}
                 <label
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition ${paymentMethod === 'cod' ? 'border-primary bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
+                  className={`flex min-h-[64px] cursor-pointer items-center gap-3 rounded-2xl border-2 p-4 transition focus-within:ring-2 focus-within:ring-primary-200 ${paymentMethod === 'cod' ? 'border-primary-600 bg-primary-50/40' : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
                   <span
@@ -822,7 +837,7 @@ const Checkout = () => {
           </form>
         </div>
 
-        <div className="h-fit lg:sticky lg:top-36 rounded-xl border border-gray-100 bg-white p-5 shadow-card sm:p-6">
+        <div className="h-fit rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-6 lg:sticky lg:top-[calc(var(--sticky-header-h,144px)+1rem)]">
           <h2 className="mb-4 text-lg font-bold text-dark">Order Summary</h2>
 
           {/* Shipping tier nudge */}
@@ -913,8 +928,8 @@ const Checkout = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Delivery</span>
-              <span className={shipping === 0 ? 'font-medium text-emerald-600' : 'font-medium text-amber-600'}>
-                {shipping === 0 ? 'FREE' : formatPrice(shipping)}
+              <span className={shipping === 0 ? 'font-semibold text-primary-700' : 'font-medium text-gray-800'}>
+                {shipping === 0 ? 'Free' : formatPrice(shipping)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -923,7 +938,7 @@ const Checkout = () => {
             </div>
             <div className="mt-1 flex items-baseline justify-between border-t border-gray-100 pt-3 text-lg font-bold">
               <span>Total</span>
-              <span className="text-primary">{formatPrice(total)}</span>
+              <span className="text-xl font-extrabold text-primary-700">{formatPrice(total)}</span>
             </div>
           </div>
 

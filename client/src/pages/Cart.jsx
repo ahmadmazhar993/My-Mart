@@ -6,6 +6,7 @@ import QuantityStepper from '../components/product/QuantityStepper';
 import { EmptyState } from '../components/ui';
 import { useToast } from '../components/ToastProvider';
 import { getShippingInfo } from '../config/shipping';
+import { PAYMENT_METHOD_LABELS } from '../config/paymentAccounts';
 import { useAuthStore, useCartStore } from '../store';
 import { formatPrice } from '../utils/format';
 import { buildProductPath } from '../utils/product';
@@ -51,9 +52,17 @@ const Cart = () => {
 
   return (
     <div className="container-main animate-fade-in py-4 pb-24 sm:py-6 lg:pb-6">
-      <div className="mb-4 flex items-baseline justify-between gap-3 sm:mb-6">
-        <h1 className="text-xl font-bold tracking-tight text-dark sm:text-2xl">Shopping cart</h1>
-        {cart.length > 0 && <p className="text-sm text-gray-500">{itemsLabel}</p>}
+      <div className="relative mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-primary-600 p-5 text-white shadow-soft sm:mb-6 sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+            <ShoppingCart className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold tracking-tight">Shopping cart</h1>
+            <p className="text-sm text-primary-100" aria-live="polite">{cart.length > 0 ? itemsLabel : 'Nothing here yet'}</p>
+          </div>
+        </div>
       </div>
 
       {cart.length === 0 ? (
@@ -209,7 +218,15 @@ const Cart = () => {
               <ShoppingCart className="h-4 w-4" aria-hidden="true" />
               Proceed to checkout
             </button>
-            <p className="text-xs text-gray-500 lg:mt-3 lg:text-center">Delivery and payment options are confirmed at checkout.</p>
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              <p className="mb-2 text-xs font-semibold text-gray-600">Pay with</p>
+              <ul className="flex flex-wrap gap-2">
+                {['cod', 'online'].filter((key) => PAYMENT_METHOD_LABELS[key]).map((key) => (
+                  <li key={key} className="rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-800">{PAYMENT_METHOD_LABELS[key]}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">Delivery and payment options are confirmed at checkout.</p>
+            </div>
           </aside>
         </div>
       )}

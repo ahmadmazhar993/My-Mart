@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categoryService } from '../services';
 import { getCategoryIcon } from '../utils/product';
+import SectionHeader from './home/SectionHeader';
 
 const FALLBACK_CATEGORIES = [
   { id: 1, name: 'Electronics', slug: 'electronics' },
@@ -28,35 +29,26 @@ const CategoryGrid = () => {
   }, []);
 
   return (
-    <section className="container-main py-4">
-      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-card sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Shop by Category</h2>
-          <Link
-            to="/products"
-            className="text-sm font-semibold text-primary transition hover:underline"
-          >
-            View all
-          </Link>
-        </div>
+    <section className="container-main py-5 sm:py-8" aria-labelledby="shop-by-category">
+      <SectionHeader id="shop-by-category" eyebrow="Browse" title="Shop by category" to="/products" linkLabel="View all" />
 
-        <div className="grid grid-cols-4 gap-x-1 gap-y-2 sm:grid-cols-6 sm:gap-3 md:grid-cols-8">
-          {categories.map((category) => (
+      <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6 sm:gap-3 md:grid-cols-8">
+        {categories.map((category) => (
+          <li key={category.id || category.slug}>
             <Link
-              key={category.id || category.slug}
               to={`/products?category=${category.slug}`}
-              className="group flex flex-col items-center gap-2 rounded-xl p-2 transition-colors hover:bg-primary-50"
+              className="group flex h-full flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white px-1 py-3 shadow-card transition duration-200 hover:-translate-y-1 hover:border-primary-200 hover:shadow-soft sm:px-2 sm:py-4"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-2xl shadow-sm ring-1 ring-primary-100 transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-md group-hover:ring-primary-200 sm:h-16 sm:w-16">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 text-2xl ring-1 ring-primary-100 transition-all duration-200 group-hover:from-primary-100 group-hover:to-primary-200 sm:h-14 sm:w-14">
                 {getCategoryIcon(category.slug)}
-              </div>
-              <span className="line-clamp-2 text-center text-[11px] font-medium leading-tight sm:text-xs text-gray-700 transition-colors group-hover:text-primary-700">
+              </span>
+              <span className="line-clamp-2 min-h-[2.2em] text-center text-[11px] font-semibold leading-tight text-gray-700 transition-colors group-hover:text-primary-700 sm:text-xs">
                 {category.name}
               </span>
             </Link>
-          ))}
-        </div>
-      </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 };

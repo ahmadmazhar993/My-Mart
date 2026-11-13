@@ -1,61 +1,64 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { SHIPPING_TIERS } from '../config/shipping';
+import { formatPrice } from '../utils/format';
 
+const FREE_TIER = SHIPPING_TIERS.find((tier) => tier.cost === 0);
+
+// Slide copy only states things the store can back up: delivery terms come from config, and no
+// discount percentages or "limited time" claims are made here.
 const slides = [
   {
     id: 1,
-    title: 'Welcome to AHM Mart',
-    subtitle: 'Up to 70% off on top brands — shop smarter today',
-    badge: 'Limited Time',
-    cta: 'Shop Now',
+    title: 'Everyday shopping, made simple',
+    subtitle: FREE_TIER
+      ? `Groceries, essentials and more. Free delivery on orders over ${formatPrice(FREE_TIER.minSubtotal)}.`
+      : 'Groceries, essentials and more, delivered to your door.',
+    badge: FREE_TIER ? 'Free delivery' : null,
+    cta: 'Shop now',
     link: '/products',
-    image: '/Wellcome.png',
+    image: '/Wellcome.webp',
+    imageSmall: '/Wellcome-800.webp',
   },
   {
     id: 2,
-    title: 'Electronics Sale',
-    subtitle: 'Phones, earbuds, smart watches & more at great prices',
-    badge: 'Up to 40% Off',
-    cta: 'Explore Deals',
+    title: 'Electronics',
+    subtitle: 'Phones, earbuds, smart watches and more.',
+    cta: 'Explore electronics',
     link: '/products?category=electronics',
-    image: '/Electronics.png',
+    image: '/Electronics.webp',
+    imageSmall: '/Electronics-800.webp',
   },
   {
     id: 3,
-    title: 'Fresh Groceries',
-    subtitle: 'Daily essentials delivered to your doorstep',
-    badge: 'Free Delivery',
-    cta: 'Shop Groceries',
+    title: 'Fresh groceries',
+    subtitle: 'Daily essentials, delivered to your doorstep.',
+    cta: 'Shop groceries',
     link: '/products?category=groceries',
-    image: '/Grocery.png',
+    image: '/Grocery.webp',
+    imageSmall: '/Grocery-800.webp',
   },
   {
     id: 4,
     title: 'Thank You for Choosing AHM Mart',
     // link: '/products',
-    image: '/Thank_you.png',
-    mobileImage: '/Thank_you_mobile.png',
+    image: '/Thank_you.webp',
+    mobileImage: '/Thank_you_mobile.webp',
     imageOnly: true, // artwork already contains all text, so no overlay or gradient
   },
 ];
 
 const SLIDE_DURATION = 5000;
 
-const ChevronLeft = () => (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-  </svg>
-);
-
-const ChevronRight = () => (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-  </svg>
-);
-
 const HeroBanner = () => {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Autoplay is opt-out: people who prefer reduced motion start paused, and anyone can pause (WCAG 2.2.2).
+  const [userPaused, setUserPaused] = useState(
+    () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+  );
+  const stopped = paused || userPaused;
   const [progressKey, setProgressKey] = useState(0);
   const touchStartX = useRef(null);
 
@@ -68,10 +71,10 @@ const HeroBanner = () => {
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
   useEffect(() => {
-    if (paused) return undefined;
+    if (stopped) return undefined;
     const timer = setTimeout(next, SLIDE_DURATION);
     return () => clearTimeout(timer);
-  }, [current, paused, next]);
+  }, [current, stopped, next]);
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -90,12 +93,12 @@ const HeroBanner = () => {
 
   const arrowClass = lightSlide
     ? 'bg-white/90 text-gray-800 shadow-md hover:bg-white'
-    : 'bg-white/20 text-white hover:bg-white/30';
+    : 'bg-white/15 text-white ring-1 ring-white/30 hover:bg-white/30';
 
   return (
-    <section className="container-main py-4">
+    <section className="container-main py-4" aria-roledescription="carousel" aria-label="Featured offers">
       <div
-        className="group relative h-[190px] overflow-hidden rounded-xl bg-white shadow-card min-[400px]:h-[220px] sm:h-[300px] md:h-[360px]"
+        className="group relative h-[230px] overflow-hidden rounded-2xl bg-white shadow-soft min-[400px]:h-[250px] sm:h-[320px] md:h-[400px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={handleTouchStart}
@@ -132,6 +135,8 @@ const HeroBanner = () => {
                     src={slide.image}
                     alt={slide.title}
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                     className={`h-full w-full object-center ${mobileFade} md:object-cover md:[mask-image:none]`}
                   />
                 </picture>
@@ -141,80 +146,97 @@ const HeroBanner = () => {
 
           return (
             <div key={slide.id} className={`absolute inset-0 flex items-center ${visibility}`}>
+              {/* WebP in two sizes. The first slide is the page's largest image, so it loads eagerly and first. */}
               <img
                 src={slide.image}
+                srcSet={slide.imageSmall ? `${slide.imageSmall} 800w, ${slide.image} 1600w` : undefined}
+                sizes="(max-width: 1280px) 100vw, 1280px"
                 alt={slide.title}
+                width={1600}
+                height={854}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === 0 ? 'high' : undefined}
+                decoding="async"
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-900/95 via-primary-900/75 to-primary-900/25 sm:via-primary-900/55 sm:to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/30 to-transparent" />
 
-              <div className="relative z-10 max-w-lg px-6 sm:px-12 md:px-16">
+              <div className="relative z-10 max-w-xl px-5 pb-7 sm:px-12 sm:pb-0 md:px-16">
                 {slide.badge && (
-                  <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm sm:mb-3 sm:px-3 sm:py-1 sm:text-xs">
-                    <svg className="h-2.5 w-2.5 sm:h-3 sm:w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
-                    </svg>
+                  <span className="mb-2 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white ring-1 ring-white/30 backdrop-blur-sm sm:mb-3 sm:text-xs">
                     {slide.badge}
                   </span>
                 )}
-                <h2 className="mb-1.5 text-xl font-extrabold leading-tight text-white drop-shadow-sm sm:mb-2 sm:text-3xl md:text-4xl">
+                <h2 className="mb-1.5 text-2xl font-extrabold leading-[1.1] tracking-tight text-white drop-shadow-sm sm:mb-3 sm:text-4xl md:text-5xl">
                   {slide.title}
                 </h2>
-                <p className="mb-3 text-xs text-white/90 sm:mb-6 sm:text-base">{slide.subtitle}</p>
+                <p className="mb-3 line-clamp-2 max-w-md text-xs text-white/90 sm:mb-6 sm:text-lg">{slide.subtitle}</p>
                 <Link
                   to={slide.link}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-bold text-primary-700 shadow-md transition hover:-translate-y-0.5 hover:bg-primary-50 hover:shadow-lg sm:gap-2 sm:px-6 sm:py-2.5 sm:text-sm"
+                  tabIndex={isActive ? 0 : -1}
+                  className="group/cta inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-primary-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-primary-50 sm:min-h-[48px] sm:px-7 sm:text-base"
                 >
                   {slide.cta}
-                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" aria-hidden="true" />
                 </Link>
               </div>
             </div>
           );
         })}
 
-        {/* Prev / Next arrows — appear on hover (desktop) */}
+        {/* Prev / Next arrows: desktop */}
         <button
           type="button"
           onClick={prev}
           aria-label="Previous slide"
-          className={`absolute left-3 top-1/2 z-20 hidden -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 sm:block ${arrowClass}`}
+          className={`absolute left-3 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full opacity-0 backdrop-blur-sm transition focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${arrowClass}`}
         >
-          <ChevronLeft />
+          <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={next}
           aria-label="Next slide"
-          className={`absolute right-3 top-1/2 z-20 hidden -translate-y-1/2 rounded-full p-2 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 sm:block ${arrowClass}`}
+          className={`absolute right-3 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full opacity-0 backdrop-blur-sm transition focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${arrowClass}`}
         >
-          <ChevronRight />
+          <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </button>
-        {/* Progress-bar dots */}
-        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4">
+
+        {/* Slide controls: progress dots + pause/play */}
+        <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-center gap-1 sm:bottom-3">
           {slides.map((slide, index) => (
             <button
               key={slide.id}
               type="button"
               onClick={() => goTo(index)}
               aria-label={`Go to slide ${index + 1}`}
-              className="relative h-1.5 w-6 overflow-hidden rounded-full bg-white/40 sm:w-8"
+              aria-current={index === current}
+              className="flex h-6 items-center px-1"
             >
-              {index === current && (
-                <span
-                  key={progressKey}
-                  className="absolute inset-y-0 left-0 rounded-full bg-white"
-                  style={{
-                    animation: paused ? 'none' : `heroProgress ${SLIDE_DURATION}ms linear forwards`,
-                    width: paused ? '100%' : undefined,
-                  }}
-                />
-              )}
-              {index < current && <span className="absolute inset-0 rounded-full bg-white" />}
+              <span className="relative block h-1.5 w-6 overflow-hidden rounded-full bg-white/40 ring-1 ring-black/10 sm:w-8">
+                {index === current && (
+                  <span
+                    key={progressKey}
+                    className="absolute inset-y-0 left-0 rounded-full bg-white"
+                    style={{
+                      animation: stopped ? 'none' : `heroProgress ${SLIDE_DURATION}ms linear forwards`,
+                      width: stopped ? '100%' : undefined,
+                    }}
+                  />
+                )}
+                {index < current && <span className="absolute inset-0 rounded-full bg-white" />}
+              </span>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setUserPaused((p) => !p)}
+            aria-label={userPaused ? 'Play slideshow' : 'Pause slideshow'}
+            className={`ml-1 flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-sm transition ${arrowClass}`}
+          >
+            {userPaused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
+          </button>
         </div>
       </div>
 

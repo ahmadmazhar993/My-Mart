@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore, useCartStore } from '../store';
+import { useAuthStore, useCartStore, useWishlistStore } from '../store';
 import { authService } from '../services';
 import { NAV_CATEGORIES as categories } from '../config/categories';
 import { shouldShowBottomNav } from './BottomNav';
-import { Search, ShoppingCart, User, Truck } from 'lucide-react';
+import { Heart, LogOut, Package, Search, ShieldCheck, ShoppingCart, User, UserRound, Truck } from 'lucide-react';
 import { SHIPPING_TIERS } from '../config/shipping';
 
 const SearchIcon = () => <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />;
@@ -23,8 +23,30 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
+  const headerRef = useRef(null);
+
+  // Publish the sticky header's height (it differs by breakpoint) so page-level sticky bars can sit right under it.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const publish = () => document.documentElement.style.setProperty('--sticky-header-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => { observer.disconnect(); document.documentElement.style.removeProperty('--sticky-header-h'); };
+  }, []);
   const { isAuthenticated, user } = useAuthStore();
   const { cart } = useCartStore();
+  const wishlistCount = useWishlistStore((state) => state.items.length);
+  const [scrolled, setScrolled] = useState(false);
+
+  // A stronger shadow appears once the page has scrolled under the sticky header.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     setAccountMenuOpen(false);
@@ -39,11 +61,15 @@ const Header = () => {
       }
     };
 
+    const handleKey = (event) => { if (event.key === 'Escape') setAccountMenuOpen(false); };
+
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('touchstart', handleOutsideClick);
+    document.addEventListener('keydown', handleKey);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleKey);
     };
   }, [accountMenuOpen]);
   // On phones the cart lives in the bottom bar; the header shows it only where that bar is hidden.
@@ -134,11 +160,12 @@ const Header = () => {
   const renderCategoryNav = (className) => (
       <div className={className}>
         <div className="container-main">
-          <nav aria-label="Categories" className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-1.5 sm:py-2">
+          <nav aria-label="Categories" className="scrollbar-hide flex items-center gap-1 overflow-x-auto py-1.5">
             <Link
               to="/products"
-              className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
-                isAllCategoriesActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+              aria-current={isAllCategoriesActive ? 'page' : undefined}
+              className={`inline-flex min-h-[40px] flex-shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[13px] font-semibold transition-colors sm:text-sm ${
+                isAllCategoriesActive ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'
               }`}
             >
               All Categories
@@ -149,8 +176,9 @@ const Header = () => {
                 <Link
                   key={cat.slug}
                   to={`/products?category=${cat.slug}`}
-                  className={`flex-shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors sm:px-4 sm:text-sm ${
-                    isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-primary'
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`inline-flex min-h-[40px] flex-shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[13px] font-semibold transition-colors sm:text-sm ${
+                    isActive ? 'bg-primary-600 text-white shadow-sm' : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'
                   }`}
                 >
                   {cat.name}
@@ -167,11 +195,11 @@ const Header = () => {
       {/* Phones: announcement and categories scroll away; only the logo / search row stays sticky,
           so the product is visible sooner. From sm up the whole header stays sticky as before. */}
       {renderAnnouncement('bg-primary-700 text-xs text-white sm:hidden')}
-      <header className="sticky top-0 z-50 shadow-header">
+      <header ref={headerRef} className={`sticky top-0 z-50 transition-shadow duration-200 ${scrolled ? 'shadow-soft' : 'shadow-header'}`}>
         {renderAnnouncement('hidden bg-primary-700 text-xs text-white sm:block')}
       {/* Main header row */}
-      <div className="border-b border-gray-100 bg-white">
-        <div className="container-main flex items-center gap-2 py-2 sm:py-3 lg:gap-5">
+      <div className="border-b border-gray-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+        <div className="container-main flex items-center gap-2 py-2 sm:gap-4 sm:py-3 lg:gap-6">
           <Link
             to="/"
             className="flex-shrink-0"
@@ -181,7 +209,7 @@ const Header = () => {
           >
             {/* Mobile */}
             <div className="flex items-center gap-1.5 sm:hidden">
-              <img src="/logo.png" alt="" className="h-8 w-8" />
+              <img src="/logo-128.png" alt="" className="h-8 w-8" />
               <span className="whitespace-nowrap text-xl font-extrabold tracking-tight">
                 <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
@@ -189,9 +217,9 @@ const Header = () => {
             </div>
 
             {/* Tablet & Desktop */}
-            <div className="hidden flex-col items-center justify-center rounded-lg border-2 border-primary-200 px-2 py-1 sm:flex">
-              <img src="/logo.png" alt="AHM Mart Logo" className="h-14 w-14" />
-              <span className="text-3xl font-extrabold tracking-tight">
+            <div className="hidden items-center gap-2.5 sm:flex">
+              <img src="/logo-128.png" alt="" className="h-11 w-11 lg:h-12 lg:w-12" />
+              <span className="whitespace-nowrap text-2xl font-extrabold tracking-tight lg:text-[1.7rem]">
                 <span className="text-dark">AHM</span>
                 <span className="text-primary"> Mart</span>
               </span>
@@ -199,35 +227,54 @@ const Header = () => {
           </Link>
 
           {shouldShowSearchBar && (
-            <form onSubmit={handleSearch} role="search" className="hidden max-w-full flex-1 sm:flex">
+            <form onSubmit={handleSearch} role="search" className="hidden max-w-2xl flex-1 sm:mx-auto sm:flex">
               <div className="relative flex-1">
                 <SearchIcon />
                 <input
-                  type="text"
+                  id="site-search"
+                  type="search"
+                  enterKeyHint="search"
+                  aria-label="Search products"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search in AHM Mart"
-                  className="w-full rounded-l-xl border border-r-0 border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  placeholder="Search products, brands and more"
+                  className="search-clear-red h-12 w-full rounded-l-2xl border border-r-0 border-gray-200 bg-gray-50 pl-10 pr-3 text-sm shadow-inner transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
               <button
                 type="submit"
-                className="flex items-center rounded-r-xl bg-primary-600 px-5 text-white transition-colors hover:bg-primary-700"
+                aria-label="Search"
+                className="flex h-12 items-center gap-2 rounded-r-2xl bg-primary-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
               >
                 <SearchButtonIcon />
+                <span className="hidden lg:inline">Search</span>
               </button>
             </form>
           )}
 
-          <div className="ml-auto flex items-center gap-1 sm:gap-4">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
+            <Link
+              to="/wishlist"
+              aria-label={`Wishlist, ${wishlistCount} items`}
+              className="relative hidden min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-xl px-2 py-1 text-dark transition-colors hover:bg-primary-50 hover:text-primary-700 md:flex"
+            >
+              <Heart className="h-6 w-6" strokeWidth={1.6} aria-hidden="true" />
+              {wishlistCount > 0 && (
+                <span className="absolute right-1 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold text-white">
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
+              <span className="mt-0.5 text-xs">Wishlist</span>
+            </Link>
             {isAuthenticated ? (
               <div ref={accountMenuRef} className="relative z-40">
                 <button
                   type="button"
                   aria-label="Account menu"
+                  aria-haspopup="menu"
                   aria-expanded={accountMenuOpen}
                   onClick={() => setAccountMenuOpen((open) => !open)}
-                  className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary"
+                  className="flex min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-xl px-2 py-1 text-dark transition-colors hover:bg-primary-50 hover:text-primary-700"
                 >
                   <UserIcon />
                   <span className="mt-0.5 hidden max-w-[80px] truncate text-xs md:block">
@@ -235,16 +282,21 @@ const Header = () => {
                   </span>
                 </button>
                 <div className={`absolute right-0 top-full z-50 pt-2 ${accountMenuOpen ? 'block' : 'hidden'}`}>
-                  <div className="min-w-[180px] overflow-hidden rounded-xl border border-gray-100 bg-white py-1.5 shadow-lg">
-                    <Link to="/profile" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Profile</Link>
-                    <Link to="/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">My Orders</Link>
-                    <Link to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700">Wishlist</Link>
+                  <div role="menu" className="min-w-[220px] overflow-hidden rounded-2xl border border-gray-100 bg-white py-1.5 shadow-soft">
+                    <div className="border-b border-gray-100 px-4 pb-2.5 pt-2">
+                      <p className="truncate text-sm font-bold text-dark">{user?.firstName || user?.name || user?.email?.split('@')[0] || 'Account'}</p>
+                      {user?.email && <p className="truncate text-xs text-gray-500">{user.email}</p>}
+                    </div>
+                    <Link role="menuitem" to="/profile" onClick={() => setAccountMenuOpen(false)} className="flex min-h-[44px] items-center gap-3 px-4 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700"><UserRound className="h-4 w-4" aria-hidden="true" />My Profile</Link>
+                    <Link role="menuitem" to="/orders" onClick={() => setAccountMenuOpen(false)} className="flex min-h-[44px] items-center gap-3 px-4 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700"><Package className="h-4 w-4" aria-hidden="true" />My Orders</Link>
+                    <Link role="menuitem" to="/wishlist" onClick={() => setAccountMenuOpen(false)} className="flex min-h-[44px] items-center gap-3 px-4 text-sm text-gray-700 transition hover:bg-primary-50 hover:text-primary-700"><Heart className="h-4 w-4" aria-hidden="true" />Wishlist</Link>
                     {user?.role === 'Admin' && (
-                      <Link to="/admin" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary-50">Admin Panel</Link>
+                      <Link role="menuitem" to="/admin" onClick={() => setAccountMenuOpen(false)} className="flex min-h-[44px] items-center gap-3 px-4 text-sm font-semibold text-primary-700 transition hover:bg-primary-50"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Admin Panel</Link>
                     )}
                     <div className="my-1 border-t border-gray-100" />
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={async () => {
                         try {
                           await authService.logout();
@@ -255,21 +307,22 @@ const Header = () => {
                         setAccountMenuOpen(false);
                         navigate('/login');
                       }}
-                      className="block w-full px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+                      className="flex min-h-[44px] w-full items-center gap-3 px-4 text-left text-sm text-red-600 transition hover:bg-red-50"
                     >
+                      <LogOut className="h-4 w-4" aria-hidden="true" />
                       Logout
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <Link to="/login" aria-label="Login" className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary">
+              <Link to="/login" aria-label="Login" className="flex min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-xl px-2 py-1 text-dark transition-colors hover:bg-primary-50 hover:text-primary-700">
                 <UserIcon />
                 <span className="mt-0.5 hidden text-xs md:block">Login</span>
               </Link>
             )}
 
-            <Link to="/cart" aria-label={`Cart, ${cartCount} items`} className={`${bottomNavVisible ? 'hidden md:flex' : 'flex'} relative min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-2 py-1 text-dark transition-colors hover:bg-gray-50 hover:text-primary`}>
+            <Link to="/cart" aria-label={`Cart, ${cartCount} items`} className={`${bottomNavVisible ? 'hidden md:flex' : 'flex'} relative min-h-[48px] min-w-[48px] flex-col items-center justify-center rounded-xl px-2 py-1 text-dark transition-colors hover:bg-primary-50 hover:text-primary-700`}>
               <CartIcon />
               {cartCount > 0 && (
                 <span className="absolute right-0 top-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">

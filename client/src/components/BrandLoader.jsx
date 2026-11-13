@@ -1,7 +1,7 @@
 import React from 'react';
 
 // The AHM Mart brand mark (public/logo.png). To use a different mark, change this one path.
-const BRAND_MARK_SRC = '/logo.png';
+const BRAND_MARK_SRC = '/logo-128.png';
 
 const SIZES = { xs: 16, sm: 32, md: 56, lg: 80 };
 

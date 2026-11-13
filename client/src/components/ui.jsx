@@ -11,16 +11,16 @@ export const EmptyState = ({ icon, title, description, action }) => (
 );
 
 export const Breadcrumb = ({ items }) => (
-  <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4 flex-wrap">
+  <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-x-2 text-sm text-gray-500">
     {items.map((item, index) => (
       <React.Fragment key={item.label}>
         {index > 0 && <span className="text-gray-300">/</span>}
         {item.to ? (
-          <Link to={item.to} className="hover:text-primary transition-colors">
+          <Link to={item.to} className="inline-flex min-h-[44px] items-center transition-colors hover:text-primary-700">
             {item.label}
           </Link>
         ) : (
-          <span className="text-dark font-medium">{item.label}</span>
+          <span aria-current="page" className="py-2 font-medium text-dark">{item.label}</span>
         )}
       </React.Fragment>
     ))}

@@ -34,6 +34,7 @@ module.exports = {
         card: '0 1px 4px rgba(0, 0, 0, 0.08)',
         'card-hover': '0 4px 16px rgba(0, 0, 0, 0.12)',
         header: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        soft: '0 10px 30px -8px rgba(6, 78, 59, 0.18)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',

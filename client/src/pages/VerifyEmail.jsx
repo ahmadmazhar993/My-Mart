@@ -1,36 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { authService } from '../services';
-
-// Matches AHM Mart's brand: emerald green primary, white card,
-// soft rounded corners, clean sans-serif — same language as the header/footer.
+import AuthShell from '../components/auth/AuthShell';
+import usePageMeta from '../hooks/usePageMeta';
 
 const REDIRECT_SECONDS = 5;
 
-const Icon = ({ state }) => {
-  if (state === 'checking') {
-    return (
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" className="icon-spin">
-        <circle cx="20" cy="20" r="17" stroke="#E3E8E6" strokeWidth="3" />
-        <path d="M20 3 a17 17 0 0 1 17 17" stroke="#12805C" strokeWidth="3" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (state === 'success') {
-    return (
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <circle cx="20" cy="20" r="18" fill="#E7F7EF" />
-        <path d="M12 20.5 L17.5 26 L28 14" stroke="#12805C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="draw-check" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="18" fill="#FDECEA" />
-      <path d="M14 14 L26 26" stroke="#C0392B" strokeWidth="3" strokeLinecap="round" />
-      <path d="M26 14 L14 26" stroke="#C0392B" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
+const StatusIcon = ({ state }) => {
+  const base = 'mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full';
+  if (state === 'checking') return <span className={`${base} bg-primary-50 text-primary-600`}><Loader2 className="h-8 w-8 animate-spin motion-reduce:animate-none" aria-hidden="true" /></span>;
+  if (state === 'success') return <span className={`${base} bg-primary-100 text-primary-700`}><CheckCircle2 className="h-8 w-8" aria-hidden="true" /></span>;
+  return <span className={`${base} bg-red-50 text-red-600`}><XCircle className="h-8 w-8" aria-hidden="true" /></span>;
 };
 
 const VerifyEmail = () => {
@@ -40,6 +21,8 @@ const VerifyEmail = () => {
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
   const navigate = useNavigate();
   const timerRef = useRef(null);
+
+  usePageMeta({ title: 'Verify Email', description: 'Verify your AHM Mart email address.', path: '/verify-email', noindex: true });
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -103,113 +86,28 @@ const VerifyEmail = () => {
     : 'Verification failed';
 
   return (
-    <div className="container-main py-12 animate-fade-in">
-      <style>{`
-        .verify-box {
-          width: 100%;
-          max-width: 440px;
-          margin: 0 auto;
-          background: #fff;
-          border: 1px solid #E7EAE8;
-          border-radius: 10px;
-          box-shadow: 0 1px 3px rgba(16, 24, 20, 0.06);
-          padding: 2.5rem 2rem;
-          text-align: center;
-        }
-        .verify-icon-wrap {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 1.25rem;
-        }
-        .icon-spin { animation: spin 0.9s linear infinite; transform-origin: 20px 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .draw-check {
-          stroke-dasharray: 26;
-          stroke-dashoffset: 26;
-          animation: draw 0.4s ease-out 0.1s forwards;
-        }
-        @keyframes draw { to { stroke-dashoffset: 0; } }
-
-        .verify-heading {
-          font-size: 1.35rem;
-          font-weight: 700;
-          color: #16241F;
-          margin: 0 0 0.5rem;
-        }
-        .verify-message {
-          font-size: 0.925rem;
-          color: #5B6660;
-          line-height: 1.55;
-          margin: 0 auto 1.5rem;
-          max-width: 32ch;
-        }
-        .verify-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 0.6rem;
-        }
-        .verify-btn {
-          display: block;
-          width: 100%;
-          padding: 0.7rem 1.25rem;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-decoration: none;
-          text-align: center;
-          transition: background 0.15s ease, border-color 0.15s ease;
-          box-sizing: border-box;
-        }
-        .verify-btn.primary {
-          background: #12805C;
-          color: #fff;
-        }
-        .verify-btn.primary:hover { background: #0E6B4C; }
-        .verify-btn.ghost {
-          background: #fff;
-          border: 1px solid #D7DEDA;
-          color: #16241F;
-        }
-        .verify-btn.ghost:hover { border-color: #12805C; color: #12805C; }
-
-        .verify-footnote {
-          margin-top: 1rem;
-          font-size: 0.8rem;
-          color: #8B958F;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .icon-spin, .draw-check { animation: none; }
-          .draw-check { stroke-dashoffset: 0; }
-        }
-      `}</style>
-
-      <div className="verify-box">
-        <div className="verify-icon-wrap">
-          <Icon state={state} />
-        </div>
-
-        <h1 className="verify-heading">{heading}</h1>
-        <p className="verify-message">
+    <AuthShell title={heading} subtitle="AHM Mart account">
+      <div className="text-center" role="status" aria-live="polite">
+        <StatusIcon state={state} />
+        <p className="mx-auto mb-6 max-w-xs text-sm leading-relaxed text-gray-600">
           {state === 'checking' ? 'Please wait while we confirm your email address.' : message}
         </p>
 
         {state === 'success' && (
-          <div className="verify-actions">
-            <Link to="/login" className="verify-btn primary">Login now</Link>
-            <p className="verify-footnote">Redirecting to login in {countdown}s</p>
+          <div className="flex flex-col gap-2">
+            <Link to="/login" className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-primary-600 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700">Login now</Link>
+            <p className="mt-1 text-xs text-gray-500">Redirecting to login in {countdown}s</p>
           </div>
         )}
 
         {state === 'error' && (
-          <div className="verify-actions">
-            <Link to="/resend-verification" className="verify-btn primary">Send a new link</Link>
-            <Link to="/login" className="verify-btn ghost">Back to login</Link>
+          <div className="flex flex-col gap-2">
+            <Link to="/login" className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-primary-600 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700">Back to login</Link>
+            <p className="mt-1 text-xs text-gray-500">Need a new link? Try logging in. If your email is not verified yet, you will be offered a Resend option.</p>
           </div>
         )}
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

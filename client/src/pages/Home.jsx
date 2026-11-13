@@ -1,50 +1,18 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Link, useLocation, useNavigationType } from 'react-router-dom';
-import { Truck, Wallet, Undo2, LifeBuoy, ChevronRight } from 'lucide-react';
+import { useLocation, useNavigationType } from 'react-router-dom';
 import { getSnapshot, saveSnapshot } from '../utils/listSnapshots';
-import { SHIPPING_TIERS } from '../config/shipping';
-import { POLICY } from '../config/policies';
-import { formatPrice } from '../utils/format';
 import HeroBanner from '../components/HeroBanner';
+import ValueStrip from '../components/home/ValueStrip';
+import SectionHeader from '../components/home/SectionHeader';
 import CategoryGrid from '../components/CategoryGrid';
 import ShopByBrand from '../components/ShopByBrand';
 import FlashSale from '../components/FlashSale';
 import ProductCard from '../components/ProductCard';
+import EndOfList from '../components/EndOfList';
 import { productService } from '../services';
 import BrandLoader from '../components/BrandLoader';
 import ProductCardSkeleton from '../components/ProductCardSkeleton';
 import usePageMeta from '../hooks/usePageMeta';
-
-const FREE_DELIVERY_TIER = SHIPPING_TIERS.find((tier) => tier.cost === 0);
-
-// Short promises shown under the product list. Every value comes from the same config the cart and
-// policy pages use, so this block cannot drift from what checkout actually does.
-const TRUST_FEATURES = [
-  FREE_DELIVERY_TIER && {
-    title: 'Free delivery',
-    desc: `On orders over ${formatPrice(FREE_DELIVERY_TIER.minSubtotal)}`,
-    to: '/pages/shipping',
-    Icon: Truck,
-  },
-  {
-    title: 'Pay your way',
-    desc: 'Cash on delivery or bank transfer',
-    to: '/pages/cash-on-delivery',
-    Icon: Wallet,
-  },
-  POLICY.returnWindowDays && {
-    title: 'Easy returns',
-    desc: `${POLICY.returnWindowDays}-day return policy`,
-    to: '/pages/returns-refunds',
-    Icon: Undo2,
-  },
-  {
-    title: 'Help when you need it',
-    desc: 'Help center and contact options',
-    to: '/help',
-    Icon: LifeBuoy,
-  },
-].filter(Boolean);
 
 // WebSite structured data (site name + canonical home URL). No SearchAction: that would need a
 // verified search URL template.
@@ -177,23 +145,15 @@ const Home = () => {
   return (
     <div className="animate-fade-in">
       <HeroBanner />
+      <ValueStrip />
       <CategoryGrid />
       <ShopByBrand />
       {!loading && products.length > 0 && <FlashSale products={products} />}
 
       {/* Just For You */}
-      <section className="container-main py-4 pb-8">
-        <div className="rounded-2xl border border-gray-100 bg-white p-3 shadow-card sm:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold tracking-tight text-dark sm:text-xl">Just for you</h2>
-            <Link
-              to="/products"
-              className="inline-flex min-h-[44px] items-center gap-0.5 pl-2 text-sm font-semibold text-primary-700 transition hover:underline"
-            >
-              See all
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
+      <section className="container-main py-5 pb-10 sm:py-8" aria-labelledby="just-for-you">
+        <div>
+          <SectionHeader id="just-for-you" eyebrow="Explore" title="Just for you" subtitle="Browse products from across our store" to="/products" linkLabel="See all" />
 
           {loading ? (
             <BrandLoader minHeight={420} text="Loading products" />
@@ -232,33 +192,10 @@ const Home = () => {
                 <div ref={sentinelRef} className="h-10" aria-hidden="true" />
               )}
               {!hasNextPage && !loadingMore && (
-                <p className="text-center text-sm text-gray-500">
-                  You&apos;ve seen all {pagination?.total || products.length} products
-                </p>
+                <EndOfList total={pagination?.total || products.length} browseAllTo="/products" />
               )}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* Trust badges */}
-      <section className="container-main pb-10">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {TRUST_FEATURES.map(({ title, desc, to, Icon }) => (
-            <Link
-              key={title}
-              to={to}
-              className="flex flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-3 text-center shadow-card transition hover:border-primary-200 hover:shadow-card-hover sm:flex-row sm:items-center sm:gap-4 sm:p-4 sm:text-left"
-            >
-              <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700">
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div>
-                <h3 className="text-sm font-bold text-dark">{title}</h3>
-                <p className="text-xs text-gray-500">{desc}</p>
-              </div>
-            </Link>
-          ))}
         </div>
       </section>
     </div>

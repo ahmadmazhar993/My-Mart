@@ -12,6 +12,8 @@ import ReceiptButtons from '../components/ReceiptButtons';
 import { MART_INFO } from '../data/siteContent';
 import { receiptService } from '../services';
 import BrandLoader from '../components/BrandLoader';
+import usePageMeta from '../hooks/usePageMeta';
+import { ArrowLeft, Check, ExternalLink, XCircle } from 'lucide-react';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
@@ -28,6 +30,52 @@ const PAYMENT_STYLES = {
   refunded: 'text-gray-500',
 };
 
+// Order progress, drawn from the order's real status. A cancelled order shows a notice instead of steps.
+const PROGRESS_STEPS = [
+  { key: 'pending', label: 'Placed' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'processing', label: 'Processing' },
+  { key: 'shipped', label: 'Shipped' },
+  { key: 'delivered', label: 'Delivered' },
+];
+
+const OrderProgress = ({ status }) => {
+  if (status === 'cancelled') {
+    return (
+      <div role="status" className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+        <XCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        This order was cancelled.
+      </div>
+    );
+  }
+  const currentIndex = PROGRESS_STEPS.findIndex((step) => step.key === status);
+  if (currentIndex < 0) return null;
+
+  return (
+    <ol className="flex items-start" aria-label="Order progress">
+      {PROGRESS_STEPS.map((step, index) => {
+        const done = index < currentIndex || (index === currentIndex && status === 'delivered');
+        const current = index === currentIndex && !done;
+        return (
+          <li key={step.key} className="relative flex flex-1 flex-col items-center text-center" aria-current={current ? 'step' : undefined}>
+            {index > 0 && (
+              <span className={`absolute right-1/2 top-3.5 h-0.5 w-full -translate-y-1/2 ${index <= currentIndex ? 'bg-primary-500' : 'bg-gray-200'}`} aria-hidden="true" />
+            )}
+            <span
+              className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ring-4 ring-white ${
+                done ? 'bg-primary-600 text-white' : current ? 'bg-primary-100 text-primary-700 ring-primary-50' : 'bg-gray-100 text-gray-400'
+              }`}
+            >
+              {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
+            </span>
+            <span className={`mt-1.5 text-[11px] leading-tight sm:text-xs ${done || current ? 'font-semibold text-dark' : 'text-gray-400'}`}>{step.label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+};
+
 const OrderDetail = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -42,10 +90,13 @@ const OrderDetail = () => {
   const [uploadMessage, setUploadMessage] = useState('');
   const [showReplaceForm, setShowReplaceForm] = useState(false);
 
+  usePageMeta({ title: 'Order details', description: 'Your AHM Mart order.', path: `/orders/${id}`, noindex: true });
+
   const loadOrder = useCallback(async (showToast = false) => {
     if (!isAuthenticated) return;
 
-    setLoading(true);
+    // Live updates pass showToast=true; refresh quietly then instead of replacing the page with a loader.
+    if (!showToast) setLoading(true);
     try {
       const res = await orderService.getOrderById(id);
       const nextOrder = res.data?.data || null;
@@ -149,7 +200,7 @@ const OrderDetail = () => {
             action={
               <Link
                 to="/orders"
-                className="inline-flex items-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600"
+                className="inline-flex min-h-[44px] items-center rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700"
               >
                 Back to orders
               </Link>
@@ -171,7 +222,7 @@ const OrderDetail = () => {
         { label: `Order #${order.display_order_id || order.id}` },
       ]} />
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <button
             type="button"
@@ -180,15 +231,18 @@ const OrderDetail = () => {
               if (from) navigate(from);
               else navigate(-1);
             }}
-            className="mb-2 inline-flex items-center gap-1 text-sm font-medium text-primary transition hover:underline"
+            className="-ml-1 mb-1 inline-flex min-h-[44px] items-center gap-1 rounded-lg px-1 text-sm font-medium text-primary-700 transition hover:underline"
           >
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back
           </button>
-          <h1 className="text-xl font-bold tracking-tight text-dark">Order #{order.display_order_id || order.id}</h1>
-          <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString('en-PK')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="break-all text-2xl font-extrabold tracking-tight text-dark">Order #{order.display_order_id || order.id}</h1>
+            <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200'}`}>
+              {order.status}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString('en-PK')}</p>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
           <div className="text-left text-xs sm:text-right">
@@ -198,19 +252,20 @@ const OrderDetail = () => {
             <div className="whitespace-nowrap font-semibold text-gray-800">{order.orderCode || order.display_order_id || order.id}</div>
           </div>
           <ReceiptButtons order={order} martInfo={MART_INFO} receipt={receipt} />
-          <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[order.status] || 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-200'}`}>
-            {order.status}
-          </span>
         </div>
       </div>
 
+      <div className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
+        <OrderProgress status={order.status} />
+      </div>
+
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
             <h2 className="mb-4 text-lg font-semibold text-dark">Order Overview</h2>
             <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
               <div>
@@ -230,7 +285,7 @@ const OrderDetail = () => {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
             <h2 className="mb-4 text-lg font-semibold text-dark">Items</h2>
 
             <div className="space-y-3">
@@ -243,7 +298,7 @@ const OrderDetail = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         to={`/products/${item.product_id}`}
-                        className="font-semibold text-primary transition-colors hover:text-primary-600 hover:underline"
+                        className="font-semibold text-primary-700 transition-colors hover:text-primary-800 hover:underline"
                       >
                         {item.product_name || 'Product'}
                       </Link>
@@ -258,7 +313,7 @@ const OrderDetail = () => {
                       ) : (
                         <Link
                           to={`/products/${item.product_id}`}
-                          className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 transition hover:bg-amber-100"
+                          className="inline-flex min-h-[32px] items-center rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200 transition hover:bg-amber-100"
                         >
                           Write Review
                         </Link>
@@ -283,7 +338,7 @@ const OrderDetail = () => {
 
         <div className="space-y-4">
           {order.payment_method === 'online' && (
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
               <h2 className="mb-3 text-lg font-semibold text-dark">Payment Status</h2>
               <div
                 className={`rounded-xl border p-4 text-sm ${
@@ -319,18 +374,16 @@ const OrderDetail = () => {
                         href={receiptUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                        className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-primary-700 hover:underline"
                       >
                         View uploaded receipt
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                       </a>
                     )}
                     <button
                       type="button"
                       onClick={() => setShowReplaceForm(true)}
-                      className="text-sm font-medium text-gray-500 transition hover:text-gray-700 hover:underline"
+                      className="min-h-[44px] text-sm font-medium text-gray-600 transition hover:text-gray-800 hover:underline"
                     >
                       Upload a different receipt
                     </button>
@@ -344,11 +397,9 @@ const OrderDetail = () => {
                     <button
                       type="button"
                       onClick={() => setShowReplaceForm(false)}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition hover:text-gray-700"
+                      className="inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-gray-600 transition hover:text-gray-800"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                       Cancel
                     </button>
                   )}
@@ -369,15 +420,16 @@ const OrderDetail = () => {
                     ))}
                   </div>
                   <div className="rounded-lg border border-gray-200 p-3">
-                    <label className="mb-2 block text-sm font-semibold text-gray-700">Upload payment receipt</label>
+                    <label htmlFor="receipt-upload" className="mb-2 block text-sm font-semibold text-gray-700">Upload payment receipt</label>
                     <input
+                      id="receipt-upload"
                       type="file"
                       accept="image/*,.pdf"
                       onChange={async (e) => {
                         await handleReceiptUpload(e);
                         setShowReplaceForm(false);
                       }}
-                      className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-3.5 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-600"
+                      className="block w-full text-sm text-gray-600 file:mr-3 file:min-h-[44px] file:rounded-xl file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:transition hover:file:bg-primary-700"
                     />
                     {uploading && (
                       <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
@@ -392,7 +444,7 @@ const OrderDetail = () => {
             </div>
           )}
 
-          <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-card">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-card sm:p-5">
             <h2 className="mb-3 text-lg font-semibold text-dark">Order Summary</h2>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -405,7 +457,7 @@ const OrderDetail = () => {
               </div>
               <div className="flex justify-between border-t border-gray-100 pt-2 font-semibold">
                 <span>Total</span>
-                <span className="text-primary">{formatPrice(order.total_price)}</span>
+                <span className="text-primary-700">{formatPrice(order.total_price)}</span>
               </div>
             </div>
           </div>

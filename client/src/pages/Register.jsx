@@ -3,24 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services';
 import { API_BASE, API_VERSION } from '../services/api';
 import BrandLoader from '../components/BrandLoader';
-
-const UserFieldIcon = () => (
-  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
-
-const EmailIcon = () => (
-  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-);
+import AuthShell from '../components/auth/AuthShell';
+import AuthField from '../components/auth/AuthField';
+import usePageMeta from '../hooks/usePageMeta';
+import { AlertCircle, Lock, Mail, User } from 'lucide-react';
 
 const GoogleLogo = () => (
   <svg className="h-5 w-5" viewBox="0 0 48 48">
@@ -30,12 +16,6 @@ const GoogleLogo = () => (
     <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
   </svg>
 );
-
-const inputClasses = (hasError) => `w-full rounded-lg border bg-white py-2.5 pl-10 pr-3.5 text-sm shadow-sm transition focus:outline-none focus:ring-2 ${
-  hasError
-    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-    : 'border-gray-200 focus:border-primary focus:ring-primary-100'
-}`;
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -49,6 +29,8 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  usePageMeta({ title: 'Create Account', description: 'Create your AHM Mart account.', path: '/register', noindex: true });
 
   const validateField = (name, value) => {
     const nextErrors = { ...errors };
@@ -179,109 +161,96 @@ const Register = () => {
   };
 
   return (
-    <div className="container-main animate-fade-in py-10">
-      <div className="mx-auto max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-dark">Create Account</h1>
-          <p className="text-sm text-gray-500">Join AHM Mart for the best shopping experience</p>
+    <AuthShell
+      title="Create your account"
+      subtitle="Join AHM Mart to order and track your purchases"
+      footer={(
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="inline-flex min-h-[44px] items-center font-semibold text-primary-700 hover:underline">
+            Login
+          </Link>
+        </>
+      )}
+    >
+      {error && (
+        <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
+          <AuthField
+            id="reg-first-name"
+            label="First name"
+            icon={User}
+            name="first_name"
+            autoComplete="given-name"
+            value={form.first_name}
+            onChange={handleChange}
+            error={errors.first_name}
+            placeholder="First name"
+          />
+          <AuthField
+            id="reg-last-name"
+            label="Last name"
+            icon={User}
+            name="last_name"
+            autoComplete="family-name"
+            value={form.last_name}
+            onChange={handleChange}
+            error={errors.last_name}
+            placeholder="Last name"
+          />
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-card sm:p-8">
-          {error && (
-            <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
+        <AuthField
+          id="reg-email"
+          label="Email"
+          icon={Mail}
+          type="email"
+          name="email"
+          autoComplete="email"
+          inputMode="email"
+          value={form.email}
+          onChange={handleChange}
+          error={errors.email}
+          placeholder="Enter your email"
+        />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">First Name</label>
-                <div className="relative">
-                  <UserFieldIcon />
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={form.first_name}
-                    onChange={handleChange}
-                    className={inputClasses(errors.first_name)}
-                    placeholder="First name"
-                  />
-                </div>
-                {errors.first_name && <p className="mt-1.5 text-xs text-red-600">{errors.first_name}</p>}
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Last Name</label>
-                <div className="relative">
-                  <UserFieldIcon />
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={form.last_name}
-                    onChange={handleChange}
-                    className={inputClasses(errors.last_name)}
-                    placeholder="Last name"
-                  />
-                </div>
-                {errors.last_name && <p className="mt-1.5 text-xs text-red-600">{errors.last_name}</p>}
-              </div>
-            </div>
+        <AuthField
+          id="reg-password"
+          label="Password"
+          icon={Lock}
+          type="password"
+          name="password"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={handleChange}
+          error={errors.password}
+          hint="At least 6 characters."
+          placeholder="Create a password"
+        />
 
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Email</label>
-              <div className="relative">
-                <EmailIcon />
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className={inputClasses(errors.email)}
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && <p className="mt-1.5 text-xs text-red-600">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Password</label>
-              <div className="relative">
-                <LockIcon />
-                <input
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  className={inputClasses(errors.password)}
-                  placeholder="Create a password"
-                />
-              </div>
-              {errors.password && <p className="mt-1.5 text-xs text-red-600">{errors.password}</p>}
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Confirm Password</label>
-              <div className="relative">
-                <LockIcon />
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  className={inputClasses(errors.confirmPassword)}
-                  placeholder="Confirm your password"
-                />
-              </div>
-              {errors.confirmPassword && <p className="mt-1.5 text-xs text-red-600">{errors.confirmPassword}</p>}
-            </div>
+        <AuthField
+          id="reg-confirm-password"
+          label="Confirm password"
+          icon={Lock}
+          type="password"
+          name="confirmPassword"
+          autoComplete="new-password"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          error={errors.confirmPassword}
+          placeholder="Confirm your password"
+        />
 
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary-600 text-base font-semibold text-white shadow-sm transition hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading && (
                 <BrandLoader variant="button" />
@@ -289,7 +258,7 @@ const Register = () => {
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
 
-            <div className="my-5 flex items-center gap-3">
+            <div className="my-5 flex items-center gap-3" role="separator" aria-label="or">
               <div className="flex-1 border-t border-gray-200" />
               <span className="text-xs font-medium text-gray-400">OR</span>
               <div className="flex-1 border-t border-gray-200" />
@@ -302,22 +271,13 @@ const Register = () => {
                 window.location.href =
                   `${API_BASE}${API_VERSION}/auth/google?redirect=${encodeURIComponent(target)}`;
               }}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-gray-200 bg-white py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
             >
               <GoogleLogo />
               Continue with Google
             </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-primary hover:underline">
-              Login
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      </form>
+    </AuthShell>
   );
 };
 
