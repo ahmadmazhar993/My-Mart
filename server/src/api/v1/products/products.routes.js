@@ -8,6 +8,7 @@ const {
   getProductById,
   getProductByIdAdmin,
   getProductReviews,
+  getMyReviews,
   createProductReview,
   createProduct,
   updateProduct,
@@ -40,6 +41,7 @@ router.get('/brands/admin', isAuthenticated, isAdmin, listBrandsAdmin);
 router.get('/', listProducts);
 router.get('/brands', listBrands);
 router.get('/google-feed.xml', googleProductFeed);
+router.get('/reviews/mine', isAuthenticated, getMyReviews);
 router.get('/:identifier/reviews', getProductReviews);
 router.get('/:identifier/purchased', isAuthenticated, checkProductPurchased);
 router.post('/:identifier/reviews', isAuthenticated, createProductReview);

@@ -561,6 +561,44 @@ async function getProductReviews(req, res) {
   }
 }
 
+// The signed-in customer's own reviews, newest first (powers the "My Reviews" page).
+async function getMyReviews(req, res) {
+  try {
+    const rows = await db('reviews')
+      .join('products', 'reviews.product_id', 'products.productID')
+      .where('reviews.user_id', req.activeUser.userID)
+      .orderBy('reviews.createdOn', 'desc')
+      .select(
+        'reviews.reviewID as id',
+        'reviews.rating',
+        'reviews.comment',
+        'reviews.verifiedPurchase',
+        'reviews.createdOn',
+        'products.productID as productId',
+        'products.name as productName',
+        'products.slug as productSlug',
+        'products.imageUrl as productImage'
+      );
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        productId: row.productId,
+        productName: row.productName,
+        productSlug: row.productSlug,
+        productImage: row.productImage,
+        rating: Number(row.rating),
+        comment: row.comment,
+        verifiedPurchase: !!row.verifiedPurchase,
+        createdAt: row.createdOn,
+      })),
+    });
+  } catch (err) {
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to load your reviews' });
+  }
+}
+
 async function createProductReview(req, res) {
   try {
     const { rating, comment } = req.body;
@@ -1007,6 +1045,7 @@ module.exports = {
   getProductById,
   getProductByIdAdmin,
   getProductReviews,
+  getMyReviews,
   checkProductPurchased,
   createProductReview,
   createProduct,

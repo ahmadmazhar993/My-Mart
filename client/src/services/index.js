@@ -44,6 +44,7 @@ export const productService = {
   getAllProductsAdmin: (params) => api.get('/products/admin', { params }),
   getProductByIdAdmin: (identifier) => api.get(`/products/admin/${identifier}`),
   getProductReviews: (identifier) => api.get(`/products/${identifier}/reviews`),
+  getMyReviews: () => api.get('/products/reviews/mine'),
   checkPurchased: (identifier) => api.get(`/products/${identifier}/purchased`),
   createReview: (identifier, data) => api.post(`/products/${identifier}/reviews`, data),
   createProduct: (data) => api.post('/products', data),
