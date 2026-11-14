@@ -6,7 +6,6 @@ import { NAV_CATEGORIES as categories } from '../config/categories';
 import { shouldShowBottomNav } from './BottomNav';
 import { Heart, LogOut, Package, Search, ShieldCheck, ShoppingCart, User, UserRound, Truck } from 'lucide-react';
 import { SHIPPING_TIERS } from '../config/shipping';
-import { buildProductPath } from '../utils/product';
 import { SuggestionList, optionId, useSearchSuggestions } from './search/SearchSuggestions';
 
 const SearchIcon = () => <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />;
@@ -102,7 +101,7 @@ const Header = () => {
 
   useEffect(() => {
     setSearchQuery(urlSearch);
-  }, [urlSearch]);
+  }, [urlSearch, location.pathname]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -123,13 +122,14 @@ const Header = () => {
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery, location.pathname, location.search, location.state, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e) => {
     e.preventDefault();
     setSuggestOpen(false);
     setActiveIndex(-1);
     const trimmed = searchQuery.trim();
+    window.scrollTo({ 'top': 0, behavior: 'instant' });
     if (trimmed) {
       navigate(getProductsPath(trimmed), {
         state: location.pathname === '/products'
@@ -164,7 +164,9 @@ const Header = () => {
       closeSuggest();
     } else if (e.key === 'Enter' && activeIndex >= 0 && activeIndex < seeAllIndex) {
       e.preventDefault();
-      navigate(buildProductPath(suggest.items[activeIndex]));
+      navigate(suggest.items[activeIndex].path);
+      window.scrollTo({ 'top': 0, behavior: 'instant' });
+      setSearchQuery('');
       closeSuggest();
     }
   };
@@ -188,7 +190,11 @@ const Header = () => {
       loading={suggest.loading}
       query={searchQuery}
       activeIndex={activeIndex}
-      onNavigate={closeSuggest}
+      onNavigate={() => {
+        setSearchQuery('');
+        closeSuggest();
+        window.scrollTo({ 'top': 0, behavior: 'instant' });
+      }}
       onSeeAll={() => handleSearch({ preventDefault() {} })}
     />
   );
@@ -257,7 +263,7 @@ const Header = () => {
             className="flex-shrink-0"
             aria-label="AHM Mart home"
             // Already on the home page: the route does not change, so scroll to the top ourselves.
-            onClick={() => { if (location.pathname === '/') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onClick={() => { if (location.pathname === '/') window.scrollTo({ 'top': 0, behavior: 'smooth' }); }}
           >
             {/* Mobile */}
             <div className="flex items-center gap-1.5 sm:hidden">

@@ -19,9 +19,10 @@ const Layout = () => {
   // Product pages have a fixed purchase bar on phones. Its space is reserved here, below the footer,
   // so nothing is covered and no blank gap appears above the footer.
   const hasPurchaseBar = pathname.startsWith('/products/') && pathname.length > '/products/'.length;
+  const hasSearchResults = pathname === '/products' && Boolean(new URLSearchParams(location.search).get('search'));
 
   return (
-    <div style={hasPurchaseBar ? { overflowAnchor: 'none' } : undefined} className={`flex min-h-screen flex-col bg-surface ${showBottomNav ? (matches(pathname, '/cart') ? 'pb-32 md:pb-20 lg:pb-0' : 'pb-14 md:pb-0') : ''}`}>
+    <div style={hasPurchaseBar || hasSearchResults ? { overflowAnchor: 'none' } : undefined} className={`flex min-h-screen flex-col bg-surface ${showBottomNav ? (matches(pathname, '/cart') ? 'pb-32 md:pb-20 lg:pb-0' : 'pb-14 md:pb-0') : ''}`}>
       <a href="#main-content" className="sr-only z-[100] rounded-xl bg-white px-4 py-3 text-sm font-semibold text-primary-700 shadow-soft focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to main content</a>
       {isAuthPage ? <MinimalHeader /> : <Header />}
       <main id="main-content" tabIndex={-1} className="flex-1 outline-none">

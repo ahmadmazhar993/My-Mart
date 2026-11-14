@@ -5,10 +5,9 @@ import { hasSnapshot } from "../utils/listSnapshots";
 const ScrollToTop = () => {
   const { pathname, search, key } = useLocation();
   const navigationType = useNavigationType();
-  // Switching category/sale view only changes the query string, so include those params
-  // (but not `search`, which changes while typing in the header search box).
+  // Search and category changes reuse the list route but start a new results view.
   const params = new URLSearchParams(search);
-  const viewKey = `${pathname}|${params.get("category") || ""}|${params.get("sale") || ""}`;
+  const viewKey = `${pathname}|${params.get("category") || ""}|${params.get("sale") || ""}|${params.get("search") || ""}`;
 
   useLayoutEffect(() => {
     // Native history restoration runs after POP navigation and can override our scroll
@@ -26,7 +25,7 @@ const ScrollToTop = () => {
 
     window.scrollTo({
       'top': 0,
-      behavior: navigationType === "POP" || pathname.startsWith('/products/') ? "instant" : "smooth",
+      behavior: navigationType === "POP" || pathname === '/products' || pathname.startsWith('/products/') ? "instant" : "smooth",
     });
   }, [viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
 

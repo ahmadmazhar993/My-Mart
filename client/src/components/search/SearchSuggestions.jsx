@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import ProductImage from '../ProductImage';
 import { productService } from '../../services';
-import { formatPrice, getEffectivePrice } from '../../utils/format';
-import { buildProductPath } from '../../utils/product';
+import { formatPrice } from '../../utils/format';
+import { buildProductPath, parseProductVariants, getProductVariantPrice } from '../../utils/product';
 
 const MIN_CHARS = 2;
 const MAX_SUGGESTIONS = 6;
@@ -30,7 +30,14 @@ export const useSearchSuggestions = (query, enabled) => {
           if (cancelled) return;
           const data = res.data?.data;
           const list = Array.isArray(data) ? data : (data?.products || data?.items || []);
-          setItems(list.slice(0, MAX_SUGGESTIONS));
+          setItems(list.slice(0, MAX_SUGGESTIONS).flatMap((product) => {
+            const variants = parseProductVariants(product);
+            return (variants.length ? variants : [null]).map((variant) => ({
+              product,
+              variant,
+              path: buildProductPath(product, variant),
+            }));
+          }));
         })
         .catch(() => { if (!cancelled) setItems([]); })
         .finally(() => { if (!cancelled) setLoading(false); });
@@ -62,26 +69,28 @@ export const SuggestionList = ({ listId, items, loading, query, activeIndex, onN
       {items.length === 0 && loading && (
         <p className="px-4 py-3 text-sm text-gray-500" role="status">Searching…</p>
       )}
-      {items.map((product, index) => {
+      {items.map(({ product, variant, path }, index) => {
         const active = activeIndex === index;
         return (
           <Link
-            key={product.id}
+            key={JSON.stringify([product.id, variant?.name])}
             id={optionId(listId, index)}
             role="option"
             aria-selected={active}
-            to={buildProductPath(product)}
+            to={path}
             onClick={onNavigate}
             className={`flex min-h-[56px] items-center gap-3 px-3 py-2 transition-colors ${active ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
           >
             <span className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
-              <ProductImage product={product} className="p-0.5" />
+              <ProductImage product={product} variant={variant} className="p-0.5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-dark">{product.name}</span>
+              <span className="block truncate text-sm font-medium text-dark">
+                {product.name}{variant ? ` — ${variant.label || variant.name}` : ''}
+              </span>
               {product.brand && <span className="block truncate text-xs text-gray-500">{product.brand}</span>}
             </span>
-            <span className="flex-shrink-0 text-sm font-bold text-primary-700">{formatPrice(getEffectivePrice(product))}</span>
+            <span className="flex-shrink-0 text-sm font-bold text-primary-700">{formatPrice(getProductVariantPrice(product, variant))}</span>
           </Link>
         );
       })}

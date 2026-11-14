@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Check, Heart, ShoppingCart, PackageSearch } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
 import { orderService, productService } from '../services';
@@ -34,7 +34,8 @@ const ProductDetailPage = ({ identifier }) => {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviews, setReviews] = useState([]);
-  const [selectedVariantName, setSelectedVariantName] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedVariantName = searchParams.get('variant');
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
   const [descriptionRequest, setDescriptionRequest] = useState({ id: null, n: 0 });
@@ -117,9 +118,9 @@ const ProductDetailPage = ({ identifier }) => {
     if (!product || !identifier) return;
     const expectedSlug = getProductSlug(product);
     if (identifier !== expectedSlug) {
-      navigate(buildProductPath(product), { replace: true });
+      navigate({ pathname: buildProductPath(product), search: searchParams.toString() }, { replace: true });
     }
-  }, [product, identifier, navigate]);
+  }, [product, identifier, navigate, searchParams]);
 
   // Product structured data. Only real stored values are used: no reviews, brand or identifiers are
   // invented, and rating data is emitted only when real reviews exist. The Offer mirrors what the
@@ -517,7 +518,11 @@ const ProductDetailPage = ({ identifier }) => {
                       <button
                         key={variant.name}
                         type="button"
-                        onClick={() => setSelectedVariantName(variant.name)}
+                        onClick={() => setSearchParams((current) => {
+                          const next = new URLSearchParams(current);
+                          next.set('variant', variant.name);
+                          return next;
+                        }, { replace: true })}
                         aria-pressed={isSelected}
                         className={`min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
                           isSelected

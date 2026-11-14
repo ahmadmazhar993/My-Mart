@@ -96,9 +96,9 @@ export function getProductSlug(product) {
   return product?.slug || slugify(product?.name || 'product');
 }
 
-export function buildProductPath(product) {
+export function buildProductPath(product, variant = null) {
   const slug = getProductSlug(product);
-  return `/products/${slug}`;
+  return `/products/${slug}${variant ? `?variant=${encodeURIComponent(variant.name)}` : ''}`;
 }
 
 const getApiBaseUrl = () => {

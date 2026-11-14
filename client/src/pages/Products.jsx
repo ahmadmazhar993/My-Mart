@@ -261,36 +261,13 @@ const Products = () => {
     return () => observer.disconnect();
   }, [loading, loadingMore, loadMoreError, hasNextPage, products.length]);
 
-  // When a search is present on small screens, scroll results into view
-  useEffect(() => {
-    if (!search || restoredRef.current) return undefined;
-
-    // only run after loading completes
-    if (loading) return undefined;
-
-    let timer = null;
-    const doScroll = () => {
-      try {
-        if (!resultsRef.current) return;
-        // small screens only
-        if (window.innerWidth > 640) return;
-
-        const rect = resultsRef.current.getBoundingClientRect();
-        const top = rect.top + window.pageYOffset;
-        const offset = 120; // account for header/filters height
-        window.scrollTo({ top: Math.max(top - offset, 0), behavior: 'smooth' });
-      } catch (err) {
-        // ignore
-      }
-    };
-
-    // delay slightly to allow mobile keyboard/layout changes
-    timer = setTimeout(doScroll, 300);
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [loading, search]);
+  // Reset again when new search results replace the loading layout on either screen size.
+  // Back to an unchanged saved list keeps its previous scroll position.
+  useLayoutEffect(() => {
+    if (!search || showLoading) return;
+    if (navigationType === 'POP' && restored?.filterKey === filterKey) return;
+    window.scrollTo({ 'top': 0, behavior: 'instant' });
+  }, [showLoading, search, filterKey, navigationType, restored]);
 
   const filtered = products
     .filter((p) => {
@@ -642,7 +619,7 @@ const Products = () => {
               </div>
             </div>
 
-            <div className="flex flex-shrink-0 gap-3 border-t border-gray-100 px-5 pt-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <div className="flex flex-shrink-0 gap-3 border-t border-gray-100 px-5 pt-4" style={{ paddingBlockEnd: 'max(1rem, env(safe-area-inset-bottom))' }}>
               <button
                 type="button"
                 onClick={() => { setPriceRange('all'); selectBrand(''); }}
