@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Check, Heart, ShoppingCart, PackageSearch } from 'lucide-react';
 import { useToast } from '../components/ToastProvider';
@@ -18,6 +18,12 @@ import { buildShippingDetails, buildReturnPolicy } from '../utils/storePolicySch
 
 const ProductDetail = () => {
   const { identifier } = useParams();
+
+  // A new route must not render or redirect using the previous product's state.
+  return <ProductDetailPage key={identifier} identifier={identifier} />;
+};
+
+const ProductDetailPage = ({ identifier }) => {
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +34,7 @@ const ProductDetail = () => {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviews, setReviews] = useState([]);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedVariantName, setSelectedVariantName] = useState(null);
   const [canReview, setCanReview] = useState(false);
   const [reviewEligibilityMessage, setReviewEligibilityMessage] = useState('');
   const [descriptionRequest, setDescriptionRequest] = useState({ id: null, n: 0 });
@@ -37,18 +43,33 @@ const ProductDetail = () => {
   const currentUserId = user?.id || user?.userID;
   const { addToast } = useToast();
   const { isInWishlist, toggleItem } = useWishlistStore();
+  const variantOptions = useMemo(() => parseProductVariants(product), [product]);
+  // Resolve the initial variant before the first paint so its image never swaps in later.
+  const selectedVariant = variantOptions.find((variant) => variant.name === selectedVariantName)
+    || variantOptions.find((variant) => Number(getProductVariantStock(product, variant)) > 0)
+    || variantOptions[0]
+    || null;
+
+  useLayoutEffect(() => {
+    // The loaded desktop layout is taller than its placeholder. Reset after that
+    // replacement as well as on route entry, before the loaded page is painted.
+    if (!loading) window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [loading]);
 
   useEffect(() => {
     if (!identifier) return;
 
+    const controller = new AbortController();
+    const config = { signal: controller.signal };
     setLoading(true);
     Promise.all([
-      productService.getProductById(identifier),
-      productService.getProductReviews(identifier),
-      isAuthenticated ? orderService.getAllOrders() : Promise.resolve({ data: { data: [] } }),
-      isAuthenticated ? productService.checkPurchased(identifier) : Promise.resolve({ data: { purchased: false } }),
+      productService.getProductById(identifier, config),
+      productService.getProductReviews(identifier, config),
+      isAuthenticated ? orderService.getAllOrders({}, config) : Promise.resolve({ data: { data: [] } }),
+      isAuthenticated ? productService.checkPurchased(identifier, config) : Promise.resolve({ data: { purchased: false } }),
     ])
       .then(([productRes, reviewsRes, ordersRes, purchasedRes]) => {
+        if (controller.signal.aborted) return;
         const nextProduct = productRes.data?.data || null;
         const nextReviews = reviewsRes.data?.data || [];
         const nextOrders = ordersRes?.data?.data || [];
@@ -79,12 +100,17 @@ const ProductDetail = () => {
         );
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setProduct(null);
         setReviews([]);
         setCanReview(false);
         setReviewEligibilityMessage('');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
   }, [identifier, isAuthenticated, currentUserId]);
 
   useEffect(() => {
@@ -94,27 +120,6 @@ const ProductDetail = () => {
       navigate(buildProductPath(product), { replace: true });
     }
   }, [product, identifier, navigate]);
-
-  useEffect(() => {
-    if (!product) {
-      setSelectedVariant(null);
-      return;
-    }
-
-    const variants = parseProductVariants(product);
-    if (!variants.length) {
-      setSelectedVariant(null);
-      return;
-    }
-
-    setSelectedVariant((current) => {
-      if (current && variants.some((variant) => variant.name === current.name)) {
-        return current;
-      }
-      // Prefer a variant that can actually be bought; fall back to the first one.
-      return variants.find((variant) => Number(getProductVariantStock(product, variant)) > 0) || variants[0];
-    });
-  }, [product]);
 
   // Product structured data. Only real stored values are used: no reviews, brand or identifiers are
   // invented, and rating data is emitted only when real reviews exist. The Offer mirrors what the
@@ -182,9 +187,9 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <div className="bg-white">
-        <div className="container-main py-4 md:py-8">
-          <div className="grid gap-6 md:grid-cols-2 md:gap-10" role="status" aria-busy="true" aria-label="Loading product">
-            <div className="aspect-square max-h-[52vh] animate-pulse rounded-2xl bg-gray-100 md:max-h-none" />
+        <div className="container-main pb-10 pt-1 md:pt-5">
+          <div className="grid gap-5 md:grid-cols-2 md:gap-8 lg:gap-12" role="status" aria-busy="true" aria-label="Loading product">
+            <div className="aspect-[6/5] w-full rounded-2xl bg-gray-100 md:aspect-square" />
             <div className="space-y-4">
               <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
               <div className="h-7 w-4/5 animate-pulse rounded bg-gray-100" />
@@ -214,7 +219,6 @@ const ProductDetail = () => {
   }
 
   const effectivePrice = getEffectivePrice(product);
-  const variantOptions = parseProductVariants(product);
   const displayPrice = getProductVariantPrice(product, selectedVariant) ?? effectivePrice;
   const variantStock = getProductVariantStock(product, selectedVariant);
   const variantDiscountPrice = selectedVariant?.discount_price != null ? Number(selectedVariant.discount_price) : null;
@@ -431,7 +435,7 @@ const ProductDetail = () => {
   ].filter(Boolean);
 
   return (
-    <div className="animate-fade-in bg-white">
+    <div className="bg-white">
       <div className="container-main pb-10 pt-1 md:pt-5">
         <nav aria-label="Breadcrumb" className="hidden pb-4 text-sm text-gray-500 md:block">
           <ol className="flex min-w-0 items-center gap-1.5">
@@ -446,6 +450,7 @@ const ProductDetail = () => {
         <div className="grid gap-5 md:grid-cols-2 md:gap-8 lg:gap-12">
           <div className="min-w-0 md:sticky md:top-28 md:self-start">
             <ProductGallery
+              key={JSON.stringify([product.id, galleryImages])}
               product={product}
               images={galleryImages}
               isOutOfStock={isOutOfStock}
@@ -512,7 +517,7 @@ const ProductDetail = () => {
                       <button
                         key={variant.name}
                         type="button"
-                        onClick={() => setSelectedVariant(variant)}
+                        onClick={() => setSelectedVariantName(variant.name)}
                         aria-pressed={isSelected}
                         className={`min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
                           isSelected

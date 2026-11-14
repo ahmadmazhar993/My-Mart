@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductImage from '../ProductImage';
 
@@ -9,10 +9,6 @@ const ProductGallery = ({ product, images, isOutOfStock = false, discountLabel =
   const [index, setIndex] = useState(0);
   const touchStartX = useRef(null);
   const count = images.length;
-  const imagesKey = images.join('|');
-
-  // A different variant/image set starts again from the first image.
-  useEffect(() => { setIndex(0); }, [imagesKey]);
 
   const go = (next) => { if (count > 1) setIndex((next + count) % count); };
   const current = images[index] || null;

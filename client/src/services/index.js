@@ -36,16 +36,16 @@ export const userService = {
 
 export const productService = {
   getAllProducts: (params) => api.get('/products', { params }),
-  getProductById: (identifier) => api.get(`/products/${identifier}`),
+  getProductById: (identifier, config = {}) => api.get(`/products/${identifier}`, config),
   getBrands: () => api.get('/products/brands'),
   getBrandsAdmin: () => api.get('/products/brands/admin'),
   updateBrand: (name, data) => api.put(`/products/brands/${encodeURIComponent(name)}`, data),
   uploadBrandLogo: (formData) => api.post('/products/brands/logo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getAllProductsAdmin: (params) => api.get('/products/admin', { params }),
   getProductByIdAdmin: (identifier) => api.get(`/products/admin/${identifier}`),
-  getProductReviews: (identifier) => api.get(`/products/${identifier}/reviews`),
+  getProductReviews: (identifier, config = {}) => api.get(`/products/${identifier}/reviews`, config),
   getMyReviews: () => api.get('/products/reviews/mine'),
-  checkPurchased: (identifier) => api.get(`/products/${identifier}/purchased`),
+  checkPurchased: (identifier, config = {}) => api.get(`/products/${identifier}/purchased`, config),
   createReview: (identifier, data) => api.post(`/products/${identifier}/reviews`, data),
   createProduct: (data) => api.post('/products', data),
   updateProduct: (identifier, data) => api.put(`/products/${identifier}`, data),
@@ -61,7 +61,7 @@ export const categoryService = {
 };
 
 export const orderService = {
-  getAllOrders: (params = {}) => api.get('/orders', { params }),
+  getAllOrders: (params = {}, config = {}) => api.get('/orders', { ...config, params }),
   getOrderById: (id) => api.get(`/orders/${id}`),
   createOrder: (data) => api.post('/orders', data),
   updateOrderStatus: (id, status, paymentStatus) => api.put(`/orders/${id}`, { status, paymentStatus }),
