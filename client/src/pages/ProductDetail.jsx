@@ -53,7 +53,7 @@ const ProductDetailPage = ({ identifier }) => {
   useLayoutEffect(() => {
     // The loaded desktop layout is taller than its placeholder. Reset after that
     // replacement as well as on route entry, before the loaded page is painted.
-    if (!loading) window.scrollTo({ top: 0, behavior: 'instant' });
+    if (!loading) window.scrollTo({ 'top': 0, behavior: 'instant' });
   }, [loading]);
 
   useEffect(() => {

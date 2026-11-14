@@ -25,7 +25,7 @@ const ScrollToTop = () => {
     if (navigationType === "POP" && hasSnapshot(key)) return;
 
     window.scrollTo({
-      top: 0,
+      'top': 0,
       behavior: navigationType === "POP" || pathname.startsWith('/products/') ? "instant" : "smooth",
     });
   }, [viewKey]); // eslint-disable-line react-hooks/exhaustive-deps
